@@ -205,14 +205,13 @@ export function buildAircraft(ac) {
 
   const X = (xn) => xcg - xn; // nose-distance -> model x
   const body = new NodeMesh('body');
-  const gear = new NodeMesh('gear');
   const extraNodes = [];
 
   // ------------------------------------------------------------- fuselage
   {
-    const nth = 28; // segments per side
+    const nth = 40; // segments per side
     const stations = [];
-    const nNose = 34, nMid = 40, nTail = 46;
+    const nNose = 44, nMid = 56, nTail = 56;
     for (let k = 0; k <= nNose; k++) stations.push(Ln * 1.25 * Math.pow(k / nNose, 1.7));
     for (let k = 1; k <= nMid; k++) stations.push(lerp(Ln * 1.25, tailStart, k / nMid));
     for (let k = 1; k <= nTail; k++) stations.push(lerp(tailStart, L, Math.pow(k / nTail, 0.85)));
@@ -246,47 +245,123 @@ export function buildAircraft(ac) {
   const dih = g.dihedral * D2R;
   const flex = g.wingFlex || 0;
   const wingZ = (y) => zRootWing + y * Math.tan(dih) + flex * Math.pow(y / s, 2);
-  const yStart = 0;
-  const wingStations = [];
-  wingStations.push(yStart);
-  if (yk > 0) wingStations.push(yk);
-  const outerStart = yk > 0 ? yk : 0;
-  for (let k = 1; k <= 5; k++) wingStations.push(lerp(outerStart, s, k / 5));
   const raked = g.tip === 'raked';
   const tipInfo = {};
+  const camberW = isGA ? 0.025 : 0.02;
   function wingSection(y) {
     let xl = xLE(y), c = chord(y);
     if (raked && y > s * 0.86) { const t = (y - s * 0.86) / (s * 0.14); xl += t * t * c * 0.55; c *= 1 - 0.55 * t; }
     const tc = lerp(tcRoot, tcTip, clamp(y / s, 0, 1));
     return { xl, c, tc, z: wingZ(y) };
   }
-  const foil = airfoil(14, 1, isGA ? 0.025 : 0.02);
-  function buildWing(side) {
-    const pc = body.piece();
-    const rings = [];
-    for (const y of wingStations) {
+  // movable surface layout (fractions of semi-span); hinge line at XS of chord
+  const XS = isGA ? 0.74 : 0.72;
+  const yIn = Math.max(R * 0.98, 0.06 * s);
+  let parts;
+  if (isGA || isProp) parts = [['fixed', 0, yIn], ['flap', yIn, 0.56 * s], ['fixed', 0.56 * s, 0.58 * s], ['aileron', 0.58 * s, 0.94 * s], ['fixed', 0.94 * s, s]];
+  else {
+    const kink = yk > 0 ? yk : 0.34 * s;
+    parts = [['fixed', 0, yIn], ['flap', yIn, kink], ['fixed', kink, kink + 0.025 * s], ['flap', kink + 0.025 * s, 0.7 * s], ['fixed', 0.7 * s, 0.72 * s], ['aileron', 0.72 * s, 0.93 * s], ['fixed', 0.93 * s, s]];
+  }
+  const breaks = new Set([0, s]);
+  for (const p of parts) { breaks.add(p[1]); breaks.add(p[2]); }
+  if (yk > 0) breaks.add(yk);
+  for (let k = 1; k < 8; k++) breaks.add(lerp(yk > 0 ? yk : 0, s, k / 8));
+  const wingStations = [...breaks].filter((y) => y >= 0 && y <= s).sort((x, y) => x - y);
+  // airfoil helpers (thickness-normalised NACA 4-digit, scaled by tc*chord)
+  const yt = (x) => 5 * (0.2969 * Math.sqrt(x) - 0.126 * x - 0.3516 * x * x + 0.2843 * x ** 3 - 0.1036 * x ** 4);
+  const yc = (x, m) => (x < 0.4 ? (m / 0.16) * (0.8 * x - x * x) : (m / 0.36) * (0.2 + 0.8 * x - x * x));
+  // closed loop over the chord range [xa, xb]: upper xb->xa, lower xa->xb, back to upper xb
+  function foilChunk(xa, xb, n, m) {
+    const pts = [];
+    const cosr = (t) => 0.5 * (1 - Math.cos(t * Math.PI));
+    const xs = []; for (let k = 0; k <= n; k++) xs.push(xa + (xb - xa) * (xa === 0 ? cosr(k / n) : k / n));
+    const sU = (x) => 0.5 * Math.acos(clamp(2 * x - 1, -1, 1)) / Math.PI, sL = (x) => 0.5 + 0.5 * Math.acos(clamp(1 - 2 * x, -1, 1)) / Math.PI;
+    for (let k = n; k >= 0; k--) { const x = xs[k]; pts.push([x, yc(x, m) + yt(x), sU(x)]); }
+    for (let k = 0; k <= n; k++) { const x = xs[k]; pts.push([x, yc(x, m) - yt(x), sL(x)]); }
+    pts.push(pts[0].slice());
+    return pts;
+  }
+  function loft(node, ys, xa, xb, side, n = 14) {
+    const ch = foilChunk(xa, xb, n, camberW);
+    const rings = ys.map((y) => {
       const sec = wingSection(y);
-      const ring = [];
-      for (const [xf, zf, sp] of foil) {
-        const tcs = sec.tc;
-        ring.push([X(sec.xl + xf * sec.c), side * y, sec.z + zf * sec.c * tcs / 1.0, 0.75 + 0.25 * sp, 0.5 + 0.25 * (y / s)]);
+      return ch.map(([xf, zf, sp]) => [X(sec.xl + xf * sec.c), side * y, sec.z + zf * sec.c * sec.tc, 0.75 + 0.25 * sp, 0.5 + 0.25 * (y / s)]);
+    });
+    node.piece().grid(rings, side < 0);
+    return rings;
+  }
+  function capRing(node, ring, side, flip = false) {
+    const cap = node.piece(false);
+    const [su, sv] = swatchUV(SW.wingUnder);
+    let cx = 0, cy = 0, cz = 0; for (const q of ring) { cx += q[0]; cy += q[1]; cz += q[2]; }
+    const c = cap.v(cx / ring.length, cy / ring.length, cz / ring.length, su, sv);
+    const ids = ring.map((q) => cap.v(q[0], q[1], q[2], su, sv));
+    for (let k = 0; k < ids.length - 1; k++) { if ((side > 0) !== flip) cap.tri(c, ids[k + 1], ids[k]); else cap.tri(c, ids[k], ids[k + 1]); }
+  }
+  const surfaces = []; // animated control surfaces
+  const hingeAt = (y, xf) => { const sec = wingSection(y); return [X(sec.xl + xf * sec.c), y, sec.z + yc(xf, camberW) * sec.c * sec.tc]; };
+  function buildWing(side) {
+    const mainRings = loft(body, wingStations, 0, XS, side, 16);
+    capRing(body, mainRings[mainRings.length - 1], side);
+    let flapN = 0;
+    for (const [type, y0, y1] of parts) {
+      const ys = wingStations.filter((y) => y >= y0 - 1e-6 && y <= y1 + 1e-6);
+      if (ys.length < 2) continue;
+      if (type === 'fixed') { const r = loft(body, ys, XS, 1, side, 6); if (y1 >= s - 1e-6) capRing(body, r[r.length - 1], side); continue; }
+      const name = (type === 'flap' ? 'flap' + flapN++ : 'ail') + (side > 0 ? 'L' : 'R');
+      const nm = new NodeMesh(name);
+      const r = loft(nm, ys, XS, 1, side, 6);
+      capRing(nm, r[0], side, true); capRing(nm, r[r.length - 1], side);
+      extraNodes.push(nm);
+      const p0 = hingeAt(y0, XS), p1 = hingeAt(y1, XS);
+      surfaces.push({ node: name, type, side, p0: [p0[0], side * p0[1], p0[2]], p1: [p1[0], side * p1[1], p1[2]], chord: chord((y0 + y1) / 2) * (1 - XS) });
+      // flap track fairings ("canoes") under the flaps
+      if (type === 'flap' && !isGA && !isProp) {
+        for (const yf of [lerp(y0, y1, 0.15), lerp(y0, y1, 0.85)].slice(0, y1 - y0 > 0.2 * s ? 2 : 1)) {
+          const sec = wingSection(yf);
+          const len = sec.c * 0.62, rr = sec.c * 0.045;
+          const zc = sec.z - yt(0.7) * sec.c * sec.tc - rr * 0.55;
+          revolveSq(body, [[0, 0.02], [0.12 * len, rr * 0.8], [0.4 * len, rr], [0.75 * len, rr * 0.8], [len, 0.03]], X(sec.xl + sec.c * 0.52), side * yf, zc, SW.wingUnder, 0.55);
+        }
       }
-      rings.push(ring);
     }
-    // NACA formula already scaled by thickness 1 -> rescale zf by tc: done above (zf*c*tc)
-    pc.grid(rings, side < 0);
-    // tip cap
-    const last = rings[rings.length - 1];
-    const cap = body.piece(false);
-    const [su, sv] = swatchUV(SW.wingTop);
-    const idx = last.map((q) => cap.v(q[0], q[1], q[2], su, sv));
-    const n = idx.length;
-    for (let k = 1; k < n / 2 - 1; k++) {
-      const a = idx[k], bb = idx[k + 1], c = idx[n - 1 - k], d = idx[n - 2 - k];
-      if (side > 0) { cap.quad(a, bb, d, c); } else { cap.quad(a, c, d, bb); }
+    // spoiler panels on the upper surface, ahead of the flaps
+    if (!isGA) {
+      const spans = isProp ? [] : [[yIn + 0.02 * s, (yk > 0 ? yk : 0.34 * s) - 0.01 * s], [(yk > 0 ? yk : 0.34 * s) + 0.04 * s, 0.68 * s]];
+      spans.forEach(([y0, y1], i) => {
+        const name = 'spoil' + i + (side > 0 ? 'L' : 'R');
+        const nm = new NodeMesh(name);
+        const pc = nm.piece(false);
+        const xa = XS - 0.16, xb = XS - 0.005;
+        const pts = [];
+        for (const y of [y0, y1]) for (const xf of [xa, (xa + xb) / 2, xb]) {
+          const sec = wingSection(y);
+          pts.push([X(sec.xl + xf * sec.c), side * y, sec.z + (yc(xf, camberW) + yt(xf)) * sec.c * sec.tc + 0.012]);
+        }
+        const [u, v] = swatchUV(SW.wingTop);
+        const id = pts.map((q) => pc.v(q[0], q[1], q[2], u, v));
+        const q = (a1, b1, c1, d1) => { pc.quad(a1, b1, c1, d1); pc.quad(a1, d1, c1, b1); };
+        q(id[0], id[1], id[4], id[3]); q(id[1], id[2], id[5], id[4]);
+        extraNodes.push(nm);
+        const pA = hingeAt(y0, xa), pB = hingeAt(y1, xa);
+        surfaces.push({ node: name, type: 'spoiler', side, p0: [pA[0], side * pA[1], pA[2]], p1: [pB[0], side * pB[1], pB[2]] });
+      });
     }
     const sec = wingSection(s);
     tipInfo.x = X(sec.xl + sec.c * 0.5); tipInfo.xl = sec.xl; tipInfo.c = sec.c; tipInfo.z = sec.z;
+  }
+  // flattened body of revolution (fairings)
+  function revolveSq(node, prof, cx, cy, cz, sw, squashY = 1) {
+    const pc = node.piece();
+    const seg = 14; const rings = [];
+    const [u, v] = swatchUV(sw);
+    for (const [dx, r] of prof) {
+      const ring = [];
+      for (let k = 0; k <= seg; k++) { const a = (k / seg) * Math.PI * 2; ring.push([cx - dx, cy + Math.cos(a) * r * squashY, cz + Math.sin(a) * r, u, v]); }
+      rings.push(ring);
+    }
+    pc.grid(rings, true);
   }
   buildWing(1); buildWing(-1);
 
@@ -350,30 +425,41 @@ export function buildAircraft(ac) {
   fin.tipTE = fin.tipLE + vct;
   fin.xMin = Math.min(fin.rootLE, fin.tipLE) - 0.3; fin.xMax = Math.max(fin.rootTE, fin.tipTE) + 0.3;
   {
-    const n = 14, rows = 8;
-    for (const side of [1, -1]) {
-      const pc = body.piece();
-      const rings = [];
-      for (let j = 0; j <= rows; j++) {
-        const t = j / rows;
-        // extend below root into fuselage
-        const zz = fin.zRoot - (j === 0 ? 0.35 * H0 : 0) + vh * t;
-        const le = lerp(fin.rootLE, fin.tipLE, t), te = lerp(fin.rootTE, fin.tipTE, t);
-        const c = te - le;
-        const tc = lerp(0.12, 0.09, t);
-        const ring = [];
-        for (let k = 0; k <= n; k++) {
-          const xf = 0.5 * (1 - Math.cos((k / n) * Math.PI));
-          const th = 5 * tc * (0.2969 * Math.sqrt(xf) - 0.126 * xf - 0.3516 * xf * xf + 0.2843 * xf ** 3 - 0.1036 * xf ** 4) * c;
-          const xn = le + xf * c;
-          const uf = (xn - fin.xMin) / (fin.xMax - fin.xMin);
-          const vf = 1 - clamp((zz - fin.zRoot) / vh, 0, 1);
-          ring.push([X(xn), side * Math.max(th, 0.002), zz, side > 0 ? 0.5 * uf : 0.5 * (1 - uf), (side > 0 ? 0.5 : 0.75) + 0.25 * vf]);
-        }
-        rings.push(ring);
+    // fixed fin (0..XR of chord) + rudder (XR..1) as its own node
+    const XR = 0.7, rows = 8;
+    const finRing = (j, xa, xb, n, side, extendRoot) => {
+      const t = j / rows;
+      const zz = fin.zRoot - (extendRoot && j === 0 ? 0.35 * H0 : 0) + vh * t;
+      const le = lerp(fin.rootLE, fin.tipLE, t), te = lerp(fin.rootTE, fin.tipTE, t);
+      const c = te - le, tc = lerp(0.12, 0.09, t);
+      const ring = [];
+      for (let k = 0; k <= n; k++) {
+        const xf = xa === 0 ? xb * 0.5 * (1 - Math.cos((k / n) * Math.PI)) : xa + (xb - xa) * (k / n);
+        const th = 5 * tc * (0.2969 * Math.sqrt(xf) - 0.126 * xf - 0.3516 * xf * xf + 0.2843 * xf ** 3 - 0.1036 * xf ** 4) * c;
+        const xn = le + xf * c;
+        const uf = (xn - fin.xMin) / (fin.xMax - fin.xMin);
+        const vf = 1 - clamp((zz - fin.zRoot) / vh, 0, 1);
+        ring.push([X(xn), side * Math.max(th, 0.002), zz, side > 0 ? 0.5 * uf : 0.5 * (1 - uf), (side > 0 ? 0.5 : 0.75) + 0.25 * vf]);
       }
-      pc.grid(rings, side > 0);
+      return ring;
+    };
+    const rud = new NodeMesh('rudder');
+    for (const side of [1, -1]) {
+      const fr = [], rr = [];
+      for (let j = 0; j <= rows; j++) { fr.push(finRing(j, 0, XR, 12, side, true)); rr.push(finRing(j, XR, 1, 5, side, false)); }
+      body.piece().grid(fr, side > 0);
+      rud.piece().grid(rr, side > 0);
     }
+    // close the hinge faces between left and right skins
+    for (const [node, xf, n] of [[body, XR, 12], [rud, XR, 5]]) {
+      const pc = node.piece(false); const [u, v] = swatchUV(SW.finBase);
+      const L1 = [], R1 = [];
+      for (let j = 0; j <= rows; j++) { const l = finRing(j, node === body ? 0 : XR, node === body ? XR : 1, n, 1, node === body)[node === body ? n : 0]; const r = finRing(j, node === body ? 0 : XR, node === body ? XR : 1, n, -1, node === body)[node === body ? n : 0]; L1.push(pc.v(l[0], l[1], l[2], u, v)); R1.push(pc.v(r[0], r[1], r[2], u, v)); }
+      for (let j = 0; j < rows; j++) { pc.quad(L1[j], L1[j + 1], R1[j + 1], R1[j]); pc.quad(L1[j], R1[j], R1[j + 1], L1[j + 1]); }
+    }
+    extraNodes.push(rud);
+    const h0 = finRing(0, XR, 1, 5, 1, false)[0], h1 = finRing(rows, XR, 1, 5, 1, false)[0];
+    surfaces.push({ node: 'rudder', type: 'rudder', side: 0, p0: [h0[0], 0, h0[2]], p1: [h1[0], 0, h1[2]] });
     // fin tip cap
     const cap = body.piece(false);
     const [su, sv] = swatchUV(SW.finBase);
@@ -396,28 +482,25 @@ export function buildAircraft(ac) {
     const hs = hsSpan / 2;
     const hdih = (g.tTail ? -2 : isGA ? 0 : 7) * D2R;
     const sts = [0, hs * 0.5, hs];
+    const XE = 0.7;
+    const stabRing = (y, xa, xb, n, side) => {
+      const xl = hxRoot + y * Math.tan(hsweep);
+      const c = lerp(hcr, hcr * hTaper, y / hs);
+      const zz = hz + y * Math.tan(hdih);
+      return foilChunk(xa, xb, n, 0).map(([xf, zf]) => { const [u, v] = swatchUV(zf >= 0 ? SW.stab : SW.stabUnder); return [X(xl + xf * c), side * y, zz + zf * c * 0.1, u, v]; });
+    };
     for (const side of [1, -1]) {
-      const pc = body.piece();
-      const rings = [];
-      for (const y of sts) {
-        const xl = hxRoot + y * Math.tan(hsweep);
-        const c = lerp(hcr, hcr * hTaper, y / hs);
-        const zz = hz + y * Math.tan(hdih);
-        const ring = [];
-        for (const [xf, zf, sp] of airfoil(10, 0.1, 0)) {
-          const [u, v] = swatchUV(zf >= 0 ? SW.stab : SW.stabUnder);
-          ring.push([X(xl + xf * c), side * y, zz + zf * c, u, v]);
-        }
-        rings.push(ring);
-      }
-      pc.grid(rings, side < 0);
-      const last = rings[rings.length - 1];
-      const cap = body.piece(false);
-      const ids = last.map((q) => cap.v(q[0], q[1], q[2], q[3], q[4]));
-      const n = ids.length;
-      for (let k = 1; k < n / 2 - 1; k++) {
-        if (side > 0) cap.quad(ids[k], ids[k + 1], ids[n - 2 - k], ids[n - 1 - k]); else cap.quad(ids[k], ids[n - 1 - k], ids[n - 2 - k], ids[k + 1]);
-      }
+      const fixed = sts.map((y) => stabRing(y, 0, XE, 10, side));
+      body.piece().grid(fixed, side < 0);
+      capRing(body, fixed[fixed.length - 1], side);
+      const name = 'elev' + (side > 0 ? 'L' : 'R');
+      const nm = new NodeMesh(name);
+      const er = [hs * 0.04, hs * 0.5, hs * 0.97].map((y) => stabRing(y, XE, 1, 4, side));
+      nm.piece().grid(er, side < 0);
+      capRing(nm, er[0], side, true); capRing(nm, er[er.length - 1], side);
+      extraNodes.push(nm);
+      const hp = (y) => [X(hxRoot + y * Math.tan(hsweep) + XE * lerp(hcr, hcr * hTaper, y / hs)), side * y, hz + y * Math.tan(hdih)];
+      surfaces.push({ node: name, type: 'elevator', side, p0: hp(hs * 0.04), p1: hp(hs * 0.97) });
     }
   }
 
@@ -540,7 +623,7 @@ export function buildAircraft(ac) {
         const sec = wingSection(y);
         const len = D * (D > 3 ? 1.75 : 1.95);
         const xn0 = sec.xl - len * (D > 3 ? 0.62 : 0.55);
-        const zc = sec.z - (g.flatNacelle ? 0.42 : 0.62) * D - 0.08 * sec.c * 0.12;
+        const zc = sec.z - (g.flatNacelle ? 0.42 : 0.5) * D - 0.06 * sec.c * sec.tc;
         turbofan(xn0, side * y, zc, D, ei++);
         pylon(X(xn0 + len * 0.15), X(sec.xl + sec.c * 0.55), side * y, zc + 0.35 * D, sec.z + 0.02, 0.09 * D);
       }
@@ -642,50 +725,82 @@ export function buildAircraft(ac) {
     }
     pc.grid(rings, true);
   }
-  const gearNode = g.fixedGear ? body : gear;
+  // each gear leg is its own node so it can retract about its own hinge
+  const gearLegs = [];
+  const legNode = (name, pivot, kind) => {
+    if (g.fixedGear) return body;
+    const nm = new NodeMesh(name); extraNodes.push(nm); gearLegs.push({ node: name, pivot, kind }); return nm;
+  };
+  function doorPlate(node, x, y, z0, z1, w, outward) {
+    const pc = node.piece(false); const [u, v] = swatchUV(SW.belly);
+    const yy = y + outward * 0.12;
+    const ids = [[x + w / 2, yy, z0], [x - w / 2, yy, z0], [x - w / 2, yy, z1], [x + w / 2, yy, z1]].map((q) => pc.v(q[0], q[1], q[2], u, v));
+    pc.quad(ids[0], ids[1], ids[2], ids[3]); pc.quad(ids[0], ids[3], ids[2], ids[1]);
+  }
   const strutTopMain = highWing ? profile(xcg).bot + 0.2 : zRootWing;
   // main gear
   const mw = g.mainWheels || 2;
   for (const side of [1, -1]) {
     const y = side * track / 2;
     const axleZ = contactZ + wheelR;
-    strut(gearNode, mainX, y, axleZ, isGA ? profile(xcg).bot + 0.1 : strutTopMain + 0.1, Math.max(0.06, wheelR * 0.22));
+    const topZ = isGA ? profile(xcg).bot + 0.1 : strutTopMain + 0.1;
+    const node = legNode(side > 0 ? 'gearL' : 'gearR', [mainX, y, topZ], side > 0 ? 'mainL' : 'mainR');
+    strut(node, mainX, y, axleZ, topZ, Math.max(0.06, wheelR * 0.22));
+    if (!isGA && !g.fixedGear && !isProp) doorPlate(node, mainX, y, axleZ + wheelR * 1.2, topZ - 0.1, wheelR * 1.6, side);
     const ww = wheelR * 0.75;
-    if (mw === 1) wheel(gearNode, mainX, y, axleZ, wheelR, ww);
-    else if (mw === 2) { wheel(gearNode, mainX, y + ww * 0.6, axleZ, wheelR, ww); wheel(gearNode, mainX, y - ww * 0.6, axleZ, wheelR, ww); }
+    if (mw === 1) wheel(node, mainX, y, axleZ, wheelR, ww);
+    else if (mw === 2) { wheel(node, mainX, y + ww * 0.6, axleZ, wheelR, ww); wheel(node, mainX, y - ww * 0.6, axleZ, wheelR, ww); }
     else {
       const rowsN = mw / 2;
       for (let r = 0; r < rowsN; r++) {
         const dx = (r - (rowsN - 1) / 2) * wheelR * 2.25;
-        wheel(gearNode, mainX + dx, y + ww * 0.65, axleZ, wheelR, ww); wheel(gearNode, mainX + dx, y - ww * 0.65, axleZ, wheelR, ww);
+        wheel(node, mainX + dx, y + ww * 0.65, axleZ, wheelR, ww); wheel(node, mainX + dx, y - ww * 0.65, axleZ, wheelR, ww);
       }
+      // bogie beam
+      revolveSq(node, [[-(rowsN - 1) * wheelR * 1.15, 0.01], [-(rowsN - 1) * wheelR * 1.1, wheelR * 0.16], [(rowsN - 1) * wheelR * 1.1, wheelR * 0.16], [(rowsN - 1) * wheelR * 1.15, 0.01]], mainX, y, axleZ, SW.gear);
     }
   }
   if (g.bodyGear) {
     for (const side of [1, -1]) {
       const y = side * R * 0.55;
       const axleZ = contactZ + wheelR;
-      strut(gearNode, mainX - wheelR * 1.5, y, axleZ, profile(xcg).bot + 0.2, wheelR * 0.22);
+      const topZ = profile(xcg).bot + 0.2;
+      const node = legNode(side > 0 ? 'gearBL' : 'gearBR', [mainX - wheelR * 1.5, y, topZ], 'body');
+      strut(node, mainX - wheelR * 1.5, y, axleZ, topZ, wheelR * 0.22);
       const rowsN = g.bodyGear / 2;
       for (let r = 0; r < rowsN; r++) {
         const dx = -wheelR * 1.5 + (r - (rowsN - 1) / 2) * wheelR * 2.25;
-        wheel(gearNode, mainX + dx, y + wheelR * 0.45, axleZ, wheelR, wheelR * 0.75); wheel(gearNode, mainX + dx, y - wheelR * 0.45, axleZ, wheelR, wheelR * 0.75);
+        wheel(node, mainX + dx, y + wheelR * 0.45, axleZ, wheelR, wheelR * 0.75); wheel(node, mainX + dx, y - wheelR * 0.45, axleZ, wheelR, wheelR * 0.75);
       }
     }
   }
   if (g.centerGear) {
     const axleZ = contactZ + wheelR;
-    strut(gearNode, mainX + 0.5, 0, axleZ, profile(xcg).bot + 0.2, wheelR * 0.22);
-    wheel(gearNode, mainX + 0.5, wheelR * 0.45, axleZ, wheelR, wheelR * 0.75); wheel(gearNode, mainX + 0.5, -wheelR * 0.45, axleZ, wheelR, wheelR * 0.75);
+    const topZ = profile(xcg).bot + 0.2;
+    const node = legNode('gearC', [mainX + 0.5, 0, topZ], 'body');
+    strut(node, mainX + 0.5, 0, axleZ, topZ, wheelR * 0.22);
+    wheel(node, mainX + 0.5, wheelR * 0.45, axleZ, wheelR, wheelR * 0.75); wheel(node, mainX + 0.5, -wheelR * 0.45, axleZ, wheelR, wheelR * 0.75);
   }
   // nose gear
   const nwR = wheelR * (isGA ? 0.85 : 0.72);
   {
     const axleZ = contactZ + nwR;
     const nb = profile(xcg - noseX).bot;
-    strut(gearNode, noseX, 0, axleZ, nb + 0.15, Math.max(0.05, nwR * 0.22));
-    if (isGA) wheel(gearNode, noseX, 0, axleZ, nwR, nwR * 0.7);
-    else { wheel(gearNode, noseX, nwR * 0.5, axleZ, nwR, nwR * 0.7); wheel(gearNode, noseX, -nwR * 0.5, axleZ, nwR, nwR * 0.7); }
+    const node = legNode('gearN', [noseX, 0, nb + 0.15], 'nose');
+    strut(node, noseX, 0, axleZ, nb + 0.15, Math.max(0.05, nwR * 0.22));
+    if (isGA) wheel(node, noseX, 0, axleZ, nwR, nwR * 0.7);
+    else { wheel(node, noseX, nwR * 0.5, axleZ, nwR, nwR * 0.7); wheel(node, noseX, -nwR * 0.5, axleZ, nwR, nwR * 0.7); }
+  }
+  // antennas (VHF / TCAS blades on the crown and belly)
+  if (!isGA) {
+    const blade = (xn, top, h) => {
+      const pr = profile(xn); const z0 = top ? pr.top - 0.02 : pr.bot + 0.02; const dz = top ? h : -h;
+      const pc = body.piece(false); const [u, v] = swatchUV(SW.dark);
+      const ids = [[X(xn), 0, z0], [X(xn + h * 0.9), 0, z0], [X(xn + h * 0.75), 0, z0 + dz], [X(xn + h * 0.55), 0, z0 + dz]].map((q) => pc.v(q[0], q[1], q[2], u, v));
+      pc.quad(ids[0], ids[1], ids[2], ids[3]); pc.quad(ids[0], ids[3], ids[2], ids[1]);
+    };
+    const hA = clamp(0.06 * H0 + 0.15, 0.2, 0.45);
+    blade(Ln * 1.6, true, hA); blade(wingX + cr * 0.6, true, hA * 0.8); blade(Ln * 1.4, false, hA); blade(tailStart - 2, false, hA * 0.8);
   }
 
   // ------------------------------------------------------------ layout
@@ -735,10 +850,11 @@ export function buildAircraft(ac) {
     },
     eye: (() => { const xn = Ln * (g.deck2 ? 0.75 : 0.58); const pr = profile(xn); return [X(xn), R * 0.28, pr.top - Math.max(0.55, 0.32 * H0)]; })(),
     engines: engines.map((e) => ({ x: e.x, y: e.y, z: e.z, D: e.D, node: e.node, type: e.type, len: e.len })),
+    anim: { surfaces, gear: gearLegs },
     tailAngle: tailBot.ang * 180 / Math.PI, xcg, tailArm: (fin.rootLE + vcr * 0.4) - xcg, groundZ: contactZ, wheelR,
   };
   if (g.nose === 'c172') physics.eye = [X(Ln + 0.6), R * 0.3, profile(Ln + 0.6).cz + 0.35];
-  const nodes = [body.finalize(), ...(g.fixedGear ? [] : [gear.finalize()]), ...extraNodes.map((n) => n.finalize())];
+  const nodes = [body.finalize(), ...extraNodes.map((n) => n.finalize())];
   return { nodes, layout, physics };
 }
 

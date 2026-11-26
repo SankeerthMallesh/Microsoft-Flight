@@ -211,7 +211,10 @@ export class World {
     await new Promise((res) => { if (model.ready) res(); else { const r = model.readyEvent.addEventListener(() => { r(); res(); }); } });
     this.model = model;
     this.physics = physics;
-    this.nodes = { gear: model.getNode('gear'), props: [] };
+    this.nodes = { props: [] };
+    const anim = physics.anim || { surfaces: [], gear: [] };
+    this.surfaces = anim.surfaces.map((a) => ({ ...a, n: model.getNode(a.node) })).filter((a) => a.n);
+    this.gearLegs = anim.gear.map((a) => ({ ...a, n: model.getNode(a.node) })).filter((a) => a.n);
     for (const e of physics.engines) {
       const n = model.getNode(e.node);
       if (n) this.nodes.props.push({ node: n, e, angle: Math.random() * 6 });
@@ -243,6 +246,39 @@ export class World {
     return Cesium.Cartesian3.add(f.pos, d, new Cesium.Cartesian3());
   }
 
+  // rotate a node about a hinge line through p0 along axis, plus an optional translation (model coords)
+  hingeMatrix(p0, axis, angle, t = [0, 0, 0]) {
+    const Cesium = C();
+    const R = Cesium.Matrix3.fromQuaternion(Cesium.Quaternion.fromAxisAngle(Cesium.Cartesian3.normalize(new Cesium.Cartesian3(...axis), new Cesium.Cartesian3()), angle));
+    const p = new Cesium.Cartesian3(...p0);
+    const rp = Cesium.Matrix3.multiplyByVector(R, p, new Cesium.Cartesian3());
+    return Cesium.Matrix4.fromRotationTranslation(R, new Cesium.Cartesian3(p.x - rp.x + t[0], p.y - rp.y + t[1], p.z - rp.z + t[2]));
+  }
+  animateParts(fm) {
+    const s = fm.surf || { de: 0, da: 0, dr: 0 };
+    const D = Math.PI / 180;
+    for (const a of this.surfaces) {
+      const axis = [a.p1[0] - a.p0[0], a.p1[1] - a.p0[1], a.p1[2] - a.p0[2]];
+      let teDown = 0, t = [0, 0, 0];
+      if (a.type === 'aileron') teDown = (a.side > 0 ? 1 : -1) * s.da * 20 * D;
+      else if (a.type === 'elevator') teDown = -s.de * 25 * D;
+      else if (a.type === 'flap') { teDown = fm.flap * 35 * D; t = [-fm.flap * (a.chord || 1) * 0.6, 0, -fm.flap * (a.chord || 1) * 0.12]; }
+      else if (a.type === 'spoiler') teDown = -(fm.spoiler * 45 + Math.max(0, (a.side > 0 ? -1 : 1) * s.da - 0.3) * 25) * D;
+      if (a.type === 'rudder') { a.n.matrix = this.hingeMatrix(a.p0, axis, s.dr * 25 * D); continue; }
+      a.n.matrix = this.hingeMatrix(a.p0, axis, a.side > 0 ? -teDown : teDown, t);
+    }
+    const k = 1 - fm.gearPos; // 0 = down, 1 = retracted
+    for (const gl of this.gearLegs) {
+      gl.n.show = fm.gearPos > 0.03;
+      if (!gl.n.show) continue;
+      const ang = k * 88 * D;
+      if (gl.kind === 'nose') gl.n.matrix = this.hingeMatrix(gl.pivot, [0, 1, 0], -ang);
+      else if (gl.kind === 'mainL') gl.n.matrix = this.hingeMatrix(gl.pivot, [1, 0, 0], -ang);
+      else if (gl.kind === 'mainR') gl.n.matrix = this.hingeMatrix(gl.pivot, [1, 0, 0], ang);
+      else gl.n.matrix = this.hingeMatrix(gl.pivot, [0, 1, 0], ang);
+    }
+  }
+
   updateAircraft(fm, dt, visible = true) {
     const Cesium = C();
     if (!this.model) return;
@@ -268,7 +304,7 @@ export class World {
       this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
     }
     this.model.show = visible;
-    if (this.nodes.gear) this.nodes.gear.show = fm.gearPos > 0.25;
+    this.animateParts(fm);
     // spin fans / props
     fm.engines.forEach((e, i) => {
       const pn = this.nodes.props[i]; if (!pn) return;
