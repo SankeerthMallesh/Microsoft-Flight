@@ -78,6 +78,7 @@ export class Hangar {
       this.controls.target.set(0, size.y * 0.35, 0);
       this.controls.minDistance = R * 0.6; this.controls.maxDistance = R * 6 + 40;
     }
+    this.loadedCount = (this.loadedCount || 0) + 1;
     this.key.shadow.camera.left = -R * 1.3; this.key.shadow.camera.right = R * 1.3; this.key.shadow.camera.top = R * 1.3; this.key.shadow.camera.bottom = -R * 1.3; this.key.shadow.camera.updateProjectionMatrix();
   }
   start() {

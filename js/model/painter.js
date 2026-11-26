@@ -212,7 +212,7 @@ function drawCockpit(p, lv) {
   if (g.nose === 'a380') { z0 = 0.05; z1 = 0.38; x0 = Ln * 0.45; x1 = Ln * 0.62; x2 = Ln * 0.78; }
   if (g.nose === 'a350' && !lv.noMask) {
     // A350 "mask" around the cockpit windows
-    p.poly([[x0 - 0.4, z0 - 0.08], [x0 + 0.2, z1 + 0.08], [x2 + 0.35, z1 - 0.02], [x2 + 0.4, z0 - 0.1]], '#101317', { local: true });
+    p.poly([[x0 - 0.15, z0 - 0.04], [x0 + (x1 - x0) * 0.5, z1 + 0.05], [x2 + 0.15, z1 - 0.08], [x2 + 0.2, z0 - 0.06]], '#101317', { local: true });
   }
   p.poly([[x0, z0], [x0 + (x1 - x0) * 0.55, z1], [x1, z1 - 0.04], [x1, z0 - 0.02]], col, { local: true });
   p.poly([[x1 + 0.08, z1 - 0.06], [x2, z1 - 0.12], [x2, z0], [x1 + 0.08, z0 - 0.02]], col, { local: true });

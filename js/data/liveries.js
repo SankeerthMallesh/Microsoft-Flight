@@ -3,9 +3,9 @@
 // `fleet` lists the aircraft types each airline actually operates (or has operated).
 import { FONTS } from '../model/painter.js';
 
-const titleSize = (l, k = 0.34) => Math.max(0.35, Math.min(1.7, l.H0 * k));
+const titleSize = (l, k = 0.34) => Math.max(0.4, Math.min(2.4, l.H0 * k * 1.35));
 const titleX = (l, f = 0.3) => l.L * f;
-const TH = 0.56; // title height (above window line)
+const TH = 0.6; // title height (above window line)
 
 // ---------------------------------------------------------------- logo shapes
 function heart(c, s) {
@@ -92,7 +92,7 @@ export const LIVERIES = [
     engineText: { text: 'Emirates', color: '#D71921', font: FONTS.serif },
     fuselage(p, l) {
       const L = l.L;
-      p.text('Emirates', L * 0.47, TH + 0.05, titleSize(l, 0.45), '#D71921', { font: FONTS.serif, weight: 700 });
+      p.text('Emirates', L * 0.47, TH + 0.04, titleSize(l, 0.5), '#D71921', { font: FONTS.serif, weight: 700 });
       p.text('طيران الإمارات', L * 0.18, TH, titleSize(l, 0.28), '#D71921', { font: FONTS.serif, weight: 700 });
       // UAE flag sweep onto rear fuselage
       const x0 = l.tailStart - L * 0.04;

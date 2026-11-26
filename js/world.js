@@ -154,6 +154,11 @@ export class World {
   updateClouds(latR, lonR, alt) {
     const Cesium = C();
     const cfg = this.cloudCfg; if (!cfg || !cfg.n) return;
+    const k = this.sunK ?? 1;
+    if (this.clouds.length && Math.abs((this._cloudK ?? -1) - k) > 0.02) {
+      this._cloudK = k;
+      for (const cl of this.clouds) cl.c.brightness = cl.b * (0.08 + 0.92 * k);
+    }
     const R = 26000;
     const center = { lat: latR, lon: lonR };
     const toPos = (dx, dy, h) => Cesium.Cartesian3.fromRadians(lonR + dx / (6378137 * Math.cos(latR)), latR + dy / 6378137, h);
@@ -187,7 +192,8 @@ export class World {
       slice: 0.3 + Math.random() * 0.25,
       brightness: cfg.dark ? 0.55 + Math.random() * 0.2 : 0.9 + Math.random() * 0.1,
     });
-    this.clouds.push({ c, lat, lon, h });
+    this.clouds.push({ c, lat, lon, h, b: c.brightness });
+    this._cloudK = -1;
   }
 
   // ------------------------------------------------------------------ aircraft
@@ -243,6 +249,22 @@ export class World {
     const X = f.bodyToFixed([1, 0, 0]), Y = f.bodyToFixed([0, -1, 0]), Z = f.bodyToFixed([0, 0, -1]);
     const m = new Cesium.Matrix4(X.x, Y.x, Z.x, f.pos.x, X.y, Y.y, Z.y, f.pos.y, X.z, Y.z, Z.z, f.pos.z, 0, 0, 0, 1);
     this.model.modelMatrix = m;
+    // dim the aircraft at night: scale the model's light by the real sun elevation
+    const nowMs = performance.now();
+    if (!this._sunT || nowMs - this._sunT > 1000) {
+      this._sunT = nowMs;
+      const time = this.viewer.clock.currentTime;
+      const sunI = Cesium.Simon1994PlanetaryPositions.computeSunPositionInEarthInertialFrame(time);
+      const mtx = Cesium.Transforms.computeIcrfToFixedMatrix(time) || Cesium.Transforms.computeTemeToPseudoFixedMatrix(time);
+      const sunF = Cesium.Matrix3.multiplyByVector(mtx, sunI, new Cesium.Cartesian3());
+      const toSun = Cesium.Cartesian3.normalize(Cesium.Cartesian3.subtract(sunF, f.pos, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+      const sinElev = Cesium.Cartesian3.dot(toSun, Cesium.Cartesian3.normalize(new Cesium.Cartesian3(f.U.x, f.U.y, f.U.z), new Cesium.Cartesian3()));
+      const t = clamp((sinElev + 0.1) / 0.22, 0, 1);
+      const k = 0.12 + 0.88 * t * t * (3 - 2 * t);
+      this.sunK = k;
+      this.model.lightColor = new Cesium.Cartesian3(k * 2.0, k * 1.95, k * 1.85);
+      this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
+    }
     this.model.show = visible;
     if (this.nodes.gear) this.nodes.gear.show = fm.gearPos > 0.25;
     // spin fans / props
