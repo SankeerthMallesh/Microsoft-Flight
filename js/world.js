@@ -32,8 +32,7 @@ export class World {
     scene.globe.showGroundAtmosphere = true;
     scene.fog.enabled = true; scene.fog.density = 1.0e-4; scene.fog.minimumBrightness = 0.05; scene.fog.screenSpaceErrorFactor = 0.5;
     scene.skyAtmosphere.show = true;
-    scene.highDynamicRange = false;
-    scene.postProcessStages.fxaa.enabled = true;
+    this.applyGraphics(settings.quality || 'medium');
     scene.screenSpaceCameraController.enableCollisionDetection = true;
     viewer.resolutionScale = settings.resolutionScale || ({ high: 1, medium: 0.85, low: 0.6 }[settings.quality] ?? 0.85);
     scene.camera.frustum.near = 0.2;
@@ -43,8 +42,33 @@ export class World {
     // lights
     this.points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
     this.rwyPoints = scene.primitives.add(new Cesium.PointPrimitiveCollection());
-    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 16 }));
+    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 20 }));
     return viewer;
+  }
+
+  // ------------------------------------------------------------------ graphics presets
+  // Filmic HDR tone mapping, sun-lit atmosphere, bloom, ambient occlusion and shadows, scaled by quality.
+  applyGraphics(q) {
+    const Cesium = C(), viewer = this.viewer, scene = viewer.scene, pp = scene.postProcessStages;
+    this.quality = q;
+    // HDR tone mapping darkens Google's photoreal tiles and the sky, so keep the LDR pipeline (crisper colours)
+    scene.highDynamicRange = false;
+    pp.fxaa.enabled = true;
+    scene.light = new Cesium.SunLight({ intensity: 2.0 });
+    try { scene.atmosphere.dynamicLighting = Cesium.DynamicAtmosphereLightingType.SUNLIGHT; } catch (e) { /* */ }
+    // bloom: gentle glow on sun glare, bright paint and lights
+    const bloom = pp.bloom;
+    bloom.enabled = q !== 'low';
+    bloom.uniforms.glowOnly = false; bloom.uniforms.contrast = 118; bloom.uniforms.brightness = -0.45; bloom.uniforms.delta = 1.0; bloom.uniforms.sigma = 2.6; bloom.uniforms.stepSize = 1.2;
+    // ambient occlusion: contact shadows between parts and on buildings (high only, it is expensive)
+    const ao = pp.ambientOcclusion;
+    ao.enabled = false; // Cesium AO renders black together with photoreal 3D tiles
+    ao.uniforms.intensity = 2.2; ao.uniforms.bias = 0.12; ao.uniforms.lengthCap = 0.12; ao.uniforms.directionCount = 8; ao.uniforms.stepCount = 24; ao.uniforms.stepSize = 1.2; ao.uniforms.blurStepSize = 0.86;
+    // sun shadows (aircraft onto itself / runway / buildings)
+    viewer.shadows = q === 'high' || !!this.settings.shadows;
+    const sm = scene.shadowMap;
+    if (sm) { sm.softShadows = true; sm.size = q === 'high' ? 4096 : 2048; sm.maximumDistance = 600; sm.darkness = 0.35; sm.fadingEnabled = true; }
+    viewer.terrainShadows = Cesium.ShadowMode.RECEIVE_ONLY;
   }
 
   // ------------------------------------------------------------------ scenery
@@ -155,7 +179,8 @@ export class World {
     const r = a.r[0];
     try {
       const h = scene.sampleHeight(Cesium.Cartographic.fromDegrees((r[2] + r[6]) / 2, (r[1] + r[5]) / 2), [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : [])], 2);
-      if (h !== undefined && isFinite(h)) { this.aptGeoid[a.i] = h - ((r[3] + r[7]) / 2) * 0.3048; return true; }
+      const g = h - ((r[3] + r[7]) / 2) * 0.3048;
+      if (h !== undefined && isFinite(h) && Math.abs(g) < 130) { this.aptGeoid[a.i] = g; return true; }
     } catch (e) { /* ignore */ }
     return false;
   }
@@ -481,7 +506,9 @@ export class World {
       cam.frustum.near = 0.1;
       const eye = this.physics.eye;
       const pos = this.modelPoint(f, eye);
-      const cy = Math.cos(c.lookYaw), sy = Math.sin(c.lookYaw), cp = Math.cos(c.lookPitch), sp = Math.sin(c.lookPitch);
+      const t = performance.now() / 1000, a = c.shakeAmp || 0;
+      const shY = a * (Math.sin(t * 37) * 0.6 + Math.sin(t * 23.3) * 0.4), shP = a * (Math.sin(t * 41.7) * 0.6 + Math.sin(t * 17.1) * 0.4);
+      const cy = Math.cos(c.lookYaw + shY), sy = Math.sin(c.lookYaw + shY), cp = Math.cos(c.lookPitch + shP), sp = Math.sin(c.lookPitch + shP);
       const dirB = [cp * cy, cp * sy, -sp];
       const dir = f.bodyToFixed(dirB), up = f.bodyToFixed([-sp * cy, -sp * sy, -cp]);
       cam.setView({ destination: pos, orientation: { direction: dir, up } });
@@ -502,7 +529,9 @@ export class World {
       const dist = (L * 1.25 + 14) / c.zoom;
       const back = enuDir(c.chaseYaw + Math.PI + c.lookYaw, -c.chasePitch * 0.6 + 0.16 + c.lookPitch);
       camPos = Cesium.Cartesian3.add(target, Cesium.Cartesian3.multiplyByScalar(back, dist, new Cesium.Cartesian3()), new Cesium.Cartesian3());
-      const aim = Cesium.Cartesian3.add(target, Cesium.Cartesian3.multiplyByScalar(f.U, L * 0.12, new Cesium.Cartesian3()), new Cesium.Cartesian3());
+      const tt = performance.now() / 1000, sa = (c.shakeAmp || 0) * dist;
+      const aim = Cesium.Cartesian3.add(target, Cesium.Cartesian3.multiplyByScalar(f.U, L * 0.12 + sa * Math.sin(tt * 31), new Cesium.Cartesian3()), new Cesium.Cartesian3());
+      Cesium.Cartesian3.add(aim, Cesium.Cartesian3.multiplyByScalar(f.E, sa * Math.sin(tt * 27.3) * 0.7, new Cesium.Cartesian3()), aim);
       this.lookAt(camPos, aim, f);
     } else if (c.mode === 'orbit') {
       if (c.orbitDist == null) c.orbitDist = L * 1.6 + 10;

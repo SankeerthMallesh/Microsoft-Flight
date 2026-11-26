@@ -289,8 +289,13 @@ async function startFlight() {
     loading(true, 'Streaming scenery for ' + ap.n + '…', 0.2);
     await world.waitForScenery(world.mode === 'lite' ? 3000 : 20000, (f) => loading(true, null, 0.2 + f * 0.5));
     let hThr;
-    for (let i = 0; i < 30 && hThr === undefined; i++) { hThr = world.groundHeight(rwy.lat, rwy.lon); if (hThr === undefined) await new Promise((r) => setTimeout(r, 100)); }
-    const geoid = hThr !== undefined ? hThr - rwy.elevM : 0;
+    // the ellipsoid-to-sea-level offset is within about -110..+90 m everywhere on Earth: reject implausible samples
+    const plausible = (h) => h !== undefined && isFinite(h) && (world.mode === 'lite' || Math.abs(h - rwy.elevM) < 130);
+    for (let i = 0; i < 30 && !plausible(hThr); i++) { hThr = world.groundHeight(rwy.lat, rwy.lon); if (!plausible(hThr)) { hThr = undefined; await new Promise((r) => setTimeout(r, 120)); } }
+    if (!plausible(hThr) && world.mode !== 'lite') {
+      try { const [p] = await window.Cesium.sampleTerrainMostDetailed(world.viewer.scene.terrainProvider, [new window.Cesium.Cartographic(rwy.lon, rwy.lat)]); if (plausible(p.height)) hThr = p.height; } catch (e) { /* ignore */ }
+    }
+    const geoid = plausible(hThr) ? hThr - rwy.elevM : 0;
     world.aptGeoid = world.aptGeoid || {}; world.aptGeoid[ap.i] = geoid;
     app.calibrated = { [ap.i]: true }; app.lastNear = 0;
     world.setGroundAirports(airportsNear(rwy.lat, rwy.lon, 40 * NM, 12).concat([ap]));
@@ -309,7 +314,7 @@ async function startFlight() {
     let spawn;
     if (plan.start === 'runway') {
       const [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
-      let hg = world.groundHeight(la, lo); if (hg === undefined) hg = rwy.elevM + geoid;
+      let hg = world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
       spawn = { ...base, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
       fm.reset(spawn);
     } else {
@@ -393,6 +398,7 @@ async function startFlight() {
     if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
     if (world.mode === 'lite' && settings.scenery !== 'lite') toast('Using Lite scenery — add a Cesium ion token in Settings for 3D terrain', 'warn');
     app.lastT = performance.now();
+    clearTimeout(app.qkTimer); const qk = $('quickKeys'); if (qk) { qk.style.opacity = '1'; app.qkTimer = setTimeout(() => { qk.style.transition = 'opacity 1s'; qk.style.opacity = '0'; }, 20000); }
   } catch (err) {
     console.error(err);
     loading(false);
@@ -410,7 +416,10 @@ function setView(v) {
   const ui = $('flightUI'); ui.classList.toggle('view-cockpit', v === 'cockpit');
   $('viewName').textContent = VIEW_NAMES[v];
 }
-function togglePanel() { app.panel = !app.panel; $('flightUI').classList.toggle('panel-off', !app.panel); }
+function togglePanel() {
+  if (app.view !== 'cockpit') { $('flightUI').classList.toggle('show-mini'); return; }
+  app.panel = !app.panel; $('flightUI').classList.toggle('panel-off', !app.panel);
+}
 
 // ------------------------------------------------------------------ actions
 const act = {
@@ -535,6 +544,14 @@ function tick() {
     else { cam.lookYaw = clamp(cam.lookYaw + m.dx * 0.004, -2.6, 2.6); cam.lookPitch = clamp(cam.lookPitch - m.dy * 0.004, -1.3, 1.3); }
   }
   if (m.wheel) cam.zoom = clamp(cam.zoom * (m.wheel > 0 ? 0.88 : 1.14), 0.3, 5);
+  // camera shake: runway rumble, turbulence and touchdown jolts
+  {
+    const sh = world.cam;
+    const rumble = fm.onGround ? Math.min(1, fm.out.gs / 140) * 0.006 + (fm.onGround && fm.out.gs > 2 ? 0.0015 : 0) : 0;
+    const turb = !fm.onGround ? Math.min(0.01, Math.hypot(...fm.gust) * 0.0018) : 0;
+    sh.jolt = (sh.jolt || 0) * Math.exp(-dt * 5);
+    sh.shakeAmp = app.paused ? 0 : rumble + turb + sh.jolt;
+  }
   world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
   world.updateCamera(fm, dt);
   world.updatePapi(fm);
@@ -578,6 +595,7 @@ function handleEvent(ev) {
   if (ev.type === 'touchdown') {
     toast(`Touchdown ${-ev.fpm > 0 ? '' : '-'}${Math.abs(ev.fpm)} fpm · ${ev.rating}`, ev.fpm > 600 ? 'bad' : ev.fpm > 360 ? 'warn' : 'good');
     audio.thump(clamp(ev.fpm / 400, 0.3, 1.5));
+    app.world.cam.jolt = clamp(ev.fpm / 6000, 0.01, 0.08);
   } else if (ev.type === 'liftoff') {
     toast('Positive rate', 'good');
   } else if (ev.type === 'crash') {
@@ -661,8 +679,6 @@ async function boot() {
     app.world = world;
     input.attachMouse(world.viewer.canvas);
     world.viewer.scene.preUpdate.addEventListener(tick);
-    world.viewer.shadows = !!settings.shadows;
-    if (settings.shadows) { const sm = world.viewer.scene.shadowMap; sm.softShadows = true; sm.size = 2048; sm.maximumDistance = 800; }
     loading(true, 'Loading airports…', 0.3);
     await loadAirports();
     try { app.map = new MiniMap($('minimap'), { airports: allAirports, onSetDest: (a, ident) => setDestination(a, ident) }); } catch (e) { console.warn('map failed', e); }
