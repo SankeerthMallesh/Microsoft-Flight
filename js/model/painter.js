@@ -219,7 +219,7 @@ function drawCockpit(p, lv) {
 }
 
 // ---------------------------------------------------------------- main paint
-export async function paintLivery(layout, livery) {
+export async function paintLivery(layout, livery, opts = {}) {
   const canvas = makeCanvas(ATLAS_W, ATLAS_H);
   const ctx = canvas.getContext('2d');
   const lv = livery;
@@ -269,9 +269,7 @@ export async function paintLivery(layout, livery) {
     p.fillAll(col('base', '#ffffff'));
     if (lv.belly) p.band(-0.62, -1.5, lv.belly);
     if (lv.fuselage) lv.fuselage(p, layout);
-    drawDoors(p, lv);
-    drawWindows(p, lv);
-    drawCockpit(p, lv);
+    if (!opts.detailed) { drawDoors(p, lv); drawWindows(p, lv); drawCockpit(p, lv); }
     if (lv.after) lv.after(p, layout);
     if (lv.reg !== false) p.text(lv.reg || 'N' + (100 + Math.floor(Math.random() * 899)) + 'OS', layout.tailStart + layout.Lt * 0.25, -0.15, Math.min(0.42, layout.H0 * 0.12), lv.regColor || 'rgba(40,40,50,0.85)', { weight: 600 });
   }

@@ -356,6 +356,7 @@ export class World {
     }
     const k = 1 - fm.gearPos; // 0 = down, 1 = retracted
     for (const gl of this.gearLegs) {
+      if (gl.kind === 'hide') { gl.n.show = fm.gearPos > 0.5; continue; }
       gl.n.show = fm.gearPos > 0.03;
       if (!gl.n.show) continue;
       const ang = k * 88 * D;

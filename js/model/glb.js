@@ -80,3 +80,57 @@ export function writeGLB(nodes, pngBytes, opts = {}) {
   new Uint8Array(out, 28 + jsonLen).set(bin);
   return new Uint8Array(out);
 }
+
+// ---------------------------------------------------------------- patching existing GLBs
+export function parseGLB(bytes) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (dv.getUint32(0, true) !== 0x46546c67) throw new Error('not a GLB');
+  let off = 12, json = null, bin = new Uint8Array(0);
+  while (off < bytes.byteLength) {
+    const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true);
+    const chunk = bytes.subarray(off + 8, off + 8 + len);
+    if (type === 0x4e4f534a) json = JSON.parse(new TextDecoder().decode(chunk));
+    else if (type === 0x004e4942) bin = chunk;
+    off += 8 + len;
+  }
+  return { json, bin };
+}
+export function buildGLB(json, bin) {
+  const jsonBytesRaw = new TextEncoder().encode(JSON.stringify(json));
+  const jl = pad4(jsonBytesRaw.length), bl = pad4(bin.length);
+  const total = 12 + 8 + jl + 8 + bl;
+  const out = new Uint8Array(total); const dv = new DataView(out.buffer);
+  dv.setUint32(0, 0x46546c67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+  dv.setUint32(12, jl, true); dv.setUint32(16, 0x4e4f534a, true);
+  out.fill(0x20, 20, 20 + jl); out.set(jsonBytesRaw, 20);
+  dv.setUint32(20 + jl, bl, true); dv.setUint32(24 + jl, 0x004e4942, true);
+  out.set(bin, 28 + jl);
+  return out;
+}
+const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+function hexLinear(hex) {
+  const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map((x) => x + x).join('') : h, 16);
+  return [srgbToLinear(((n >> 16) & 255) / 255), srgbToLinear(((n >> 8) & 255) / 255), srgbToLinear((n & 255) / 255), 1];
+}
+// Swap the LIVERY material's texture for a freshly painted PNG and tint ENGINE/WING paint.
+export function patchDetailedGLB(bytes, png, colors) {
+  const { json, bin } = parseGLB(bytes);
+  const start = pad4(bin.length);
+  const nb = new Uint8Array(pad4(start + png.length));
+  nb.set(bin); nb.set(png, start);
+  json.bufferViews.push({ buffer: 0, byteOffset: start, byteLength: png.length });
+  const view = json.bufferViews.length - 1;
+  json.buffers[0].byteLength = nb.length;
+  for (const m of json.materials || []) {
+    const pbr = (m.pbrMetallicRoughness = m.pbrMetallicRoughness || {});
+    if (m.name === 'LIVERY' && pbr.baseColorTexture) {
+      const tex = json.textures[pbr.baseColorTexture.index];
+      json.images[tex.source] = { bufferView: view, mimeType: 'image/png', name: 'livery' };
+      json.samplers = json.samplers || []; json.samplers.push({ magFilter: 9729, minFilter: 9987, wrapS: 33071, wrapT: 33071 });
+      tex.sampler = json.samplers.length - 1;
+      pbr.baseColorFactor = [1, 1, 1, 1]; pbr.metallicFactor = 0.08; pbr.roughnessFactor = 0.3;
+    } else if (m.name.startsWith('ENGINE_PAINT') && colors.engine) { pbr.baseColorFactor = hexLinear(colors.engine); delete pbr.baseColorTexture; pbr.roughnessFactor = 0.35; }
+    else if (m.name.startsWith('WING_PAINT') && colors.wing) { pbr.baseColorFactor = hexLinear(colors.wing); delete pbr.baseColorTexture; pbr.roughnessFactor = 0.45; }
+  }
+  return buildGLB(json, nb);
+}

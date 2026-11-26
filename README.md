@@ -108,6 +108,8 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 
 ## Credits and legal
 
+- The detailed Boeing 737-800 model is "B737-800 Model" by hakai315 on Sketchfab, licensed CC BY 4.0 and modified for this sim. See [models/CREDITS.md](models/CREDITS.md).
+
 - [CesiumJS](https://cesium.com) (Apache 2.0) and [three.js](https://threejs.org) (MIT) load from the jsDelivr CDN.
 - Airport and runway data comes from [OurAirports](https://ourairports.com/data/) (public domain).
 - Aircraft specifications are taken from manufacturers' public data.
