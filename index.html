@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenSkies Flight Simulator</title>
+  <meta name="description" content="A free, browser-based flight simulator with real-world terrain, real airports and real airliners." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&family=Montserrat:wght@600;700;800;900&family=Archivo+Black&family=Playfair+Display:wght@600;700&family=Oswald:wght@600&family=Kaushan+Script&display=swap" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <link href="css/style.css" rel="stylesheet" />
+  <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/';</script>
+  <script src="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Cesium.js"></script>
+  <script type="importmap">
+    { "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+    } }
+  </script>
+</head>
+<body>
+  <div id="cesium"></div>
+
+  <!-- ============================== MAIN MENU -->
+  <section id="menu" class="screen">
+    <div class="menu-card">
+      <div class="brand"><span class="logo">✈</span><div><h1>OpenSkies</h1><p>Flight Simulator</p></div></div>
+      <nav class="menu-buttons">
+        <button class="btn primary" data-go="setup">Free Flight</button>
+        <button class="btn" data-go="hangar">Hangar</button>
+        <button class="btn" data-go="settings">Settings</button>
+        <button class="btn" data-go="help">Controls</button>
+      </nav>
+      <p class="menu-note" id="tokenNote"></p>
+      <p class="fine">Free &amp; open: CesiumJS · three.js · OurAirports. Airline names and liveries are trademarks of their owners and are recreated here for personal, non-commercial simulation.</p>
+    </div>
+  </section>
+
+  <!-- ============================== FLIGHT SETUP -->
+  <section id="setup" class="screen hidden">
+    <div class="panel setup-panel">
+      <header><h2>Plan your flight</h2><button class="icon-btn" data-go="menu" aria-label="Back">✕</button></header>
+      <div class="setup-grid">
+        <div class="field span2 aircraft-pick">
+          <label>Aircraft</label>
+          <div class="ac-summary">
+            <div class="chips" id="liveryChips"></div>
+            <div><strong id="acName">—</strong><span id="liveryName" class="muted">—</span></div>
+            <button class="btn small" data-go="hangar">Open hangar</button>
+          </div>
+        </div>
+        <div class="field span2">
+          <label for="airportSearch">Departure airport</label>
+          <div class="search">
+            <input id="airportSearch" autocomplete="off" placeholder="ICAO, IATA, city or name (e.g. KATL, DXB, Dallas)" />
+            <ul id="airportResults" class="results hidden"></ul>
+          </div>
+          <div id="airportPicked" class="muted"></div>
+        </div>
+        <div class="field"><label for="runwaySel">Runway</label><select id="runwaySel"></select></div>
+        <div class="field"><label for="startSel">Start position</label>
+          <select id="startSel"><option value="runway">On runway, ready for takeoff</option><option value="approach">6 NM final approach</option><option value="air">In flight (12 NM out)</option></select></div>
+        <div class="field"><label for="timeSel">Time of day <span id="timeLbl" class="muted"></span></label><input type="range" id="timeSel" min="0" max="23.75" step="0.25" value="11" /></div>
+        <div class="field"><label for="wxSel">Weather</label>
+          <select id="wxSel"><option value="clear">Clear skies</option><option value="few">Few clouds</option><option value="scattered" selected>Scattered clouds</option><option value="broken">Broken clouds</option><option value="overcast">Overcast</option><option value="storm">Stormy</option></select></div>
+        <div class="field"><label>Wind <span id="windLbl" class="muted"></span></label>
+          <div class="row"><input type="number" id="windDir" min="0" max="360" value="270" aria-label="Wind direction" /> <span>° /</span> <input type="number" id="windSpd" min="0" max="60" value="8" aria-label="Wind speed" /> <span>kt</span></div></div>
+        <div class="field"><label for="turbSel">Turbulence</label><select id="turbSel"><option value="0">None</option><option value="0.3" selected>Light</option><option value="0.7">Moderate</option><option value="1.2">Severe</option></select></div>
+        <div class="field"><label for="fuelSel">Fuel <span id="fuelLbl" class="muted"></span></label><input type="range" id="fuelSel" min="5" max="100" value="40" /></div>
+        <div class="field"><label for="payloadSel">Payload <span id="payloadLbl" class="muted"></span></label><input type="range" id="payloadSel" min="0" max="100" value="60" /></div>
+      </div>
+      <footer><span id="weightInfo" class="muted"></span><button class="btn primary big" id="flyBtn">Fly ✈</button></footer>
+    </div>
+  </section>
+
+  <!-- ============================== HANGAR -->
+  <section id="hangar" class="screen hidden">
+    <canvas id="hangarCanvas"></canvas>
+    <aside class="hangar-list panel">
+      <header><h2>Hangar</h2><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
+      <input id="acFilter" placeholder="Search aircraft…" />
+      <div id="acList"></div>
+    </aside>
+    <aside class="hangar-info panel">
+      <div class="maker" id="hMaker"></div>
+      <h2 id="hName"></h2>
+      <div id="hCat" class="tag"></div>
+      <table id="hSpecs"></table>
+      <h3>Liveries <label class="toggle"><input type="checkbox" id="allLiveries" /> show all</label></h3>
+      <div id="hLiveries" class="livery-grid"></div>
+      <button class="btn primary big" id="hSelect">Select aircraft</button>
+    </aside>
+    <div class="hangar-loading hidden" id="hangarLoading">Painting aircraft…</div>
+  </section>
+
+  <!-- ============================== SETTINGS -->
+  <section id="settings" class="screen hidden">
+    <div class="panel settings-panel">
+      <header><h2>Settings</h2><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
+      <div class="field"><label for="tokenInput">Cesium ion access token</label>
+        <input id="tokenInput" type="password" placeholder="Paste your free token from ion.cesium.com/tokens" autocomplete="off" />
+        <p class="muted small">Stored only in this browser (localStorage). Get one free at <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">ion.cesium.com/tokens</a>. Without a token the sim uses free satellite imagery on a flat globe.</p></div>
+      <div class="field"><label for="scenerySel">Scenery</label>
+        <select id="scenerySel">
+          <option value="photoreal">Photorealistic 3D cities (Google tiles via Cesium ion)</option>
+          <option value="terrain">World terrain + aerial imagery + 3D buildings</option>
+          <option value="lite">Lite: satellite imagery, flat ground (no token)</option>
+        </select></div>
+      <div class="field"><label for="qualitySel">Graphics quality</label>
+        <select id="qualitySel"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low (laptops)</option></select></div>
+      <div class="field"><label><input type="checkbox" id="shadowsChk" /> Shadows</label></div>
+      <div class="field"><label for="assistSel">Flight model</label>
+        <select id="assistSel"><option value="assisted">Assisted (fly-by-wire: attitude hold, protections)</option><option value="realistic">Realistic (direct control, manual trim)</option></select></div>
+      <div class="field"><label><input type="checkbox" id="invertChk" /> Invert pitch (↑ = nose up)</label></div>
+      <div class="field"><label for="volSel">Volume</label><input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7" /></div>
+      <footer><span class="muted small">Scenery and quality changes apply on reload.</span><button class="btn primary" id="saveSettings">Save &amp; reload</button></footer>
+    </div>
+  </section>
+
+  <!-- ============================== HELP -->
+  <section id="help" class="screen hidden">
+    <div class="panel help-panel">
+      <header><h2>Controls</h2><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
+      <table id="helpTable"></table>
+      <p class="muted small">Gamepad: left stick = pitch/roll, right stick = rudder, triggers = throttle, A gear, X/Y flaps, B speedbrake, LB brakes, RB autopilot. Joysticks / HOTAS: X/Y axes = roll/pitch, throttle axis, twist = rudder.</p>
+      <h3>Quick start</h3>
+      <ol class="small">
+        <li>Release the parking brake with <kbd>N</kbd>, set takeoff flaps with <kbd>F</kbd> (one or two notches).</li>
+        <li>Hold <kbd>W</kbd> for full thrust. At the "Rotate" call, hold <kbd>↓</kbd> gently to lift the nose ~10–15°.</li>
+        <li>Positive climb: gear up <kbd>G</kbd>, retract flaps <kbd>R</kbd> as you accelerate.</li>
+        <li>Engage the autopilot with <kbd>Z</kbd> or click the panel (CMD), set HDG/ALT/SPD with the MCP buttons.</li>
+        <li>To land: press APP on the MCP near the runway, extend flaps and gear, arm spoilers (<kbd>Shift</kbd>+<kbd>/</kbd>).</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============================== FLIGHT UI -->
+  <div id="flightUI" class="hidden">
+    <div id="cockpit">
+      <svg class="frame" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="pillar" x1="0" x2="1"><stop offset="0" stop-color="#1b1e22"/><stop offset="1" stop-color="#2e3238"/></linearGradient></defs>
+        <path d="M0 0 H1600 V40 Q800 20 0 40 Z" fill="#1d2024"/>
+        <path d="M0 0 L120 0 L250 560 L0 600 Z" fill="url(#pillar)"/>
+        <path d="M1600 0 L1480 0 L1350 560 L1600 600 Z" fill="url(#pillar)"/>
+        <path d="M784 30 L816 30 L812 560 L788 560 Z" fill="#202328"/>
+      </svg>
+      <div class="glareshield">
+        <div class="mcp" id="mcp">
+          <div class="mcp-group"><button class="mcp-btn" data-ap="at">A/T</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">IAS</span><div class="mcp-win" id="mcpSpd">250</div><div class="knob"><button data-inc="spd:-1">−</button><button data-inc="spd:1">+</button></div><button class="mcp-btn" data-ap="flch">FLCH</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">HDG</span><div class="mcp-win" id="mcpHdg">000</div><div class="knob"><button data-inc="hdg:-1">−</button><button data-inc="hdg:1">+</button></div><button class="mcp-btn" data-ap="hdg">HDG SEL</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">ALT</span><div class="mcp-win" id="mcpAlt">10000</div><div class="knob"><button data-inc="alt:-1">−</button><button data-inc="alt:1">+</button></div><button class="mcp-btn" data-ap="alt">ALT HLD</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">V/S</span><div class="mcp-win" id="mcpVs">+0000</div><div class="knob"><button data-inc="vs:-1">−</button><button data-inc="vs:1">+</button></div><button class="mcp-btn" data-ap="vs">V/S</button></div>
+          <div class="mcp-group"><button class="mcp-btn" data-ap="app">APP</button><button class="mcp-btn cmd" data-ap="cmd">CMD</button></div>
+        </div>
+      </div>
+      <div class="instrument-panel">
+        <div class="screen-bezel"><canvas id="pfd"></canvas></div>
+        <div class="screen-bezel"><canvas id="nd"></canvas></div>
+        <div class="screen-bezel"><canvas id="eicas"></canvas></div>
+        <div class="side-controls">
+          <button class="gear-lever" id="gearLever" title="Landing gear (G)"><span>GEAR</span><b id="gearState">DN</b></button>
+          <div class="lights"><span id="lgtL">●</span><span id="lgtN">●</span><span id="lgtR">●</span></div>
+          <div class="range"><span>ND RANGE</span><button id="rngDn">−</button><b id="rngVal">20</b><button id="rngUp">+</button></div>
+          <div class="thr"><span>THR</span><div class="thr-bar"><i id="thrFill"></i></div><b id="thrVal">0%</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hud">
+      <div class="hud-mini"><canvas id="pfdMini"></canvas></div>
+      <div class="hud-strip">
+        <div><span>IAS</span><b id="hIas">0</b></div><div><span>ALT</span><b id="hAlt">0</b></div><div><span>V/S</span><b id="hVs">0</b></div>
+        <div><span>HDG</span><b id="hHdg">000</b></div><div><span>THR</span><b id="hThr">0%</b></div><div><span>FLAPS</span><b id="hFlaps">0</b></div>
+        <div><span>GEAR</span><b id="hGear">DN</b></div><div><span>AP</span><b id="hAp">OFF</b></div>
+      </div>
+    </div>
+    <div id="topbar">
+      <span id="viewName">Chase</span>
+      <button class="icon-btn" id="btnView" title="Camera (C)">🎥</button>
+      <button class="icon-btn" id="btnPanel" title="Panel (H)">▤</button>
+      <button class="icon-btn" id="btnMute" title="Mute (M)">🔊</button>
+      <button class="icon-btn" id="btnPause" title="Pause (P)">⏸</button>
+    </div>
+    <div id="hint"></div>
+  </div>
+
+  <div id="pause" class="screen hidden"><div class="panel small-panel"><h2>Paused</h2>
+    <button class="btn primary" id="resumeBtn">Resume</button><button class="btn" id="restartBtn">Restart flight</button>
+    <button class="btn" data-go="help">Controls</button><button class="btn" id="quitBtn">Main menu</button></div></div>
+  <div id="crash" class="screen hidden"><div class="panel small-panel"><h2>Crashed</h2><p id="crashReason"></p>
+    <button class="btn primary" id="crashRestart">Try again</button><button class="btn" id="crashQuit">Main menu</button></div></div>
+  <div id="loading" class="screen hidden"><div class="loading-card"><div class="spinner"></div><p id="loadingText">Loading…</p><div class="bar"><i id="loadingBar"></i></div></div></div>
+  <div id="toasts"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

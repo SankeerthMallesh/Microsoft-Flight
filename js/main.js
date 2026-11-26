@@ -1,0 +1,540 @@
+// OpenSkies Flight Simulator — application controller.
+import { AIRCRAFT, MAKERS, getAircraft, deriveAero } from './data/aircraft.js';
+import { LIVERIES, liveriesFor, getLivery } from './data/liveries.js';
+import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear } from './data/airports.js';
+import { getAircraftGLB } from './model/factory.js';
+import { World } from './world.js';
+import { FlightModel } from './sim/flightmodel.js';
+import { Autopilot } from './sim/autopilot.js';
+import { Input, KEY_HELP } from './input.js';
+import { Audio } from './audio.js';
+import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
+import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360 } from './sim/math.js';
+
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('openskies.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('openskies.' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
+};
+
+// ------------------------------------------------------------------ state
+const settings = Object.assign({ ionToken: '', scenery: 'photoreal', quality: 'medium', shadows: false, assist: 'assisted', invertPitch: false, volume: 0.7 }, store.get('settings', {}));
+const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60 }, store.get('plan', {}));
+const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
+const input = new Input();
+const audio = new Audio();
+input.invertPitch = settings.invertPitch;
+audio.setVolume(settings.volume);
+
+// ------------------------------------------------------------------ screens
+const SCREENS = ['menu', 'setup', 'hangar', 'settings', 'help', 'pause', 'crash'];
+function show(name, push = true) {
+  if (name === 'back') { name = app.history.pop() || 'menu'; push = false; }
+  if (push && app.screen && app.screen !== name) app.history.push(app.screen);
+  for (const s of SCREENS) $(s).classList.toggle('hidden', s !== name);
+  app.screen = name;
+  if (name === 'hangar') openHangar(); else if (app.hangar) app.hangar.stop();
+  if (name === 'setup') refreshSetup();
+  if (name === 'settings') loadSettingsForm();
+  $('cesium').style.visibility = name === 'hangar' ? 'hidden' : 'visible';
+}
+document.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]');
+  if (go) { e.preventDefault(); show(go.dataset.go); }
+});
+function hideAllScreens() { for (const s of SCREENS) $(s).classList.add('hidden'); app.screen = null; }
+
+function toast(text, kind = '') {
+  const el = document.createElement('div'); el.className = 'toast ' + kind; el.textContent = text;
+  $('toasts').appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 450); }, 3200);
+  while ($('toasts').children.length > 4) $('toasts').firstChild.remove();
+}
+function loading(on, text, frac) {
+  $('loading').classList.toggle('hidden', !on);
+  if (text) $('loadingText').textContent = text;
+  if (frac != null) $('loadingBar').style.width = Math.round(frac * 100) + '%';
+}
+
+// ------------------------------------------------------------------ help table
+$('helpTable').innerHTML = KEY_HELP.map(([a, k]) => `<tr><td>${a}</td><td>${k}</td></tr>`).join('');
+
+// ------------------------------------------------------------------ settings form
+function loadSettingsForm() {
+  $('tokenInput').value = settings.ionToken; $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
+  $('shadowsChk').checked = settings.shadows; $('assistSel').value = settings.assist; $('invertChk').checked = settings.invertPitch; $('volSel').value = settings.volume;
+}
+$('saveSettings').onclick = () => {
+  settings.ionToken = $('tokenInput').value.trim(); settings.scenery = $('scenerySel').value; settings.quality = $('qualitySel').value;
+  settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value;
+  store.set('settings', settings); location.reload();
+};
+
+// ------------------------------------------------------------------ livery chips
+function chipsHTML(lv) {
+  const cols = [lv.base || '#fff', lv.belly, lv.finBase || lv.base, lv.engine].filter(Boolean);
+  return cols.map((c) => `<i style="background:${c}"></i>`).join('');
+}
+
+// ------------------------------------------------------------------ setup screen
+let airportResults = [];
+function refreshSetup() {
+  const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId);
+  $('acName').textContent = `${ac.maker} ${ac.name}`;
+  $('liveryName').textContent = `${lv.name} — ${lv.subtitle || ''}`;
+  $('liveryChips').innerHTML = chipsHTML(lv);
+  const ap = getAirport(plan.airport);
+  if (ap) {
+    $('airportPicked').textContent = `${ap.i}${ap.a ? ' / ' + ap.a : ''} — ${ap.n}, ${ap.c} (${ap.k}) · elev ${ap.e} ft`;
+    const ends = runwayEnds(ap).sort((a, b) => b.length - a.length);
+    $('runwaySel').innerHTML = ends.map((r) => `<option value="${r.ident}">RWY ${r.ident} — ${Math.round(r.lengthFt).toLocaleString()} ft, hdg ${String(Math.round(wrap360(r.heading * R2D))).padStart(3, '0')}°</option>`).join('');
+    if (plan.runway && ends.some((r) => r.ident === plan.runway)) $('runwaySel').value = plan.runway; else plan.runway = ends[0]?.ident;
+  }
+  $('startSel').value = plan.start; $('timeSel').value = plan.hour; $('wxSel').value = plan.weather;
+  $('windDir').value = plan.windDir; $('windSpd').value = plan.windSpd; $('turbSel').value = String(plan.turb);
+  $('fuelSel').value = plan.fuel; $('payloadSel').value = plan.payload;
+  updateSetupLabels();
+}
+function updateSetupLabels() {
+  const h = +$('timeSel').value; const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  $('timeLbl').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} local`;
+  const ac = getAircraft(plan.acId);
+  const fuel = ac.fuel * (+$('fuelSel').value / 100);
+  const payloadMax = Math.max(0, ac.mtow - ac.oew - ac.fuel * 0.3);
+  const payload = payloadMax * (+$('payloadSel').value / 100) * 0.55;
+  $('fuelLbl').textContent = `${Math.round(fuel).toLocaleString()} kg`;
+  $('payloadLbl').textContent = `${Math.round(payload).toLocaleString()} kg`;
+  const gw = ac.oew + fuel + payload;
+  $('weightInfo').innerHTML = `Gross weight <b>${(gw / 1000).toFixed(1)} t</b> / MTOW ${(ac.mtow / 1000).toFixed(1)} t` + (gw > ac.mtow ? ' <span style="color:var(--bad)">OVERWEIGHT</span>' : '');
+  $('windLbl').textContent = '';
+}
+for (const id of ['timeSel', 'fuelSel', 'payloadSel']) $(id).addEventListener('input', updateSetupLabels);
+const savePlanFromForm = () => {
+  plan.runway = $('runwaySel').value; plan.start = $('startSel').value; plan.hour = +$('timeSel').value; plan.weather = $('wxSel').value;
+  plan.windDir = +$('windDir').value || 0; plan.windSpd = +$('windSpd').value || 0; plan.turb = +$('turbSel').value; plan.fuel = +$('fuelSel').value; plan.payload = +$('payloadSel').value;
+  store.set('plan', plan);
+};
+['runwaySel', 'startSel', 'wxSel', 'windDir', 'windSpd', 'turbSel', 'fuelSel', 'payloadSel', 'timeSel'].forEach((id) => $(id).addEventListener('change', savePlanFromForm));
+let resIdx = -1;
+$('airportSearch').addEventListener('input', () => {
+  airportResults = searchAirports($('airportSearch').value);
+  resIdx = -1; renderResults();
+});
+$('airportSearch').addEventListener('focus', () => { airportResults = searchAirports($('airportSearch').value); renderResults(); });
+$('airportSearch').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown') { resIdx = Math.min(airportResults.length - 1, resIdx + 1); renderResults(); e.preventDefault(); }
+  if (e.key === 'ArrowUp') { resIdx = Math.max(0, resIdx - 1); renderResults(); e.preventDefault(); }
+  if (e.key === 'Enter' && airportResults.length) pickAirport(airportResults[Math.max(0, resIdx)]);
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('.search')) $('airportResults').classList.add('hidden'); });
+function renderResults() {
+  const ul = $('airportResults');
+  ul.innerHTML = airportResults.map((a, i) => `<li data-i="${i}" class="${i === resIdx ? 'active' : ''}"><b>${a.i}</b><span>${a.n}<br><small class="muted">${a.c}, ${a.k}${a.a ? ' · ' + a.a : ''}</small></span></li>`).join('');
+  ul.classList.toggle('hidden', !airportResults.length);
+  ul.querySelectorAll('li').forEach((li) => li.addEventListener('mousedown', (e) => { e.preventDefault(); pickAirport(airportResults[+li.dataset.i]); }));
+}
+function pickAirport(a) {
+  plan.airport = a.i; plan.runway = null; $('airportSearch').value = ''; $('airportResults').classList.add('hidden');
+  store.set('plan', plan); refreshSetup();
+  if (app.world && !app.flying) app.world.menuOrbit(a.la, a.lo);
+}
+$('flyBtn').onclick = () => { savePlanFromForm(); startFlight(); };
+
+// ------------------------------------------------------------------ hangar
+let hangarSel = { acId: plan.acId, liveryId: plan.liveryId };
+async function openHangar() {
+  if (!app.hangar) {
+    try {
+      const { Hangar } = await import('./hangar.js');
+      app.hangar = new Hangar($('hangarCanvas'));
+    } catch (e) { console.error(e); toast('Hangar 3D view failed to load: ' + e.message, 'bad'); }
+  }
+  hangarSel = { acId: plan.acId, liveryId: plan.liveryId };
+  renderAcList(); selectHangarAc(hangarSel.acId, hangarSel.liveryId);
+  app.hangar?.start();
+}
+function renderAcList() {
+  const f = $('acFilter').value.trim().toLowerCase();
+  const html = MAKERS.map((m) => {
+    const items = AIRCRAFT.filter((a) => a.maker === m && (!f || (a.maker + ' ' + a.name + ' ' + a.category).toLowerCase().includes(f)));
+    if (!items.length) return '';
+    return `<div class="ac-group"><h4>${m}</h4>${items.map((a) => `<div class="ac-item ${a.id === hangarSel.acId ? 'active' : ''}" data-ac="${a.id}"><span>${a.name}</span><small>${a.category}</small></div>`).join('')}</div>`;
+  }).join('');
+  $('acList').innerHTML = html;
+  $('acList').querySelectorAll('.ac-item').forEach((el) => el.addEventListener('click', () => selectHangarAc(el.dataset.ac)));
+}
+$('acFilter').addEventListener('input', renderAcList);
+$('allLiveries').addEventListener('change', () => renderLiveries());
+function selectHangarAc(acId, liveryId) {
+  const ac = getAircraft(acId);
+  const lvs = liveriesFor(acId);
+  if (!liveryId || !(lvs.some((l) => l.id === liveryId) || $('allLiveries').checked)) liveryId = (lvs.find((l) => l.id !== 'plain-white') || lvs[0]).id;
+  hangarSel = { acId, liveryId };
+  document.querySelectorAll('.ac-item').forEach((el) => el.classList.toggle('active', el.dataset.ac === acId));
+  $('hMaker').textContent = ac.maker; $('hName').textContent = ac.name; $('hCat').textContent = ac.category + (ac.fbw ? ' · Fly-by-wire' : '');
+  const e = ac.engines, p = ac.perf;
+  const rows = [
+    ['Length', `${ac.length.toFixed(2)} m`], ['Wingspan', `${ac.span.toFixed(2)} m`], ['Height', `${ac.height.toFixed(2)} m`], ['Wing area', `${ac.wingArea} m²`],
+    ['Max take-off weight', `${(ac.mtow / 1000).toFixed(1)} t`], ['Empty weight', `${(ac.oew / 1000).toFixed(1)} t`], ['Fuel capacity', `${(ac.fuel / 1000).toFixed(1)} t`],
+    ['Engines', `${e.count} × ${e.name}`], [e.thrust ? 'Thrust (each)' : 'Power (each)', e.thrust ? `${e.thrust} kN` : `${e.power} kW (${Math.round(e.power * 1.341)} shp)`],
+    ['Cruise', p.cruiseMach ? `Mach ${p.cruiseMach}` : `${p.cruiseKtas} KTAS`], ['Max operating', p.cruiseMach ? `${p.vmo} KIAS / M${p.mmo}` : `${p.vmo} KIAS`],
+    ['Range', `${p.range.toLocaleString()} km (${Math.round(p.range / 1.852).toLocaleString()} nm)`], ['Service ceiling', `${p.ceiling.toLocaleString()} ft`], ['Seats', p.seats],
+  ];
+  $('hSpecs').innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+  renderLiveries();
+  showHangarModel();
+}
+function renderLiveries() {
+  const acId = hangarSel.acId;
+  const list = $('allLiveries').checked ? LIVERIES : liveriesFor(acId);
+  $('hLiveries').innerHTML = list.map((l) => `<div class="livery ${l.id === hangarSel.liveryId ? 'active' : ''}" data-lv="${l.id}"><span class="chips">${chipsHTML(l)}</span><div><b>${l.name}</b><small>${l.subtitle || ''}${l.fleet !== '*' && !l.fleet.includes(acId) ? ' · not in real fleet' : ''}</small></div></div>`).join('');
+  $('hLiveries').querySelectorAll('.livery').forEach((el) => el.addEventListener('click', () => { hangarSel.liveryId = el.dataset.lv; renderLiveries(); showHangarModel(); }));
+}
+async function showHangarModel() {
+  if (!app.hangar) return;
+  $('hangarLoading').classList.remove('hidden');
+  try { await app.hangar.show(hangarSel.acId, hangarSel.liveryId); } catch (e) { console.error(e); toast('Could not build model: ' + e.message, 'bad'); }
+  $('hangarLoading').classList.add('hidden');
+}
+$('hSelect').onclick = () => {
+  plan.acId = hangarSel.acId; plan.liveryId = hangarSel.liveryId; store.set('plan', plan);
+  toast(`${getAircraft(plan.acId).name} · ${getLivery(plan.liveryId).name} selected`, 'good');
+  show('setup');
+};
+
+// ------------------------------------------------------------------ flight start
+async function startFlight() {
+  const world = app.world;
+  if (!world) return;
+  hideAllScreens();
+  loading(true, 'Preparing aircraft…', 0.05);
+  try {
+    const ap = getAirport(plan.airport);
+    const ends = runwayEnds(ap);
+    const rwy = ends.find((r) => r.ident === plan.runway) || ends[0];
+    app.rwy = rwy;
+    const ac = getAircraft(plan.acId);
+    const built = await getAircraftGLB(plan.acId, plan.liveryId);
+    loading(true, 'Loading aircraft into the world…', 0.15);
+    await world.loadAircraft(built.glb, built.physics);
+    world.model.show = false;
+    world.stopMenuOrbit();
+    world.viewer.scene.screenSpaceCameraController.enableInputs = false;
+    world.setWeather(plan.weather);
+    world.setTimeOfDay(plan.hour, rwy.lon);
+    // load scenery around the runway threshold first (to measure terrain/geoid offset)
+    const Cesium = window.Cesium;
+    world.viewer.camera.setView({ destination: Cesium.Cartesian3.fromRadians(rwy.lon, rwy.lat, rwy.elevM + 250), orientation: { heading: rwy.heading, pitch: -0.35, roll: 0 } });
+    loading(true, 'Streaming scenery for ' + ap.n + '…', 0.2);
+    await world.waitForScenery(world.mode === 'lite' ? 3000 : 20000, (f) => loading(true, null, 0.2 + f * 0.5));
+    let hThr;
+    for (let i = 0; i < 30 && hThr === undefined; i++) { hThr = world.groundHeight(rwy.lat, rwy.lon); if (hThr === undefined) await new Promise((r) => setTimeout(r, 100)); }
+    const geoid = hThr !== undefined ? hThr - rwy.elevM : 0;
+    // spawn
+    const fm = new FlightModel(ac, built.physics);
+    fm.assist = settings.assist;
+    const apl = new Autopilot(fm);
+    apl.on((msg, bad) => { toast(msg, /disconnect/i.test(msg) ? 'warn' : ''); if (/disconnected/i.test(msg)) audio.apDisconnect(); });
+    app.fm = fm; app.ap = apl;
+    const isGA = ac.category === 'General aviation';
+    const fuel = ac.fuel * (plan.fuel / 100);
+    const payload = Math.max(0, ac.mtow - ac.oew - ac.fuel * 0.3) * (plan.payload / 100) * 0.55;
+    const windFrom = plan.windDir * D2R, ws = plan.windSpd * KT;
+    const wind = [-Math.cos(windFrom) * ws, -Math.sin(windFrom) * ws, 0];
+    const base = { fuel, payload, geoid, wind, turbulence: plan.turb, heading: rwy.heading };
+    let spawn;
+    if (plan.start === 'runway') {
+      const [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
+      let hg = world.groundHeight(la, lo); if (hg === undefined) hg = rwy.elevM + geoid;
+      spawn = { ...base, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
+      fm.reset(spawn);
+    } else {
+      const approach = plan.start === 'approach';
+      const dist = (approach ? 6 : 12) * NM;
+      const [aimLa, aimLo] = destination(rwy.lat, rwy.lon, rwy.heading, rwy.aim);
+      const [la, lo] = destination(aimLa, aimLo, rwy.heading + Math.PI, dist);
+      const altMsl = approach ? rwy.elevM + dist * Math.tan(3 * D2R) + 15 : rwy.elevM + (isGA ? 3000 : ac.engines.type === 'turboprop' ? 5000 : 6000) * FT;
+      fm.reset({ ...base, lat: la, lon: lo, h: altMsl + geoid, groundH: rwy.elevM + geoid, flapIndex: approach ? ac.flaps.length - 1 : 0, gearDown: approach });
+      const vs = fm.vspeeds();
+      const ias = approach ? vs.vref + 5 : isGA ? 100 : ac.engines.type === 'turboprop' ? 200 : 250;
+      const atm = isa(altMsl, 0);
+      const V = (ias * KT) / Math.sqrt(atm.sigma);
+      const gamma = approach ? -3 * D2R : 0;
+      const A = fm.aero;
+      const CL = (fm.mass * G0) / (0.5 * atm.rho * V * V * ac.wingArea);
+      const alpha = (CL - A.cl0 - A.dclFlaps * fm.flapLevels[fm.flapIndex].flap * 0.8) / A.clAlpha;
+      fm.flap = fm.flapLevels[fm.flapIndex].flap; fm.slat = fm.flapLevels[fm.flapIndex].slat;
+      fm.q = eulerToQuat(rwy.heading, alpha + gamma, 0);
+      fm.vel = [V * Math.cos(gamma) * Math.cos(rwy.heading), V * Math.cos(gamma) * Math.sin(rwy.heading), -V * Math.sin(gamma)];
+      fm.airTime = 10; fm.gearPos = approach ? 1 : 0;
+      // thrust to balance drag (approximate L/D)
+      const LD = approach ? (isGA ? 7 : 8.5) : isGA ? 9 : 15;
+      const Treq = (fm.mass * G0) / LD + fm.mass * G0 * Math.sin(gamma);
+      let thr = 0.5;
+      for (let i = 0; i < 25; i++) {
+        fm.ctl.throttle = thr; for (const e of fm.engines) e.n1 = e.idle + thr * (100 - e.idle);
+        fm.updateEngines(1e-4, atm, V, V / atm.a);
+        const T = fm.engines.reduce((s, e) => s + e.thrust, 0);
+        thr = clamp(thr + (Treq - T) / (fm.engines.length * (fm.engines[0].maxThrust || fm.engines[0].maxPower * 0.004)) * 0.6, 0.05, 1);
+      }
+      fm.calcOutputs(atm, wind);
+      apl.sync();
+      if (approach) { apl.setApproach(rwy); apl.appArmed = true; apl.engaged = false; apl.spd = Math.round(ias); }
+      else { apl.alt = Math.round(fm.out.alt / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = ias; apl.vert = 'ALT'; apl.lat = 'HDG'; apl.engaged = true; apl.at = true; apl.runway = rwy; }
+    }
+    if (plan.start === 'runway') { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
+    world.setRunwayLights(rwy, geoid);
+    world.resetCamera();
+    app.view = plan.start === 'runway' ? 'chase' : 'chase';
+    setView(app.view);
+    // stream scenery at spawn point for air starts
+    world.updateAircraft(fm, 0, true);
+    world.updateCamera(fm, 0.016);
+    if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
+    audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
+    app.flying = true; app.paused = false; app.crashed = false;
+    input.enabled = true;
+    $('flightUI').classList.remove('hidden');
+    loading(false);
+    toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} RWY ${rwy.ident}`, 'good');
+    if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
+    if (world.mode === 'lite' && settings.scenery !== 'lite') toast('Using Lite scenery — add a Cesium ion token in Settings for 3D terrain', 'warn');
+    app.lastT = performance.now();
+  } catch (err) {
+    console.error(err);
+    loading(false);
+    toast('Could not start flight: ' + err.message, 'bad');
+    show('setup');
+  }
+}
+
+// ------------------------------------------------------------------ views
+const VIEWS = ['cockpit', 'chase', 'orbit', 'tower'];
+const VIEW_NAMES = { cockpit: 'Cockpit', chase: 'Chase', orbit: 'Orbit (drag)', tower: 'Fly-by' };
+function setView(v) {
+  app.view = v; app.world.cam.mode = v; app.world.cam.lookYaw = 0; app.world.cam.lookPitch = v === 'cockpit' ? -6 * D2R : 0; app.world.cam.zoom = 1; app.world.cam.towerPos = null;
+  app.world.cam.fov = v === 'cockpit' ? 70 : 60;
+  const ui = $('flightUI'); ui.classList.toggle('view-cockpit', v === 'cockpit');
+  $('viewName').textContent = VIEW_NAMES[v];
+}
+function togglePanel() { app.panel = !app.panel; $('flightUI').classList.toggle('panel-off', !app.panel); }
+
+// ------------------------------------------------------------------ actions
+const act = {
+  gear: () => { const fm = app.fm; if (!fm || fm.ac.geo.fixedGear) return; if (fm.onGround && fm.gearDown) { toast('Gear locked down on the ground', 'warn'); return; } fm.gearDown = !fm.gearDown; audio.click(); toast('Gear ' + (fm.gearDown ? 'down' : 'up')); },
+  flapsDown: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex + 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
+  flapsUp: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex - 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
+  parkingBrake: () => { const fm = app.fm; if (!fm) return; fm.parkingBrake = !fm.parkingBrake; toast('Parking brake ' + (fm.parkingBrake ? 'set' : 'released')); },
+  spoiler: () => { const fm = app.fm; if (!fm) return; fm.spoilerHandle = fm.spoilerHandle > 0 ? 0 : fm.onGround ? 1 : 0.6; fm.spoilersArmed = false; toast('Speedbrake ' + (fm.spoilerHandle ? 'extended' : 'retracted')); },
+  spoilerArm: () => { const fm = app.fm; if (!fm) return; fm.spoilersArmed = !fm.spoilersArmed; fm.spoilerHandle = 0; toast('Ground spoilers ' + (fm.spoilersArmed ? 'armed' : 'disarmed')); },
+  reversers: () => { const fm = app.fm; if (!fm) return; if (!fm.onGround) { toast('Reversers only on the ground', 'warn'); return; } fm.reversers = !fm.reversers; if (fm.reversers) fm.ctl.throttle = Math.min(fm.ctl.throttle, 0.05); toast('Reverse thrust ' + (fm.reversers ? 'deployed' : 'stowed')); },
+  ap: () => { app.ap?.toggle(); }, at: () => { app.ap?.toggleAT(); },
+  camera: () => setView(VIEWS[(VIEWS.indexOf(app.view) + 1) % VIEWS.length]),
+  cam1: () => setView('cockpit'), cam2: () => setView('chase'), cam3: () => setView('orbit'), cam4: () => setView('tower'),
+  panel: togglePanel, mute: () => { audio.setMuted(!audio.muted); $('btnMute').textContent = audio.muted ? '🔇' : '🔊'; },
+  resetView: () => { app.world.cam.lookYaw = 0; app.world.cam.lookPitch = app.view === 'cockpit' ? -6 * D2R : 0; app.world.cam.zoom = 1; },
+  idle: () => { if (app.fm) app.fm.ctl.throttle = 0; }, full: () => { if (app.fm) app.fm.ctl.throttle = 1; },
+  help: () => { if (app.flying) { pause(true); show('help'); } },
+  pause: () => { if (!app.flying) { if (app.screen && app.screen !== 'menu') show('back'); return; } if (app.crashed) return; pause(!app.paused); },
+};
+for (const [k, fn] of Object.entries(act)) input.on(k, fn);
+function pause(on) {
+  app.paused = on; input.enabled = !on;
+  if (on) { show('pause'); } else { hideAllScreens(); app.lastT = performance.now(); }
+}
+$('resumeBtn').onclick = () => pause(false);
+$('restartBtn').onclick = () => { $('pause').classList.add('hidden'); endFlight(false); startFlight(); };
+$('quitBtn').onclick = () => endFlight(true);
+$('crashRestart').onclick = () => { endFlight(false); startFlight(); };
+$('crashQuit').onclick = () => endFlight(true);
+$('btnView').onclick = act.camera; $('btnPanel').onclick = togglePanel; $('btnMute').onclick = act.mute; $('btnPause').onclick = () => pause(true);
+$('gearLever').onclick = act.gear;
+$('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('rngUp').onclick = () => { app.ndRange = Math.min(160, app.ndRange * 2); };
+
+function endFlight(toMenu) {
+  app.flying = false; input.enabled = false; app.paused = false;
+  audio.stopEngines();
+  $('flightUI').classList.add('hidden');
+  if (app.world.model) app.world.model.show = false;
+  app.world.points.removeAll(); app.world.rwyPoints.removeAll();
+  if (toMenu) { app.history = []; show('menu', false); const a = getAirport(plan.airport); if (a) app.world.menuOrbit(a.la, a.lo); }
+}
+
+// ------------------------------------------------------------------ MCP
+function mcpInc(key, dir, big) {
+  const ap = app.ap; if (!ap) return;
+  if (key === 'spd') ap.spd = clamp(ap.spd + dir * (big ? 10 : 1), 60, 400);
+  if (key === 'hdg') ap.hdg = wrap360(ap.hdg + dir * (big ? 10 : 1));
+  if (key === 'alt') ap.alt = clamp(ap.alt + dir * (big ? 1000 : 100), 0, 50000);
+  if (key === 'vs') ap.vs = clamp(ap.vs + dir * 100, -6000, 6000);
+}
+document.querySelectorAll('[data-inc]').forEach((b) => {
+  let timer;
+  const [key, d] = b.dataset.inc.split(':');
+  const fire = (e) => mcpInc(key, +d, e.shiftKey);
+  b.addEventListener('pointerdown', (e) => { fire(e); let n = 0; timer = setInterval(() => { n++; mcpInc(key, +d, n > 10); }, 90); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => b.addEventListener(ev, () => clearInterval(timer)));
+});
+for (const [id, key] of [['mcpSpd', 'spd'], ['mcpHdg', 'hdg'], ['mcpAlt', 'alt'], ['mcpVs', 'vs']]) {
+  $(id).addEventListener('wheel', (e) => { e.preventDefault(); mcpInc(key, e.deltaY < 0 ? 1 : -1, e.shiftKey); }, { passive: false });
+}
+document.querySelectorAll('[data-ap]').forEach((b) => b.addEventListener('click', () => {
+  const ap = app.ap; if (!ap) return; audio.click();
+  switch (b.dataset.ap) {
+    case 'at': ap.toggleAT(); break;
+    case 'flch': ap.setVert('FLCH'); ap.spd = Math.round(app.fm.out.ias); if (!ap.at) ap.toggleAT(); break;
+    case 'hdg': ap.lat = 'HDG'; ap.appArmed = false; break;
+    case 'alt': ap.vert = 'ALT'; ap.alt = Math.round(app.fm.out.alt / 100) * 100; break;
+    case 'vs': ap.setVert('VS'); break;
+    case 'app': if (ap.appArmed || ap.lat === 'LOC') { ap.appArmed = false; ap.lat = 'HDG'; if (ap.vert === 'GS') ap.vert = 'VS'; toast('Approach disarmed'); } else ap.setApproach(app.rwy); break;
+    case 'cmd': ap.toggle(); break;
+  }
+}));
+
+// ------------------------------------------------------------------ main loop
+let frame = 0, groundTimer = 0, cloudTimer = 0, lastIas = 0, trend = 0;
+function tick() {
+  if (!app.flying) return;
+  const now = performance.now();
+  let dt = Math.min(0.1, (now - (app.lastT || now)) / 1000); app.lastT = now;
+  const fm = app.fm, world = app.world, ap = app.ap;
+  if (!fm) return;
+  frame++;
+  if (!app.paused && !app.crashed) {
+    const c = input.poll(dt, fm);
+    fm.ctl.pitch = c.pitch; fm.ctl.roll = c.roll; fm.ctl.yaw = c.yaw;
+    if (c.throttleAbs != null) fm.ctl.throttle = c.throttleAbs;
+    else if (c.throttleRate) { fm.ctl.throttle = clamp(fm.ctl.throttle + c.throttleRate * dt, 0, 1); if (ap.at && Math.abs(c.throttleRate) > 0.1 && !fm.onGround) { /* manual override */ ap.thrI = fm.ctl.throttle; } }
+    if (fm.reversers && c.throttleRate > 0) fm.ctl.throttle = clamp(fm.ctl.throttle, 0, 1);
+    fm.ctl.brakeL = fm.ctl.brakeR = c.brake;
+    if (c.brake && fm.parkingBrake && fm.onGround) { /* holding B with park brake: keep */ }
+    if (c.trimRate) fm.trim = clamp(fm.trim + c.trimRate * dt, -1, 1);
+    if (c.look) { world.cam.lookPitch = clamp(world.cam.lookPitch + c.look.pitch * dt, -1.2, 1.2); }
+    // ground height sampling
+    groundTimer -= dt;
+    if (groundTimer <= 0) {
+      groundTimer = fm.onGround || fm.out.agl < 300 ? 0.08 : 0.3;
+      const hg = world.groundHeight(fm.lat, fm.lon);
+      if (hg !== undefined && isFinite(hg)) {
+        // avoid sudden jumps from sampling parked aircraft / buildings on the runway
+        if (fm.onGround && Math.abs(hg - fm.groundH) > 4) fm.groundH += clamp(hg - fm.groundH, -0.5, 0.5);
+        else fm.groundH = hg;
+      }
+    }
+    ap.update(dt);
+    fm.step(dt, null);
+    for (const ev of fm.events.splice(0)) handleEvent(ev);
+  }
+  // camera input
+  const m = input.takeMouse();
+  const cam = world.cam;
+  if (m.dx || m.dy) {
+    if (app.view === 'orbit') { cam.orbitYaw += m.dx * 0.006; cam.orbitPitch = clamp(cam.orbitPitch - m.dy * 0.005, -1.4, 1.4); }
+    else { cam.lookYaw = clamp(cam.lookYaw + m.dx * 0.004, -2.6, 2.6); cam.lookPitch = clamp(cam.lookPitch - m.dy * 0.004, -1.3, 1.3); }
+  }
+  if (m.wheel) cam.zoom = clamp(cam.zoom * (m.wheel > 0 ? 0.88 : 1.14), 0.3, 5);
+  world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
+  world.updateCamera(fm, dt);
+  world.updatePapi(fm);
+  cloudTimer -= dt; if (cloudTimer <= 0) { cloudTimer = 1; world.updateClouds(fm.lat, fm.lon, fm.h); }
+  if (now - app.lastNear > 4000) { app.lastNear = now; app.nearby = airportsNear(fm.lat, fm.lon, app.ndRange * NM * 1.3, 25); }
+  audio.update(fm, app.view, dt);
+  // speed trend (kt per second, smoothed)
+  const o = fm.out;
+  if (dt > 0) trend += ((o.ias - lastIas) / dt - trend) * Math.min(1, dt * 2); lastIas = o.ias;
+  if (frame % 2 === 0) drawInstruments();
+  if (frame % 4 === 0) updateHud();
+}
+
+function handleEvent(ev) {
+  if (ev.type === 'touchdown') {
+    toast(`Touchdown ${-ev.fpm > 0 ? '' : '-'}${Math.abs(ev.fpm)} fpm · ${ev.rating}`, ev.fpm > 600 ? 'bad' : ev.fpm > 360 ? 'warn' : 'good');
+    audio.thump(clamp(ev.fpm / 400, 0.3, 1.5));
+  } else if (ev.type === 'liftoff') {
+    toast('Positive rate', 'good');
+  } else if (ev.type === 'crash') {
+    app.crashed = true; input.enabled = false; audio.thump(2); audio.stopEngines();
+    $('crashReason').textContent = ev.reason; show('crash', false);
+  } else if (ev.type === 'warn') { toast(ev.text, 'bad'); }
+  else if (ev.type === 'msg') toast(ev.text, 'warn');
+}
+
+function instrumentState() {
+  const fm = app.fm, ap = app.ap;
+  const vs = fm.vspeeds();
+  const stallSpeed = vs.vs1 * Math.sqrt((fm.aero.clmaxClean) / (fm.aero.clmaxClean + fm.aero.dclFlaps * fm.flap + fm.aero.dclSlats * fm.slat));
+  const ils = ap.runway ? ap.ils() : null;
+  const fma = [
+    ap.at ? (ap.retard ? 'RETARD' : ap.engaged && ap.vert === 'FLCH' ? (ap.alt > fm.out.alt ? 'THR' : 'IDLE') : 'SPD') : '',
+    ap.engaged ? (ap.lat === 'LOC' ? 'LOC' : 'HDG SEL') : ap.appArmed ? 'LOC (arm)' : '',
+    ap.engaged ? ({ ALT: 'ALT HOLD', VS: 'V/S', FLCH: 'FLCH SPD', GS: ap.flare ? 'FLARE' : 'G/S' }[ap.vert] || '') : '',
+  ];
+  return {
+    out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
+    trend, fma, ils: ils && ils.along > -200 && ils.d < 30 * NM && (ap.lat === 'LOC' || ap.appArmed) ? ils : null,
+    lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.rwy, dist: ils ? ils.d : null, fm,
+    warn: fm._tailStruck ? 'TAIL STRIKE' : fm.out.alt > fm.ac.perf.ceiling + 2000 ? 'ABOVE CEILING' : fm.out.ias > vs.vmo + 5 || fm.out.mach > vs.mmo + 0.01 ? 'OVERSPEED' : '',
+  };
+}
+function drawInstruments() {
+  const s = instrumentState();
+  if (app.view === 'cockpit') {
+    if (app.panel) { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
+  } else if (app.panel) drawPFD($('pfdMini'), s);
+}
+function updateHud() {
+  const fm = app.fm, o = fm.out, ap = app.ap;
+  $('hIas').textContent = Math.round(o.ias); $('hAlt').textContent = Math.round(o.alt).toLocaleString();
+  $('hVs').textContent = (o.vs > 0 ? '+' : '') + Math.round(o.vs / 10) * 10; $('hHdg').textContent = String(Math.round(o.hdg) % 360).padStart(3, '0');
+  $('hThr').textContent = Math.round(fm.ctl.throttle * 100) + '%' + (fm.reversers ? ' R' : '');
+  $('hFlaps').textContent = fm.flapLabel;
+  const gear = fm.ac.geo.fixedGear ? 'FIX' : fm.gearPos > 0.98 ? 'DN' : fm.gearPos < 0.02 ? 'UP' : '···';
+  $('hGear').textContent = gear; $('gearState').textContent = gear;
+  $('hAp').textContent = (ap.engaged ? 'CMD' : 'OFF') + (ap.at ? ' A/T' : '');
+  // cockpit panel bits
+  $('mcpSpd').textContent = Math.round(ap.spd); $('mcpHdg').textContent = String(Math.round(ap.hdg) % 360).padStart(3, '0');
+  $('mcpAlt').textContent = ap.alt; $('mcpVs').textContent = (ap.vs >= 0 ? '+' : '−') + String(Math.abs(ap.vs)).padStart(4, '0');
+  const on = (k, v) => document.querySelector(`[data-ap="${k}"]`)?.classList.toggle('on', !!v);
+  on('at', ap.at); on('cmd', ap.engaged); on('hdg', ap.engaged && ap.lat === 'HDG'); on('alt', ap.engaged && ap.vert === 'ALT'); on('vs', ap.engaged && ap.vert === 'VS'); on('flch', ap.engaged && ap.vert === 'FLCH'); on('app', ap.appArmed || ap.lat === 'LOC');
+  const g = fm.gearPos > 0.98 ? 'g' : fm.gearPos < 0.02 ? '' : 'a';
+  for (const id of ['lgtL', 'lgtN', 'lgtR']) $(id).className = g;
+  $('rngVal').textContent = app.ndRange;
+  $('thrFill').style.width = Math.round(fm.ctl.throttle * 100) + '%'; $('thrVal').textContent = Math.round(fm.ctl.throttle * 100) + '%';
+  let hint = '';
+  if (fm.parkingBrake && fm.onGround && fm.ctl.throttle > 0.2) hint = 'Parking brake is set — press N';
+  else if (o.stall) hint = 'STALL — lower the nose, add thrust';
+  else if (fm.onGround && fm.out.gs < 1 && !fm.parkingBrake && fm.ctl.throttle < 0.05 && frame < 400) hint = 'Hold W to add thrust';
+  $('hint').textContent = hint;
+}
+
+// ------------------------------------------------------------------ boot
+async function boot() {
+  $('tokenNote').textContent = settings.ionToken ? '' : 'Tip: add your free Cesium ion token in Settings for 3D terrain & photorealistic cities.';
+  loading(true, 'Starting OpenSkies…', 0.1);
+  try {
+    if (!window.Cesium) throw new Error('CesiumJS failed to load (check your internet connection).');
+    const world = new World('cesium');
+    await world.init(settings);
+    app.world = world;
+    input.attachMouse(world.viewer.canvas);
+    world.viewer.scene.preUpdate.addEventListener(tick);
+    world.viewer.shadows = !!settings.shadows;
+    if (settings.shadows) { const sm = world.viewer.scene.shadowMap; sm.softShadows = true; sm.size = 2048; sm.maximumDistance = 800; }
+    loading(true, 'Loading airports…', 0.3);
+    await loadAirports();
+    loading(true, 'Loading scenery…', 0.5);
+    const mode = await world.setScenery(settings.scenery, (t) => loading(true, t, 0.6));
+    if (mode !== settings.scenery && settings.scenery !== 'lite') $('tokenNote').textContent = settings.ionToken ? 'Could not load 3D scenery with this token — using Lite scenery.' : $('tokenNote').textContent;
+    world.setWeather(plan.weather);
+    const a = getAirport(plan.airport) || getAirport('KDAL');
+    world.setTimeOfDay(plan.hour, a.lo * D2R);
+    world.menuOrbit(a.la, a.lo);
+  } catch (e) {
+    console.error(e);
+    toast(e.message, 'bad');
+  }
+  loading(false);
+  show('menu', false);
+}
+window.__app = app; // handy for debugging in the console
+boot();
