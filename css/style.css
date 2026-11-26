@@ -201,3 +201,5 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 .ap-pop .row { margin-top: 8px; display: flex; gap: 6px; } .ap-pop select { padding: 5px; font-size: 0.8rem; color: #111; background: #fff; }
 .hud-dest b { color: #ff7af7; }
 #flightUI.view-cockpit #minimap { top: 12px; }
+#minimap .leaflet-control-layers { font-size: 0.75rem; color: #111; }
+#minimap .leaflet-control-layers-toggle { width: 30px; height: 30px; background-size: 18px; }

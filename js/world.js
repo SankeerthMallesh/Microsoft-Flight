@@ -65,7 +65,7 @@ export class World {
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
         const sse = { high: 6, medium: 10, low: 18 }[this.settings.quality] ?? 10;
         this.baseSSE = sse;
-        const ts = await Cesium.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: sse, cacheBytes: 1536 * 1024 * 1024, maximumCacheOverflowBytes: 1024 * 1024 * 1024, preloadFlightDestinations: true, foveatedScreenSpaceError: true });
+        const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, { maximumScreenSpaceError: sse, cacheBytes: 1536 * 1024 * 1024, maximumCacheOverflowBytes: 1024 * 1024 * 1024, preloadFlightDestinations: true, foveatedScreenSpaceError: true });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
         scene.globe.show = false;

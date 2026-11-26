@@ -10,9 +10,12 @@ export class MiniMap {
     this.follow = true; this.expanded = false;
     if (!window.L) { el.innerHTML = '<div class="map-off">Map unavailable (offline)</div>'; return; }
     const map = L.map(el.querySelector('.map-canvas'), { zoomControl: false, attributionControl: true, worldCopyJump: true, preferCanvas: true }).setView([0, 0], 9);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd', maxZoom: 18, attribution: '© OpenStreetMap contributors © CARTO',
-    }).addTo(map);
+    // free, no-key tile services (Esri street map by default, satellite and OpenStreetMap selectable)
+    const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' });
+    street.addTo(map);
+    L.control.layers({ Map: street, Satellite: sat, OpenStreetMap: osm }, null, { position: 'bottomright', collapsed: true }).addTo(map);
     this.map = map;
     this.planeIcon = L.divIcon({ className: 'plane-icon', html: '<svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 2 L23 15 L37 22 L37 25 L23 21 L22 31 L27 35 L27 37 L20 35 L13 37 L13 35 L18 31 L17 21 L3 25 L3 22 L17 15 Z" fill="#ffcc00" stroke="#222" stroke-width="1.4"/></svg>', iconSize: [34, 34], iconAnchor: [17, 17] });
     this.plane = L.marker([0, 0], { icon: this.planeIcon, interactive: false, zIndexOffset: 1000 }).addTo(map);
