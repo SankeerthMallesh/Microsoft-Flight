@@ -19,6 +19,9 @@ const store = {
 
 // ------------------------------------------------------------------ state
 const settings = Object.assign({ ionToken: '', scenery: 'photoreal', quality: 'medium', shadows: false, assist: 'assisted', invertPitch: false, volume: 0.7 }, store.get('settings', {}));
+// A token in config.js (written by the setup script) is used when none was saved in Settings.
+const fileToken = (window.OPENSKIES_CONFIG && String(window.OPENSKIES_CONFIG.ionToken || '').trim()) || '';
+if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
 const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60 }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const input = new Input();
