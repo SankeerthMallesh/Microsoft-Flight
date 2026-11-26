@@ -114,6 +114,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'a320neo', maker: 'Airbus', name: 'A320neo', family: 'A320', category: 'Narrow-body',
+    detailed: { glb: 'models/a320neo.glb', meta: 'models/a320neo.meta.json', credit: '"Airbus A320-200 V2" by Dlourine (Sketchfab), CC BY 4.0 — modified' },
     length: 37.57, span: 35.8, height: 11.76, wingArea: 122.6, mtow: 79000, oew: 44300, fuel: 21400,
     engines: { count: 2, type: 'turbofan', thrust: 120.6, name: 'CFM LEAP-1A / PW1100G' },
     perf: { mmo: 0.82, vmo: 350, cruiseMach: 0.78, ceiling: 39800, range: 6300, seats: '150–194' },
@@ -206,6 +207,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b737-max8', maker: 'Boeing', name: '737 MAX 8', family: '737 MAX', category: 'Narrow-body',
+    detailed: { glb: 'models/b737-max8.glb', meta: 'models/b737-max8.meta.json', credit: '"Boeing 737 MAX 8" by Dlourine (Sketchfab), CC BY 4.0 — modified' },
     length: 39.52, span: 35.9, height: 12.3, wingArea: 127, mtow: 82190, oew: 45070, fuel: 20700,
     engines: { count: 2, type: 'turbofan', thrust: 130.4, name: 'CFM LEAP-1B' },
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.79, ceiling: 41000, range: 6570, seats: '162–210' },

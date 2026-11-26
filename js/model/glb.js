@@ -113,11 +113,38 @@ function hexLinear(hex) {
   return [srgbToLinear(((n >> 16) & 255) / 255), srgbToLinear(((n >> 8) & 255) / 255), srgbToLinear((n & 255) / 255), 1];
 }
 // Swap the LIVERY material's texture for a freshly painted PNG and tint ENGINE/WING paint.
-export function patchDetailedGLB(bytes, png, colors) {
+export function patchDetailedGLB(bytes, png, colors, extraNodes = []) {
   const { json, bin } = parseGLB(bytes);
-  const start = pad4(bin.length);
+  // optional extra meshes (e.g. procedural landing gear for models built without gear), textured by the livery atlas
+  const extra = [];
+  let off = pad4(bin.length + 0);
+  const parts = [];
+  for (const n of extraNodes) {
+    for (const [arr, target] of [[n.positions, 34962], [n.normals, 34962], [n.uvs, 34962], [n.indices, 34963]]) {
+      const b = new Uint8Array(arr.buffer, arr.byteOffset, arr.byteLength);
+      parts.push({ b, off, target }); off = pad4(off + b.length);
+    }
+  }
+  const start = off;
   const nb = new Uint8Array(pad4(start + png.length));
-  nb.set(bin); nb.set(png, start);
+  nb.set(bin); for (const p of parts) nb.set(p.b, p.off); nb.set(png, start);
+  if (extraNodes.length) {
+    const livIdx = (json.materials || []).findIndex((m) => m.name === 'LIVERY');
+    let pi = 0;
+    for (const n of extraNodes) {
+      const acc = [];
+      for (const [arr, type, comp] of [[n.positions, 'VEC3', 5126], [n.normals, 'VEC3', 5126], [n.uvs, 'VEC2', 5126], [n.indices, 'SCALAR', 5125]]) {
+        const p = parts[pi++];
+        json.bufferViews.push({ buffer: 0, byteOffset: p.off, byteLength: p.b.length, target: p.target });
+        const a = { bufferView: json.bufferViews.length - 1, componentType: comp, count: arr.length / (type === 'VEC3' ? 3 : type === 'VEC2' ? 2 : 1), type };
+        if (type === 'VEC3' && acc.length === 0) { const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity]; for (let i = 0; i < arr.length; i += 3) for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k], arr[i + k]); mx[k] = Math.max(mx[k], arr[i + k]); } a.min = mn; a.max = mx; }
+        json.accessors.push(a); acc.push(json.accessors.length - 1);
+      }
+      json.meshes.push({ name: n.name, primitives: [{ attributes: { POSITION: acc[0], NORMAL: acc[1], TEXCOORD_0: acc[2] }, indices: acc[3], material: livIdx }] });
+      json.nodes.push({ name: n.name, mesh: json.meshes.length - 1, ...(n.translation && n.translation.some((v) => v) ? { translation: n.translation } : {}) });
+      json.scenes[json.scene || 0].nodes.push(json.nodes.length - 1);
+    }
+  }
   json.bufferViews.push({ buffer: 0, byteOffset: start, byteLength: png.length });
   const view = json.bufferViews.length - 1;
   json.buffers[0].byteLength = nb.length;

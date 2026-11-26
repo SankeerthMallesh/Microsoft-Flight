@@ -28,7 +28,7 @@ async function loadDetailed(ac) {
 }
 // physics tuned to the detailed model's real wheel positions
 function detailedPhysics(phys, meta) {
-  const c = meta.contacts; if (!c || !c.gearN || !c.gearL) return phys;
+  const c = meta.contacts; if (!c || !c.gearN || !c.gearL) return { ...phys, detailed: true, procGear: true };
   const p = JSON.parse(JSON.stringify(phys));
   const gz = Math.min(c.gearN[2], c.gearL[2], (c.gearR || c.gearL)[2]);
   const mx = (c.gearL[0] + (c.gearR || c.gearL)[0]) / 2, my = (Math.abs(c.gearL[1]) + Math.abs((c.gearR || c.gearL)[1])) / 2;
@@ -55,8 +55,10 @@ export async function getAircraftGLB(acId, liveryId) {
     try {
       const raw = await loadDetailed(ac0);
       const { bytes } = await paintLivery(geo.layout, livery, { detailed: true });
-      const glb = patchDetailedGLB(raw.glb, bytes, { engine: livery.engine || '#d9dce0', wing: livery.wing || '#c3c8cf' });
-      out = { glb, layout: geo.layout, physics: detailedPhysics(geo.physics, raw.meta), detailed: true, credit: ac0.detailed.credit };
+      const physics = detailedPhysics(geo.physics, raw.meta);
+      const gearNodes = physics.procGear ? geo.nodes.filter((n) => /^gear/.test(n.name)) : [];
+      const glb = patchDetailedGLB(raw.glb, bytes, { engine: livery.engine || '#d9dce0', wing: livery.wing || '#c3c8cf' }, gearNodes);
+      out = { glb, layout: geo.layout, physics, detailed: true, credit: ac0.detailed.credit };
     } catch (e) { console.warn('Detailed model unavailable, using procedural model:', e); }
   }
   if (!out) {
