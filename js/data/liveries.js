@@ -45,7 +45,7 @@ function finStripes(f, bands, a0 = 0, a1 = 1, wave = 0.05) {
 export const LIVERIES = [
   {
     id: 'southwest', name: 'Southwest Airlines', subtitle: 'Heart (2014)', country: 'US',
-    fleet: ['b737-700', 'b737-800', 'b737-max8'],
+    fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max7'],
     base: '#304CB2', wing: '#c4c8ce', engine: '#304CB2', engineLip: '#c9cdd3', pylon: '#304CB2', stab: '#304CB2', finBase: '#304CB2',
     wingletOut: '#304CB2', wingletIn: '#304CB2', belly: null, regColor: '#ffffff', doorColor: 'rgba(10,20,60,0.6)', windowColor: '#121a3a',
     fuselage(p, l) {
@@ -67,7 +67,7 @@ export const LIVERIES = [
   },
   {
     id: 'delta', name: 'Delta Air Lines', subtitle: 'Upward (2007)', country: 'US',
-    fleet: ['a220-300', 'a319neo', 'a321neo', 'a330-300', 'a330-900', 'a350-900', 'b737-800', 'b737-max9', 'b757-200', 'b767-300er', 'e175', 'crj900'],
+    fleet: ['a220-300', 'a319neo', 'a321neo', 'a330-300', 'a330-900', 'a350-900', 'b737-800', 'b737-max9', 'b757-200', 'b767-300er', 'e175', 'crj900', 'b717-200', 'b737-900er', 'a330-200', 'b767-400er', 'crj700'],
     base: '#ffffff', engine: '#0B2D6B', pylon: '#ffffff', stab: '#c9ced6', finBase: '#C01933', wingletOut: '#0B2D6B', wingletIn: '#C01933',
     fuselage(p, l) {
       p.band(-0.38, -1.6, '#0B2D6B');
@@ -110,7 +110,7 @@ export const LIVERIES = [
   },
   {
     id: 'united', name: 'United Airlines', subtitle: 'Evolution (2019)', country: 'US',
-    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'b757-200', 'b767-300er', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'b787-10', 'a319neo', 'a321neo', 'e175', 'crj900'],
+    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'b757-200', 'b767-300er', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'b787-10', 'a319neo', 'a321neo', 'e175', 'crj900', 'b737-900er', 'b767-400er', 'b737-max10', 'crj700', 'e190'],
     base: '#ffffff', engine: '#0E2A5C', engine2: '#0E2A5C', pylon: '#ffffff', finBase: '#0E2A5C', wingletOut: '#0E2A5C', wingletIn: '#0E2A5C',
     fuselage(p, l) {
       p.band(-0.3, -1.6, '#0E2A5C');
@@ -131,7 +131,7 @@ export const LIVERIES = [
   },
   {
     id: 'american', name: 'American Airlines', subtitle: '2013 livery', country: 'US',
-    fleet: ['a319neo', 'a321neo', 'b737-800', 'b737-max8', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'e175', 'crj900'],
+    fleet: ['a319neo', 'a321neo', 'b737-800', 'b737-max8', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'e175', 'crj900', 'crj700', 'b737-max10'],
     base: '#C9CED5', wing: '#bfc4cb', engine: '#b5bcc5', pylon: '#C9CED5', stab: '#C9CED5', finBase: '#C9CED5', wingletOut: '#0078D2', wingletIn: '#C30019',
     fuselage(p, l) {
       p.text('American', titleX(l, 0.4), TH, titleSize(l, 0.4), '#36495A', { font: FONTS.sans, weight: 600, spacing: 0.02 });
@@ -152,7 +152,7 @@ export const LIVERIES = [
   },
   {
     id: 'british', name: 'British Airways', subtitle: 'Chatham Dockyard', country: 'GB',
-    fleet: ['a319neo', 'a320neo', 'a321neo', 'a350-1000', 'a380-800', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'b787-10', 'b747-400', 'e190-e2'],
+    fleet: ['a319neo', 'a320neo', 'a321neo', 'a350-1000', 'a380-800', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9', 'b787-10', 'b747-400', 'e190-e2', 'e190'],
     base: '#f7f8fa', engine: '#0E1C3C', engineLip: '#c8ccd2', pylon: '#f7f8fa', stab: '#c9ced6', finBase: '#012169', wingletOut: '#0E1C3C', wingletIn: '#0E1C3C',
     fuselage(p, l) {
       p.band(-0.32, -1.6, '#0E1C3C');
@@ -174,7 +174,7 @@ export const LIVERIES = [
   },
   {
     id: 'lufthansa', name: 'Lufthansa', subtitle: '2018 livery', country: 'DE',
-    fleet: ['a319neo', 'a320neo', 'a321neo', 'a330-300', 'a340-600', 'a350-900', 'a380-800', 'b747-400', 'b747-8i', 'b787-9', 'crj900'],
+    fleet: ['a319neo', 'a320neo', 'a321neo', 'a330-300', 'a340-600', 'a350-900', 'a380-800', 'b747-400', 'b747-8i', 'b787-9', 'crj900', 'b747-8f'],
     base: '#ffffff', engine: '#05164D', pylon: '#ffffff', finBase: '#05164D', wingletOut: '#05164D', wingletIn: '#05164D',
     fuselage(p, l) {
       p.band(3, (x) => 0.82 - 1.3 * Math.pow((x - (l.tailStart - l.L * 0.05)) / (l.Lt + l.L * 0.05), 0.9), '#05164D', { x0: l.tailStart - l.L * 0.05 });
@@ -207,7 +207,7 @@ export const LIVERIES = [
   },
   {
     id: 'klm', name: 'KLM Royal Dutch Airlines', subtitle: '2014 livery', country: 'NL',
-    fleet: ['b737-800', 'b777-200er', 'b777-300er', 'b787-9', 'b787-10', 'a321neo', 'a330-300', 'e175', 'e195-e2'],
+    fleet: ['b737-800', 'b777-200er', 'b777-300er', 'b787-9', 'b787-10', 'a321neo', 'a330-300', 'e175', 'e195-e2', 'e190'],
     base: '#00A1DE', belly: '#ffffff', engine: '#00A1DE', pylon: '#00A1DE', stab: '#00A1DE', finBase: '#00A1DE', wingletOut: '#00A1DE', wingletIn: '#00A1DE',
     windowColor: '#07344a', regColor: '#003082',
     fuselage(p, l) {
@@ -224,7 +224,7 @@ export const LIVERIES = [
   },
   {
     id: 'qatar', name: 'Qatar Airways', subtitle: 'Oryx', country: 'QA',
-    fleet: ['a320neo', 'a321neo', 'a350-900', 'a350-1000', 'a380-800', 'b777-200er', 'b777-300er', 'b777-9', 'b777f', 'b787-8', 'b787-9', 'b737-max8'],
+    fleet: ['a320neo', 'a321neo', 'a350-900', 'a350-1000', 'a380-800', 'b777-200er', 'b777-300er', 'b777-9', 'b777f', 'b787-8', 'b787-9', 'b737-max8', 'a330-200', 'b747-8f'],
     base: '#ffffff', engine: '#e8e8ea', pylon: '#ffffff', finBase: '#5C0632', wingletOut: '#5C0632', wingletIn: '#5C0632', stab: '#d0d3d8',
     fuselage(p, l) {
       const x0 = l.tailStart - l.L * 0.1;
@@ -264,7 +264,7 @@ export const LIVERIES = [
   },
   {
     id: 'ryanair', name: 'Ryanair', subtitle: '2014 livery', country: 'IE',
-    fleet: ['b737-800', 'b737-max8'],
+    fleet: ['b737-800', 'b737-max8', 'b737-max10'],
     base: '#ffffff', engine: '#073590', pylon: '#ffffff', finBase: '#073590', wingletOut: '#073590', wingletIn: '#F1C933',
     fuselage(p, l) {
       p.band(-0.3, -1.6, '#073590');
@@ -292,7 +292,7 @@ export const LIVERIES = [
   },
   {
     id: 'aircanada', name: 'Air Canada', subtitle: '2017 livery', country: 'CA',
-    fleet: ['a220-300', 'a321neo', 'a330-300', 'b737-max8', 'b777-300er', 'b787-8', 'b787-9', 'crj900', 'dash8-400', 'e175'],
+    fleet: ['a220-300', 'a321neo', 'a330-300', 'b737-max8', 'b777-300er', 'b787-8', 'b787-9', 'crj900', 'dash8-400', 'e175', 'crj700', 'b737-max10'],
     base: '#ffffff', engine: '#111111', pylon: '#ffffff', finBase: '#111111', wingletOut: '#111111', wingletIn: '#111111',
     fuselage(p, l) {
       p.band(-0.42, -1.6, '#111111');
@@ -306,7 +306,7 @@ export const LIVERIES = [
   },
   {
     id: 'qantas', name: 'Qantas', subtitle: 'Flying Kangaroo (2016)', country: 'AU',
-    fleet: ['b737-800', 'a330-300', 'a380-800', 'b787-9', 'a220-300', 'a321neo', 'dash8-400', 'b747-400', 'a350-1000'],
+    fleet: ['b737-800', 'a330-300', 'a380-800', 'b787-9', 'a220-300', 'a321neo', 'dash8-400', 'b747-400', 'a350-1000', 'a330-200', 'b717-200'],
     base: '#ffffff', engine: '#d6d9de', pylon: '#ffffff', finBase: '#E40000', wingletOut: '#E40000', wingletIn: '#E40000', stab: '#cfd2d6',
     fuselage(p, l) {
       p.text('QANTAS', titleX(l, 0.3), TH, titleSize(l, 0.33), '#1e1e1e', { font: FONTS.sans, weight: 800, spacing: 0.1 });
@@ -331,7 +331,7 @@ export const LIVERIES = [
   },
   {
     id: 'jal', name: 'Japan Airlines', subtitle: 'Tsurumaru', country: 'JP',
-    fleet: ['b737-800', 'a350-900', 'a350-1000', 'b767-300er', 'b787-8', 'b787-9', 'b777-300er', 'e190-e2', 'e175'],
+    fleet: ['b737-800', 'a350-900', 'a350-1000', 'b767-300er', 'b787-8', 'b787-9', 'b777-300er', 'e190-e2', 'e175', 'e190'],
     base: '#ffffff', engine: '#e1e3e6', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#ffffff', wingletIn: '#ffffff', stab: '#e1e3e6',
     fuselage(p, l) { p.text('JAPAN AIRLINES', titleX(l, 0.33), TH, titleSize(l, 0.26), '#1a1a1a', { font: FONTS.sans, weight: 700, spacing: 0.1 }); },
     fin(f) {
@@ -347,7 +347,7 @@ export const LIVERIES = [
   },
   {
     id: 'turkish', name: 'Turkish Airlines', subtitle: '2010 livery', country: 'TR',
-    fleet: ['a321neo', 'a330-300', 'a350-900', 'b737-800', 'b737-max8', 'b737-max9', 'b777-300er', 'b787-9', 'b777f'],
+    fleet: ['a321neo', 'a330-300', 'a350-900', 'b737-800', 'b737-max8', 'b737-max9', 'b777-300er', 'b787-9', 'b777f', 'a330-200'],
     base: '#ffffff', engine: '#e0e2e5', pylon: '#ffffff', finBase: '#C70A0C', wingletOut: '#C70A0C', wingletIn: '#C70A0C', stab: '#d4d7db',
     fuselage(p, l) {
       p.text('TURKISH AIRLINES', titleX(l, 0.33), TH, titleSize(l, 0.27), '#232B38', { font: FONTS.sans, weight: 800, spacing: 0.06 });
@@ -360,7 +360,7 @@ export const LIVERIES = [
   },
   {
     id: 'alaska', name: 'Alaska Airlines', subtitle: '2016 livery', country: 'US',
-    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'e175', 'b787-9'],
+    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'e175', 'b787-9', 'b737-900er'],
     base: '#ffffff', engine: '#01426A', pylon: '#ffffff', finBase: '#01426A', wingletOut: '#01426A', wingletIn: '#48A9C5',
     fuselage(p, l) {
       p.text('Alaska', titleX(l, 0.33), TH, titleSize(l, 0.45), '#01426A', { font: FONTS.script, weight: 400 });
@@ -382,7 +382,7 @@ export const LIVERIES = [
   },
   {
     id: 'jetblue', name: 'JetBlue', subtitle: 'Bluemanity', country: 'US',
-    fleet: ['a220-300', 'a320neo', 'a321neo', 'e190-e2'],
+    fleet: ['a220-300', 'a320neo', 'a321neo', 'e190-e2', 'e190'],
     base: '#ffffff', engine: '#003876', pylon: '#ffffff', finBase: '#003876', wingletOut: '#003876', wingletIn: '#0033A0',
     fuselage(p, l) {
       p.band(-0.32, -1.6, '#003876');
@@ -401,7 +401,7 @@ export const LIVERIES = [
   },
   {
     id: 'cathay', name: 'Cathay Pacific', subtitle: 'Brushwing (2015)', country: 'HK',
-    fleet: ['a321neo', 'a330-300', 'a350-900', 'a350-1000', 'b777-300er', 'b777-9', 'b747-8i', 'b777f'],
+    fleet: ['a321neo', 'a330-300', 'a350-900', 'a350-1000', 'b777-300er', 'b777-9', 'b747-8i', 'b777f', 'b747-8f'],
     base: '#ffffff', belly: '#9aa3a6', engine: '#d9dcdf', pylon: '#ffffff', finBase: '#005D63', wingletOut: '#005D63', wingletIn: '#005D63', stab: '#cfd3d6',
     fuselage(p, l) {
       p.text('CATHAY PACIFIC', titleX(l, 0.33), TH, titleSize(l, 0.27), '#006564', { font: FONTS.sans, weight: 700, spacing: 0.08 });
@@ -414,7 +414,7 @@ export const LIVERIES = [
   },
   {
     id: 'etihad', name: 'Etihad Airways', subtitle: 'Facets of Abu Dhabi', country: 'AE',
-    fleet: ['a350-1000', 'a380-800', 'b787-9', 'b787-10', 'b777-300er', 'a321neo', 'a320neo'],
+    fleet: ['a350-1000', 'a380-800', 'b787-9', 'b787-10', 'b777-300er', 'a321neo', 'a320neo', 'a330-200'],
     base: '#f6f1ea', engine: '#BD8B13', engine2: '#8a6d3b', pylon: '#f6f1ea', finBase: '#BD8B13', wingletOut: '#BD8B13', wingletIn: '#8a6d3b', stab: '#d8cfc2',
     fuselage(p, l) {
       p.text('ETIHAD', titleX(l, 0.3), TH, titleSize(l, 0.36), '#45302A', { font: FONTS.sans, weight: 700, spacing: 0.2 });
@@ -431,7 +431,7 @@ export const LIVERIES = [
   },
   {
     id: 'fedex', name: 'FedEx Express', subtitle: 'Cargo', country: 'US',
-    fleet: ['b777f', 'b767-300er', 'md-11f', 'b757-200', 'atr72-600'],
+    fleet: ['b777f', 'b767-300er', 'md-11f', 'b757-200', 'atr72-600', 'a300-600f'],
     base: '#ffffff', belly: '#8f949a', engine: '#d3d6da', pylon: '#ffffff', finBase: '#4D148C', wingletOut: '#4D148C', wingletIn: '#4D148C', stab: '#cfd2d6',
     fuselage(p, l) {
       const x = titleX(l, 0.38), sz = titleSize(l, 0.62);
@@ -444,7 +444,7 @@ export const LIVERIES = [
   },
   {
     id: 'ups', name: 'UPS Airlines', subtitle: 'Worldwide Services', country: 'US',
-    fleet: ['b747-8i', 'b747-400', 'b767-300er', 'b757-200', 'md-11f'],
+    fleet: ['b747-8i', 'b747-400', 'b767-300er', 'b757-200', 'md-11f', 'a300-600f', 'b747-8f'],
     base: '#ffffff', belly: '#4a2c1e', engine: '#351C15', pylon: '#ffffff', finBase: '#351C15', wingletOut: '#351C15', wingletIn: '#FFB500', stab: '#351C15',
     fuselage(p, l) {
       p.band(-0.25, -0.62, '#351C15');
@@ -474,7 +474,7 @@ export const LIVERIES = [
   },
   {
     id: 'chinaeastern', name: 'China Eastern', subtitle: '2014 livery', country: 'CN',
-    fleet: ['c919', 'a320neo', 'a321neo', 'a330-300', 'a350-900', 'b737-800', 'b777-300er', 'b787-9'],
+    fleet: ['c919', 'a320neo', 'a321neo', 'a330-300', 'a350-900', 'b737-800', 'b777-300er', 'b787-9', 'a330-200'],
     base: '#ffffff', engine: '#e2e4e8', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#1A3A8A', wingletIn: '#C8102E', stab: '#d2d5da',
     fuselage(p, l) {
       p.text('中国东方航空', titleX(l, 0.25), TH, titleSize(l, 0.3), '#1A3A8A', { font: FONTS.sans, weight: 700 });
@@ -509,7 +509,7 @@ export const LIVERIES = [
   // ------------------------------------------------------------ house & generic
   {
     id: 'airbus-house', name: 'Airbus House', subtitle: 'Manufacturer demonstrator', country: 'EU',
-    fleet: ['a220-300', 'a319neo', 'a320neo', 'a321neo', 'a330-300', 'a330-900', 'a340-600', 'a350-900', 'a350-1000', 'a380-800'],
+    fleet: ['a220-300', 'a319neo', 'a320neo', 'a321neo', 'a330-300', 'a330-900', 'a340-600', 'a350-900', 'a350-1000', 'a380-800', 'a330-200', 'a300-600f'],
     base: '#ffffff', engine: '#ffffff', engine2: '#00205B', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#00205B', wingletIn: '#0085CA',
     fuselage(p, l) {
       p.text('AIRBUS', titleX(l, 0.3), TH, titleSize(l, 0.36), '#00205B', { font: FONTS.sans, weight: 800, spacing: 0.16 });
@@ -523,7 +523,7 @@ export const LIVERIES = [
   },
   {
     id: 'boeing-house', name: 'Boeing House', subtitle: 'Manufacturer demonstrator', country: 'US',
-    fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max9', 'b747-400', 'b747-8i', 'b757-200', 'b767-300er', 'b777-200er', 'b777-300er', 'b777f', 'b777-9', 'b787-8', 'b787-9', 'b787-10'],
+    fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max9', 'b747-400', 'b747-8i', 'b757-200', 'b767-300er', 'b777-200er', 'b777-300er', 'b777f', 'b777-9', 'b787-8', 'b787-9', 'b787-10', 'b737-max7', 'b737-900er', 'b737-max10', 'b767-400er', 'b747-8f', 'b717-200'],
     base: '#ffffff', engine: '#0039A6', pylon: '#ffffff', finBase: '#0039A6', wingletOut: '#0039A6', wingletIn: '#0039A6',
     fuselage(p, l) {
       p.band((x) => -0.15 - 0.4 * (x / l.L), -1.6, '#0039A6');
@@ -535,7 +535,7 @@ export const LIVERIES = [
   },
   {
     id: 'embraer-house', name: 'Embraer House', subtitle: 'Profit Hunter style', country: 'BR',
-    fleet: ['e175', 'e190-e2', 'e195-e2'],
+    fleet: ['e175', 'e190-e2', 'e195-e2', 'e190'],
     base: '#ffffff', engine: '#1b2a3f', pylon: '#ffffff', finBase: '#1b2a3f', wingletOut: '#1b2a3f', wingletIn: '#00a3e0',
     fuselage(p, l) {
       p.band(-0.45, -1.6, '#1b2a3f');
@@ -545,7 +545,7 @@ export const LIVERIES = [
   },
   {
     id: 'regional-house', name: 'Regional Express', subtitle: 'Generic regional', country: '—',
-    fleet: ['crj900', 'atr72-600', 'dash8-400', 'e175', 'ssj100', 'c919'],
+    fleet: ['crj900', 'atr72-600', 'dash8-400', 'e175', 'ssj100', 'c919', 'crj700', 'atr42-600'],
     base: '#ffffff', engine: '#ffffff', pylon: '#ffffff', finBase: '#0a6c74', wingletOut: '#0a6c74', wingletIn: '#e3a72f', stab: '#d0d4d8',
     fuselage(p, l) {
       p.band(-0.4, -0.5, '#0a6c74'); p.band(-0.52, -0.58, '#e3a72f');
@@ -559,7 +559,7 @@ export const LIVERIES = [
   },
   {
     id: 'ga-classic', name: 'Classic Stripe', subtitle: 'Private owner', country: '—',
-    fleet: ['c172', 'kingair350'],
+    fleet: ['c172', 'kingair350', 'sr22', 'pa28', 'pc12'],
     base: '#ffffff', engine: '#ffffff', finBase: '#ffffff', wing: '#f2f2f2', wingUnder: '#e8e8e8', stab: '#f2f2f2', wingletOut: '#ffffff', spinner: '#a81d24',
     fuselage(p, l) {
       p.band(-0.05, -0.2, '#a81d24', { x0: 0, x1: l.L });
@@ -569,7 +569,7 @@ export const LIVERIES = [
   },
   {
     id: 'exec-gold', name: 'Executive Gold', subtitle: 'Corporate', country: '—',
-    fleet: ['kingair350', 'g650', 'c172'],
+    fleet: ['kingair350', 'g650', 'c172', 'pc12', 'cj4', 'global7500', 'sr22'],
     base: '#ffffff', engine: '#ffffff', finBase: '#ffffff', wingletOut: '#7a5c1e', stab: '#f0f0f0', spinner: '#d9d9d9',
     fuselage(p, l) {
       p.band((x) => -0.05 + 0.3 * (x / l.L), (x) => -0.12 + 0.3 * (x / l.L), '#b08d3c', { x0: l.L * 0.1 });
@@ -579,7 +579,7 @@ export const LIVERIES = [
   },
   {
     id: 'sky-charter', name: 'SkyCharter Navy', subtitle: 'Private', country: '—',
-    fleet: ['g650', 'kingair350'],
+    fleet: ['g650', 'kingair350', 'cj4', 'global7500', 'pc12'],
     base: '#ffffff', belly: '#14213d', engine: '#14213d', finBase: '#14213d', wingletOut: '#14213d', stab: '#f0f0f0',
     fuselage(p, l) { p.band(-0.3, -0.38, '#fca311', { x0: l.L * 0.05, x1: l.L * 0.92 }); },
     fin(f) { f.fill('#14213d'); f.poly([[-0.2, 0.3], [1.3, 0.6], [1.3, 0.66], [-0.2, 0.36]], '#fca311'); },

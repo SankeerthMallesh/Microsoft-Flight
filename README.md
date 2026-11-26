@@ -7,11 +7,11 @@ A free flight simulator that runs in your web browser. You fly real airliners ov
   - world terrain with aerial imagery and 3D buildings
   - a "Lite" mode that needs no account.
 - **2,853 real airports** with real runway coordinates, headings, lengths and elevations, from [OurAirports](https://ourairports.com/) (public domain).
-- **37 real aircraft types**, built from published dimensions, weights, engine thrust and performance:
-  - Airbus A220, A320neo family, A330, A340, A350, A380
-  - Boeing 737 NG/MAX, 747, 757, 767, 777, 777X, 787
-  - Embraer E-Jets, CRJ900, ATR 72, Dash 8-400, C919, Superjet, G650, King Air 350, Cessna 172
-  - MD-11F
+- **53 real aircraft types**, built from published dimensions, weights, engine thrust and performance:
+  - Airbus A220, A300-600F, A320neo family, A330-200/-300/-900, A340-600, A350-900/-1000, A380
+  - Boeing 717, 737 NG/MAX 7–10, 747-400/-8/-8F, 757, 767-300ER/-400ER, 777/777F/777X, 787-8/-9/-10
+  - MD-11F, Embraer E175/E190/E2, CRJ700/900, ATR 42/72, Dash 8-400, C919, Superjet 100
+  - Gulfstream G650, Global 7500, Citation CJ4, King Air 350, Pilatus PC-12, Cessna 172, Cirrus SR22, Piper Archer
 - **30+ airline liveries**, each listed for the aircraft types that airline actually flies. They include Southwest, Delta, Emirates, United, American, British Airways, Lufthansa, Air France, KLM, Qatar, Singapore, Ryanair, easyJet, Air Canada, Qantas, ANA, JAL, Turkish, Alaska, JetBlue, Cathay, Etihad, FedEx, UPS, Virgin Atlantic, China Eastern, Aeroflot and house colors.
 - **3D hangar** with studio lighting, a turntable and a spec sheet for every aircraft.
 - **Flight model with six degrees of freedom:**

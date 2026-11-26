@@ -703,7 +703,9 @@ export function buildAircraft(ac) {
   const TAIL_STRIKE = { 'a220-300': 12, a319neo: 13.5, a320neo: 11.7, a321neo: 9.7, 'a330-300': 10, 'a330-900': 10, 'a340-600': 9, 'a350-900': 11, 'a350-1000': 9.5,
     'a380-800': 11.5, 'b737-700': 14.7, 'b737-800': 11, 'b737-max8': 11, 'b737-max9': 9.7, 'b747-400': 12.5, 'b747-8i': 11, 'b757-200': 12, 'b767-300er': 11,
     'b777-200er': 10.5, 'b777-300er': 8.5, b777f: 10.5, 'b777-9': 9, 'b787-8': 11, 'b787-9': 9.5, 'b787-10': 8.7, 'md-11f': 9.5, e175: 12, 'e190-e2': 11,
-    'e195-e2': 9.5, crj900: 9.5, 'dash8-400': 8, 'atr72-600': 9.5, c919: 11, ssj100: 11, g650: 12, kingair350: 14, c172: 12 };
+    'e195-e2': 9.5, crj900: 9.5, 'dash8-400': 8, 'atr72-600': 9.5, c919: 11, ssj100: 11, g650: 12, kingair350: 14, c172: 12,
+    'a330-200': 10.5, 'a300-600f': 11, 'b737-max7': 13, 'b737-900er': 9.4, 'b737-max10': 9.5, 'b767-400er': 9.5, 'b747-8f': 11, 'b717-200': 11, e190: 11,
+    crj700: 10.5, 'atr42-600': 10, global7500: 12, cj4: 13, pc12: 12, sr22: 12, pa28: 12 };
   if (TAIL_STRIKE[ac.id]) { const arm = mainX - tailBot.x; tailBot.ang = TAIL_STRIKE[ac.id] * D2R; tailBot.z = contactZ + Math.tan(tailBot.ang) * arm; }
   const layout = {
     L, R, H0, Ln, Lt, tailStart, xcg, profile, fin, wingX, cr, sweepLE,
