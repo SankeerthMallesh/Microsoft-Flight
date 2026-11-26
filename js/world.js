@@ -102,7 +102,7 @@ export class World {
     if (this.mode === 'lite') return 0;
     if (this.tileset && scene.sampleHeightSupported) {
       try {
-        const ex = this.model ? [this.model] : [];
+        const ex = [this.points, this.rwyPoints, this.cloudCollection]; if (this.model) ex.push(this.model);
         const hgt = scene.sampleHeight(carto, ex, 1.5);
         if (hgt !== undefined) return hgt;
       } catch (e) { /* ignore */ }
