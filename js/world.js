@@ -22,6 +22,7 @@ export class World {
       animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
       navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, vrButton: false,
       baseLayer: false, shadows: false, msaaSamples: settings.quality === 'low' ? 1 : 4, requestRenderMode: false,
+      useBrowserRecommendedResolution: false, // render at the display's real pixel density (sharp on Retina)
       contextOptions: { webgl: { powerPreference: 'high-performance', preserveDrawingBuffer: !!settings.preserveBuffer } },
     });
     this.viewer = viewer;
@@ -29,12 +30,12 @@ export class World {
     scene.globe.enableLighting = true;
     scene.globe.depthTestAgainstTerrain = true;
     scene.globe.showGroundAtmosphere = true;
-    scene.fog.enabled = true; scene.fog.density = 2.0e-4; scene.fog.minimumBrightness = 0.05;
+    scene.fog.enabled = true; scene.fog.density = 1.0e-4; scene.fog.minimumBrightness = 0.05; scene.fog.screenSpaceErrorFactor = 0.5;
     scene.skyAtmosphere.show = true;
-    scene.highDynamicRange = settings.quality !== 'low';
+    scene.highDynamicRange = false;
     scene.postProcessStages.fxaa.enabled = true;
     scene.screenSpaceCameraController.enableCollisionDetection = true;
-    viewer.resolutionScale = settings.resolutionScale || Math.min(window.devicePixelRatio || 1, settings.quality === 'high' ? 1.5 : 1);
+    viewer.resolutionScale = settings.resolutionScale || ({ high: 1, medium: 0.85, low: 0.6 }[settings.quality] ?? 0.85);
     scene.camera.frustum.near = 0.2;
     viewer.cesiumWidget.creditContainer.style.display = 'block';
     viewer.clock.shouldAnimate = true;
@@ -42,7 +43,7 @@ export class World {
     // lights
     this.points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
     this.rwyPoints = scene.primitives.add(new Cesium.PointPrimitiveCollection());
-    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 16 }));
+    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 32 }));
     return viewer;
   }
 
@@ -62,7 +63,8 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const ts = await Cesium.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: this.settings.quality === 'high' ? 8 : 16, preloadFlightDestinations: true });
+        const sse = { high: 4, medium: 6, low: 12 }[this.settings.quality] ?? 6;
+        const ts = await Cesium.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: sse, cacheBytes: 1536 * 1024 * 1024, maximumCacheOverflowBytes: 1024 * 1024 * 1024, preloadFlightDestinations: true, foveatedScreenSpaceError: true });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
         scene.globe.show = false;
@@ -140,7 +142,7 @@ export class World {
   setWeather(preset) {
     this.weather = preset;
     const scene = this.viewer.scene;
-    const fog = { clear: 1.2e-4, few: 1.8e-4, scattered: 2.2e-4, broken: 3.5e-4, overcast: 6e-4, storm: 9e-4 }[preset] || 2e-4;
+    const fog = { clear: 0.6e-4, few: 0.8e-4, scattered: 1.0e-4, broken: 1.8e-4, overcast: 3.5e-4, storm: 6e-4 }[preset] || 1e-4;
     scene.fog.density = fog;
     this.cloudCfg = {
       clear: { n: 0 }, few: { n: 40, base: 1400, top: 2200, size: 1.0 }, scattered: { n: 90, base: 1500, top: 2600, size: 1.2 },
@@ -190,7 +192,7 @@ export class World {
       scale: new Cesium.Cartesian2(s, s * (0.3 + Math.random() * 0.2)),
       maximumSize: new Cesium.Cartesian3(50, 14 + Math.random() * 8, 12 + Math.random() * 6),
       slice: 0.3 + Math.random() * 0.25,
-      brightness: cfg.dark ? 0.55 + Math.random() * 0.2 : 0.9 + Math.random() * 0.1,
+      brightness: cfg.dark ? 0.7 + Math.random() * 0.15 : 1.0,
     });
     this.clouds.push({ c, lat, lon, h, b: c.brightness });
     this._cloudK = -1;
