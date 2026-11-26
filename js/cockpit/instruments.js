@@ -207,6 +207,13 @@ export function drawND(canvas, s) {
     ctx.strokeStyle = COL.cyan; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(p[0], p[1], 6, 0, 7); ctx.stroke();
     txt(ctx, ap.i, p[0] + 10, p[1] - 9, 11, COL.cyan, 'left');
   }
+  // active route (magenta)
+  if (s.routePts && s.routePts.length) {
+    ctx.strokeStyle = COL.magenta; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy);
+    for (const p of s.routePts) ctx.lineTo(...proj(p.lat, p.lon));
+    ctx.stroke();
+    for (const p of s.routePts) { const q = proj(p.lat, p.lon); ctx.strokeStyle = COL.white; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(q[0], q[1] - 6); ctx.lineTo(q[0] + 6, q[1]); ctx.lineTo(q[0], q[1] + 6); ctx.lineTo(q[0] - 6, q[1]); ctx.closePath(); ctx.stroke(); if (p.name) txt(ctx, p.name, q[0] + 9, q[1] - 9, 11, COL.magenta, 'left'); }
+  }
   // selected runway extended centreline
   if (s.runway) {
     const r = s.runway; const p1 = proj(r.lat, r.lon);

@@ -118,6 +118,7 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 #flightUI { position: fixed; inset: 0; z-index: 10; pointer-events: none; }
 #flightUI button, #flightUI .mcp, #flightUI .side-controls { pointer-events: auto; }
 #topbar { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; align-items: center; pointer-events: auto; }
+#fpsVal { font-size: 0.75rem; color: var(--muted); font-family: 'Roboto Mono', monospace; }
 #viewName { font-size: 0.8rem; color: var(--muted); background: rgba(0, 0, 0, 0.4); padding: 6px 10px; border-radius: 99px; }
 #hint { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font-size: 0.9rem; background: rgba(0, 0, 0, 0.5); padding: 7px 14px; border-radius: 99px; color: var(--warn); }
 #hint:empty { display: none; }
@@ -170,3 +171,33 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
   .instrument-panel { grid-template-columns: 1fr 1fr 1fr; } .side-controls { display: none; }
   .mcp-lbl { display: none; }
 }
+
+/* mouse yoke centre marker + quick key strip */
+#yokeMark { position: absolute; left: 50%; top: 50%; width: 56vh; height: 56vh; max-width: 56vw; transform: translate(-50%, -50%); border: 1px dashed rgba(255,255,255,0.25); border-radius: 50%; pointer-events: none; }
+#yokeMark i { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; }
+#quickKeys { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); background: rgba(8,12,18,0.7); border: 1px solid var(--line); border-radius: 99px; padding: 6px 10px 6px 16px; font-size: 0.8rem; color: var(--muted); pointer-events: auto; display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+#quickKeys b { color: var(--text); }
+#quickKeys button { background: none; border: none; color: var(--muted); cursor: pointer; }
+@media (max-width: 900px) { #quickKeys { display: none; } }
+
+/* mini map */
+#minimap { position: absolute; top: 12px; left: 12px; width: min(320px, 40vw); height: min(240px, 32vh); border-radius: 12px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,0.45); pointer-events: auto; transition: width .2s, height .2s; background: #1b2028; z-index: 3; }
+#minimap.expanded { width: min(900px, 70vw); height: min(640px, 72vh); }
+#minimap.hidden-map { display: none; }
+#minimap .map-canvas { position: absolute; inset: 0; }
+#minimap .map-tools { position: absolute; right: 6px; top: 6px; display: flex; flex-direction: column; gap: 4px; z-index: 500; }
+#minimap .map-tools button { width: 28px; height: 28px; border-radius: 7px; border: 1px solid rgba(0,0,0,0.25); background: rgba(255,255,255,0.92); color: #111; cursor: pointer; font-size: 15px; line-height: 1; }
+#minimap .map-recenter { display: none; }
+#minimap.free .map-recenter { display: block; }
+#minimap .map-search { position: absolute; left: 6px; top: 6px; width: 170px; z-index: 500; }
+#minimap.expanded .map-search { width: 260px; }
+#minimap .map-search input { padding: 6px 9px; font-size: 0.8rem; background: rgba(255,255,255,0.94); color: #111; border-radius: 8px; }
+#minimap .map-search ul { list-style: none; margin: 2px 0 0; padding: 0; background: #fff; color: #111; border-radius: 8px; max-height: 180px; overflow: auto; font-size: 0.78rem; }
+#minimap .map-search li { padding: 6px 8px; cursor: pointer; } #minimap .map-search li:hover { background: #e7f0ff; }
+#minimap .leaflet-control-attribution { font-size: 9px; }
+.map-off { color: var(--muted); display: grid; place-items: center; height: 100%; font-size: 0.85rem; }
+.plane-icon svg { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.6)); transition: transform .2s linear; }
+.ap-pop { font-family: var(--font); font-size: 0.85rem; min-width: 220px; }
+.ap-pop .row { margin-top: 8px; display: flex; gap: 6px; } .ap-pop select { padding: 5px; font-size: 0.8rem; color: #111; background: #fff; }
+.hud-dest b { color: #ff7af7; }
+#flightUI.view-cockpit #minimap { top: 12px; }

@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto+Mono:wght@500;700&family=Montserrat:wght@600;700;800;900&family=Archivo+Black&family=Playfair+Display:wght@600;700&family=Oswald:wght@600&family=Kaushan+Script&display=swap" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <link href="css/style.css" rel="stylesheet" />
   <script>window.CESIUM_BASE_URL = 'https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/';</script>
   <script src="https://cdn.jsdelivr.net/npm/cesium@1.147.0/Build/Cesium/Cesium.js"></script>
@@ -58,9 +60,13 @@
           </div>
           <div id="airportPicked" class="muted"></div>
         </div>
-        <div class="field"><label for="runwaySel">Runway</label><select id="runwaySel"></select></div>
+        <div class="field"><label for="runwaySel">Departure runway</label><select id="runwaySel"></select></div>
+        <div class="field"><label for="destSearch">Destination (optional)</label>
+          <div class="search"><input id="destSearch" autocomplete="off" placeholder="Fly to… (e.g. KLAX, Dubai, Heathrow)" /><ul id="destResults" class="results hidden"></ul></div>
+          <div id="destPicked" class="muted small"></div></div>
+        <div class="field"><label for="destRwySel">Arrival runway</label><select id="destRwySel"><option value="">Best for wind</option></select></div>
         <div class="field"><label for="startSel">Start position</label>
-          <select id="startSel"><option value="runway">On runway, ready for takeoff</option><option value="approach">6 NM final approach</option><option value="air">In flight (12 NM out)</option></select></div>
+          <select id="startSel"><option value="runway">On runway, ready for takeoff</option><option value="approach">6 NM final approach</option><option value="air">In flight (12 NM out)</option><option value="cruise">Cruising toward destination (autopilot on)</option></select></div>
         <div class="field"><label for="timeSel">Time of day <span id="timeLbl" class="muted"></span></label><input type="range" id="timeSel" min="0" max="23.75" step="0.25" value="11" /></div>
         <div class="field"><label for="wxSel">Weather</label>
           <select id="wxSel"><option value="clear">Clear skies</option><option value="few">Few clouds</option><option value="scattered" selected>Scattered clouds</option><option value="broken">Broken clouds</option><option value="overcast">Overcast</option><option value="storm">Stormy</option></select></div>
@@ -148,8 +154,8 @@
       <div class="glareshield">
         <div class="mcp" id="mcp">
           <div class="mcp-group"><button class="mcp-btn" data-ap="at">A/T</button></div>
-          <div class="mcp-group"><span class="mcp-lbl">IAS</span><div class="mcp-win" id="mcpSpd">250</div><div class="knob"><button data-inc="spd:-1">−</button><button data-inc="spd:1">+</button></div><button class="mcp-btn" data-ap="flch">FLCH</button></div>
-          <div class="mcp-group"><span class="mcp-lbl">HDG</span><div class="mcp-win" id="mcpHdg">000</div><div class="knob"><button data-inc="hdg:-1">−</button><button data-inc="hdg:1">+</button></div><button class="mcp-btn" data-ap="hdg">HDG SEL</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">IAS</span><div class="mcp-win" id="mcpSpd">250</div><div class="knob"><button data-inc="spd:-1">−</button><button data-inc="spd:1">+</button></div><button class="mcp-btn" data-ap="flch">FLCH</button><button class="mcp-btn" data-ap="vnav">VNAV</button></div>
+          <div class="mcp-group"><span class="mcp-lbl">HDG</span><div class="mcp-win" id="mcpHdg">000</div><div class="knob"><button data-inc="hdg:-1">−</button><button data-inc="hdg:1">+</button></div><button class="mcp-btn" data-ap="hdg">HDG SEL</button><button class="mcp-btn" data-ap="nav">LNAV</button></div>
           <div class="mcp-group"><span class="mcp-lbl">ALT</span><div class="mcp-win" id="mcpAlt">10000</div><div class="knob"><button data-inc="alt:-1">−</button><button data-inc="alt:1">+</button></div><button class="mcp-btn" data-ap="alt">ALT HLD</button></div>
           <div class="mcp-group"><span class="mcp-lbl">V/S</span><div class="mcp-win" id="mcpVs">+0000</div><div class="knob"><button data-inc="vs:-1">−</button><button data-inc="vs:1">+</button></div><button class="mcp-btn" data-ap="vs">V/S</button></div>
           <div class="mcp-group"><button class="mcp-btn" data-ap="app">APP</button><button class="mcp-btn cmd" data-ap="cmd">CMD</button></div>
@@ -173,17 +179,25 @@
       <div class="hud-strip">
         <div><span>IAS</span><b id="hIas">0</b></div><div><span>ALT</span><b id="hAlt">0</b></div><div><span>V/S</span><b id="hVs">0</b></div>
         <div><span>HDG</span><b id="hHdg">000</b></div><div><span>THR</span><b id="hThr">0%</b></div><div><span>FLAPS</span><b id="hFlaps">0</b></div>
-        <div><span>GEAR</span><b id="hGear">DN</b></div><div><span>AP</span><b id="hAp">OFF</b></div>
+        <div><span>GEAR</span><b id="hGear">DN</b></div><div><span>AP</span><b id="hAp">OFF</b></div><div class="hud-dest"><span id="hDestLbl">DEST</span><b id="hDest">—</b></div>
       </div>
     </div>
     <div id="topbar">
+      <span id="fpsVal" class="fps"></span>
       <span id="viewName">Chase</span>
       <button class="icon-btn" id="btnView" title="Camera (C)">🎥</button>
       <button class="icon-btn" id="btnPanel" title="Panel (H)">▤</button>
+      <button class="icon-btn" id="btnMap" title="Map (M)">🗺</button>
+      <button class="icon-btn" id="btnYoke" title="Mouse flying (Y)">🖱</button>
       <button class="icon-btn" id="btnMute" title="Mute (M)">🔊</button>
       <button class="icon-btn" id="btnPause" title="Pause (P)">⏸</button>
     </div>
     <div id="hint"></div>
+    <div id="minimap"><div class="map-canvas"></div>
+      <div class="map-tools"><button class="map-zin" title="Zoom in">+</button><button class="map-zout" title="Zoom out">−</button><button class="map-recenter" title="Follow aircraft">⌖</button><button class="map-expand" title="Bigger map">⤢</button></div>
+      <div class="map-search"><input placeholder="Fly to airport…" /><ul></ul></div></div>
+    <div id="yokeMark" class="hidden"><i></i></div>
+    <div id="quickKeys"><b>Quick keys</b> W/S throttle · ↑↓←→ fly · G gear · F/R flaps · B brakes · Y mouse-flying · M map · Z autopilot · C camera · ? help <button id="qkClose" aria-label="Hide">✕</button></div>
   </div>
 
   <div id="pause" class="screen hidden"><div class="panel small-panel"><h2>Paused</h2>

@@ -1,5 +1,5 @@
 // Autopilot / autothrottle with HDG, LOC, ALT, V/S, FLCH, G/S (ILS) and autoland flare.
-import { D2R, R2D, KT, FT, clamp, wrap180, distance, bearing } from './math.js';
+import { D2R, R2D, KT, FT, NM, clamp, wrap180, distance, bearing } from './math.js';
 
 export class Autopilot {
   constructor(fm) {
@@ -37,6 +37,27 @@ export class Autopilot {
     if (m === 'VS') this.vs = Math.round(this.fm.out.vs / 100) * 100;
     if (m === 'FLCH') this.spd = Math.round(this.fm.out.ias);
   }
+  // route to a destination runway: fly direct to a final approach fix 10 NM out, then the ILS
+  setRoute(route) {
+    this.route = route; this.runway = route ? route.rwy : this.runway; this.tod = false;
+    if (route) this.notify(`Route set: ${route.rwy.airport} RWY ${route.rwy.ident}`);
+  }
+  navInfo() {
+    const r = this.route; if (!r) return null;
+    const fm = this.fm;
+    let dFaf = distance(fm.lat, fm.lon, r.faf.lat, r.faf.lon);
+    const dThr = distance(fm.lat, fm.lon, r.rwy.lat, r.rwy.lon);
+    let brgFaf = bearing(fm.lat, fm.lon, r.faf.lat, r.faf.lon) * R2D;
+    // join the centreline at an intermediate fix (IF) when arriving at a large angle
+    if (r.ifix && !r.ifDone) {
+      const dIf = distance(fm.lat, fm.lon, r.ifix.lat, r.ifix.lon);
+      const angle = Math.abs(wrap180(brgFaf - r.rwy.heading * R2D));
+      if (angle < 40 || dIf < 2 * NM) r.ifDone = true;
+      else { return { dFaf, dThr, brgFaf: bearing(fm.lat, fm.lon, r.ifix.lat, r.ifix.lon) * R2D, pastFaf: false, togo: dIf + distance(r.ifix.lat, r.ifix.lon, r.faf.lat, r.faf.lon) + r.fafDist }; }
+    }
+    const pastFaf = this.lat === 'LOC' || dThr < r.fafDist - 500;
+    return { dFaf, dThr, brgFaf, pastFaf, togo: pastFaf ? dThr : dFaf + r.fafDist };
+  }
   setApproach(rwy) {
     if (!rwy) { this.notify('No runway selected for approach'); return; }
     this.runway = rwy; this.appArmed = true; this.lat = 'LOC'; this.vert = this.vert === 'GS' ? 'GS' : this.vert;
@@ -66,6 +87,14 @@ export class Autopilot {
     // ---------------- autothrottle
     if (this.at) {
       let target = this.spd;
+      if (this.engaged && this.route && (this.vert === 'VNAV' || this.vert === 'GS' || this.lat === 'NAV' || this.lat === 'LOC')) {
+        const nav = this.navInfo();
+        const vref = fm.vspeeds().vref;
+        if (nav && nav.togo < 12 * NM) target = Math.min(target, Math.round(vref + 8));
+        else if (nav && nav.togo < 30 * NM) target = Math.min(target, Math.max(Math.round(vref + 60), fm.isGA ? 90 : 210));
+        if (o.alt < 10000 && !fm.isGA) target = Math.min(target, 250);
+        this.spdAuto = target;
+      } else this.spdAuto = null;
       const ias = o.ias;
       const accel = this.lastIas == null ? 0 : (ias - this.lastIas) / Math.max(dt, 1e-3);
       this.lastIas = ias;
@@ -89,13 +118,20 @@ export class Autopilot {
 
     // ---------------- approach capture
     let ils = null;
-    if (this.runway && (this.lat === 'LOC' || this.appArmed)) ils = this.ils();
+    if (this.runway && (this.lat === 'LOC' || this.appArmed || this.vert === 'VNAV')) ils = this.ils();
     this.ilsData = ils;
 
     // ---------------- lateral
     let rollCmd = 0;
     if (this.lat === 'HDG') {
       const err = wrap180(this.hdg - o.hdg);
+      rollCmd = clamp(err * 1.4, -25, 25);
+    } else if (this.lat === 'NAV' && this.route) {
+      const nav = this.navInfo();
+      const ilsR = this.ils();
+      const aligned = ilsR && ilsR.along > 0 && Math.abs(wrap180(o.track - this.route.rwy.heading * R2D)) < 70 && Math.abs(ilsR.xtk) < 4000;
+      if (nav.dFaf < 2.5 * NM || (aligned && nav.dThr < this.route.fafDist + 2 * NM)) { this.lat = 'LOC'; this.appArmed = true; this.notify('Localizer captured'); }
+      const err = wrap180(nav.brgFaf - o.track);
       rollCmd = clamp(err * 1.4, -25, 25);
     } else if (this.lat === 'LOC' && ils) {
       const crsDeg = this.runway.heading * R2D;
@@ -120,6 +156,22 @@ export class Autopilot {
       this.pitchI = clamp(this.pitchI + spdErr * dt * 0.02, -8, 8);
       const base = altErr > 0 ? 1800 : -2000;
       vsCmd = clamp(base + spdErr * 120 + this.pitchI * 100, altErr > 0 ? 0 : -4000, altErr > 0 ? 5000 : 0);
+    } else if (this.vert === 'VNAV') {
+      const nav = this.navInfo();
+      if (!nav) vsCmd = clamp(altErr * 4, -2000, 2000);
+      else {
+        const tg = nav.togo / NM;
+        const pathAlt = this.route.rwy.elevM / FT + (tg <= 10 ? 50 + tg * 318 : 2750 + (tg - 10) * 285); // 3 deg final, ~2.7 deg descent above
+        const crz = this.alt;
+        const descending = pathAlt < crz;
+        const target = Math.min(crz, pathAlt);
+        if (descending && !this.tod && o.alt > target + 300) { this.tod = true; this.notify('Top of descent — VNAV descending'); }
+        const base = descending ? -(o.gs * 101.27) * Math.tan((nav.togo / NM <= 10 ? 3 : 2.7) * D2R) : 0;
+        if (o.alt < target - 300) vsCmd = clamp((target - o.alt) * 2, 600, 2200);
+        else vsCmd = clamp(base + (target - o.alt) * 1.5, -2500, 2000);
+        // too fast in the descent: shallow out so the autothrottle can slow the aircraft
+        if (this.spdAuto && o.ias > this.spdAuto + 12 && vsCmd < -700) vsCmd = Math.max(vsCmd, -700 - Math.max(0, o.alt - target) * 0.5);
+      }
     } else if (this.vert === 'GS' && ils) {
       const gsVs = -(o.gs * KT) * Math.tan(3 * D2R) / 0.00508;
       vsCmd = gsVs - ils.gsDev / FT * 6;

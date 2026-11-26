@@ -2,11 +2,11 @@
 import { clamp } from './sim/math.js';
 
 export const KEY_HELP = [
-  ['Pitch', '↑ / ↓  (↓ = nose up)'], ['Roll', '← / →'], ['Rudder / nosewheel', 'Q / E  or  A / D'],
+  ['Pitch', '↑ / ↓  (↓ = nose up, like pulling a yoke)'], ['Roll / taxi steering', '← / →'], ['Rudder / nosewheel', 'Q / E  or  A / D'],
   ['Throttle', 'W / S  ·  PgUp / PgDn  ·  F1 idle · F4 full'], ['Flaps', 'F extend · R retract'], ['Landing gear', 'G'],
   ['Brakes', 'B (hold) · N parking brake'], ['Speedbrake', '/  toggle · Shift+/ arm'], ['Reverse thrust', 'T (on ground)'],
   ['Trim', '[ nose down · ] nose up  (Home / End)'], ['Autopilot', 'Z master · X autothrottle'], ['Camera', 'C cycle · 1 cockpit · 2 chase · 3 orbit · 4 fly-by'],
-  ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Cockpit panel', 'H show / hide'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'M'],
+  ['Mouse flying', 'Y toggles mouse-yoke mode (steer with the pointer)'], ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Map / fly to airport', 'M map · click an airport → Fly here'], ['Autopilot route', 'LNAV + VNAV on the panel fly to your destination'], ['Cockpit panel', 'H show / hide'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'U'],
 ];
 
 export class Input {
@@ -30,6 +30,8 @@ export class Input {
   attachMouse(el) {
     el.addEventListener('pointerdown', (e) => { if (!this.enabled) return; this.mouse.down = true; this.mouse.lx = e.clientX; this.mouse.ly = e.clientY; el.setPointerCapture?.(e.pointerId); });
     el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect();
+      this.yoke = { x: (e.clientX - r.left - r.width / 2) / (r.width * 0.28), y: (e.clientY - r.top - r.height / 2) / (r.height * 0.28) };
       if (!this.mouse.down) return;
       this.mouse.dx += e.clientX - this.mouse.lx; this.mouse.dy += e.clientY - this.mouse.ly; this.mouse.lx = e.clientX; this.mouse.ly = e.clientY;
     });
@@ -51,7 +53,7 @@ export class Input {
       if (!e.repeat) {
         const lower = k.length === 1 ? k.toLowerCase() : k;
         const map = {
-          g: 'gear', f: 'flapsDown', r: 'flapsUp', n: 'parkingBrake', t: 'reversers', z: 'ap', x: 'at', c: 'camera', h: 'panel', m: 'mute', v: 'resetView',
+          y: 'mouseYoke', g: 'gear', f: 'flapsDown', r: 'flapsUp', n: 'parkingBrake', t: 'reversers', z: 'ap', x: 'at', c: 'camera', h: 'panel', m: 'map', u: 'mute', v: 'resetView',
           '1': 'cam1', '2': 'cam2', '3': 'cam3', '4': 'cam4', F1: 'idle', F4: 'full', '?': 'help', k: 'help',
         };
         if (k === '/' ) { this.fire(e.shiftKey ? 'spoilerArm' : 'spoiler'); }
@@ -75,15 +77,21 @@ export class Input {
       if (tgt === 0) return Math.abs(cur) < rate * dt ? 0 : cur - Math.sign(cur) * rate * dt;
       return clamp(cur + clamp(tgt - cur, -rate * dt * (Math.sign(tgt) !== Math.sign(cur) && cur !== 0 ? 2 : 1), rate * dt), -1, 1);
     };
-    a.pitch = ramp(a.pitch, tp); a.roll = ramp(a.roll, tr); a.yaw = ramp(a.yaw, ty, 2, 3);
+    a.pitch = ramp(a.pitch, tp * 0.85, 3.2, 5); a.roll = ramp(a.roll, tr, 4, 6); a.yaw = ramp(a.yaw, ty, 3, 4);
     let thr = 0;
-    if (k.has('w') || k.has('PageUp') || k.has('F3') || k.has('+') || k.has('=')) thr += 0.45;
-    if (k.has('s') || k.has('PageDown') || k.has('F2') || k.has('-')) thr -= 0.45;
+    if (k.has('w') || k.has('PageUp') || k.has('F3') || k.has('+') || k.has('=')) thr += 0.7;
+    if (k.has('s') || k.has('PageDown') || k.has('F2') || k.has('-')) thr -= 0.7;
     let trim = 0;
     if (k.has('[') || k.has('Home')) trim -= 0.25;
     if (k.has(']') || k.has('End')) trim += 0.25;
     let brake = k.has('b') ? 1 : 0;
     let out = { pitch: a.pitch, roll: a.roll, yaw: a.yaw, throttleRate: thr, throttleAbs: null, brake, trimRate: trim, look: null };
+    // mouse yoke: pointer offset from screen centre acts as the control column
+    if (this.mouseYoke && this.yoke && !this.mouse.down && !tp && !tr) {
+      const dz = (v) => (Math.abs(v) < 0.06 ? 0 : (v - Math.sign(v) * 0.06) / 0.94);
+      out.pitch = dz(clamp(this.yoke.y, -1, 1)) * (this.invertPitch ? -1 : 1);
+      out.roll = dz(clamp(this.yoke.x, -1, 1));
+    }
     this.pollGamepad(out, dt);
     return out;
   }

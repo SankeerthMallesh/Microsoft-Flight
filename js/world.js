@@ -21,7 +21,7 @@ export class World {
     const viewer = new Cesium.Viewer(this.containerId, {
       animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
       navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, vrButton: false,
-      baseLayer: false, shadows: false, msaaSamples: settings.quality === 'low' ? 1 : 4, requestRenderMode: false,
+      baseLayer: false, shadows: false, msaaSamples: settings.quality === 'high' ? 4 : 1, requestRenderMode: false,
       useBrowserRecommendedResolution: false, // render at the display's real pixel density (sharp on Retina)
       contextOptions: { webgl: { powerPreference: 'high-performance', preserveDrawingBuffer: !!settings.preserveBuffer } },
     });
@@ -43,7 +43,7 @@ export class World {
     // lights
     this.points = scene.primitives.add(new Cesium.PointPrimitiveCollection());
     this.rwyPoints = scene.primitives.add(new Cesium.PointPrimitiveCollection());
-    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 32 }));
+    this.cloudCollection = scene.primitives.add(new Cesium.CloudCollection({ noiseDetail: 16 }));
     return viewer;
   }
 
@@ -63,7 +63,8 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const sse = { high: 4, medium: 6, low: 12 }[this.settings.quality] ?? 6;
+        const sse = { high: 6, medium: 10, low: 18 }[this.settings.quality] ?? 10;
+        this.baseSSE = sse;
         const ts = await Cesium.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: sse, cacheBytes: 1536 * 1024 * 1024, maximumCacheOverflowBytes: 1024 * 1024 * 1024, preloadFlightDestinations: true, foveatedScreenSpaceError: true });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
@@ -113,6 +114,92 @@ export class World {
     return hg;
   }
 
+  // ---------------------------------------------------------------- adaptive quality
+  // Keeps the frame rate smooth: first trims 3D-tile detail, then render resolution; restores when there's headroom.
+  adaptQuality(fps) {
+    const v = this.viewer; const target = this.targetScale ?? v.resolutionScale;
+    this.targetScale = target;
+    if (fps < 30) {
+      if (this.tileset && this.tileset.maximumScreenSpaceError < (this.baseSSE || 10) * 2.4) this.tileset.maximumScreenSpaceError += 2;
+      else v.resolutionScale = Math.max(0.5, +(v.resolutionScale - 0.1).toFixed(2));
+    } else if (fps > 52) {
+      if (v.resolutionScale < target) v.resolutionScale = Math.min(target, +(v.resolutionScale + 0.05).toFixed(2));
+      else if (this.tileset && this.tileset.maximumScreenSpaceError > (this.baseSSE || 10)) this.tileset.maximumScreenSpaceError -= 1;
+    }
+  }
+
+  // ---------------------------------------------------------------- fast ground height
+  // Runways come from the airport database (exact, flat, free); elsewhere terrain is sampled
+  // asynchronously. Expensive scene.sampleHeight is only used once per airport for calibration.
+  setGroundAirports(aps) {
+    this.gAirports = aps || [];
+    this.aptGeoid = this.aptGeoid || {}; this._geoPending = this._geoPending || {};
+    for (const a of this.gAirports) if (this.aptGeoid[a.i] === undefined && !this._geoPending[a.i]) this.measureGeoid(a);
+  }
+  async measureGeoid(a) {
+    const Cesium = C();
+    if (this.mode === 'lite') { this.aptGeoid[a.i] = -a.e * 0.3048; return; }
+    const tp = this.viewer.scene.terrainProvider;
+    if (!tp || tp instanceof Cesium.EllipsoidTerrainProvider) { this.aptGeoid[a.i] = -a.e * 0.3048; return; }
+    this._geoPending[a.i] = true;
+    try {
+      const [p] = await Cesium.sampleTerrainMostDetailed(tp, [Cesium.Cartographic.fromDegrees(a.lo, a.la)]);
+      if (isFinite(p.height) && this.aptGeoid[a.i] === undefined) this.aptGeoid[a.i] = p.height - a.e * 0.3048;
+    } catch (e) { /* keep undefined */ }
+    this._geoPending[a.i] = false;
+  }
+  // one-off calibration against the rendered 3D tiles (so wheels sit exactly on the photoreal runway)
+  calibrateAirport(a) {
+    const Cesium = C(), scene = this.viewer.scene;
+    if (!this.tileset || !scene.sampleHeightSupported || !a.r.length) return false;
+    const r = a.r[0];
+    try {
+      const h = scene.sampleHeight(Cesium.Cartographic.fromDegrees((r[2] + r[6]) / 2, (r[1] + r[5]) / 2), [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : [])], 2);
+      if (h !== undefined && isFinite(h)) { this.aptGeoid[a.i] = h - ((r[3] + r[7]) / 2) * 0.3048; return true; }
+    } catch (e) { /* ignore */ }
+    return false;
+  }
+  runwayHeight(lat, lon) {
+    const R = 6371008.8, D = Math.PI / 180;
+    for (const a of this.gAirports || []) {
+      if (Math.abs(a.la * D - lat) > 0.08) continue;
+      const gd = this.aptGeoid ? this.aptGeoid[a.i] : undefined; if (gd === undefined) continue;
+      for (const r of a.r) {
+        const la1 = r[1] * D, lo1 = r[2] * D, la2 = r[5] * D, lo2 = r[6] * D;
+        const cl = Math.cos(la1);
+        const ex = (lo2 - lo1) * cl * R, ey = (la2 - la1) * R, L = Math.hypot(ex, ey) || 1;
+        const dx = (lon - lo1) * cl * R, dy = (lat - la1) * R;
+        const along = (dx * ex + dy * ey) / L, cross = (dx * ey - dy * ex) / L;
+        if (along > -60 && along < L + 60 && Math.abs(cross) < (r[9] * 0.3048) / 2 + 35) {
+          const t = Math.max(0, Math.min(1, along / L));
+          return (r[3] + (r[7] - r[3]) * t) * 0.3048 + gd;
+        }
+      }
+    }
+    return undefined;
+  }
+  // nearest airport geoid offset (ellipsoid - MSL) for altitude display
+  localGeoid(lat, lon) {
+    let best, bd = 1e9; const D = Math.PI / 180;
+    for (const a of this.gAirports || []) { const g = this.aptGeoid?.[a.i]; if (g === undefined) continue; const d = Math.hypot(a.la * D - lat, (a.lo * D - lon) * Math.cos(lat)); if (d < bd) { bd = d; best = g; } }
+    return best;
+  }
+  groundFast(lat, lon) {
+    const rh = this.runwayHeight(lat, lon);
+    if (rh !== undefined) return rh;
+    if (this.mode === 'lite') return 0;
+    const Cesium = C();
+    const now = performance.now();
+    if (!this._terrBusy && (!this._terrT || now - this._terrT > 400)) {
+      this._terrBusy = true; this._terrT = now;
+      const tp = this.viewer.scene.terrainProvider;
+      Cesium.sampleTerrainMostDetailed(tp, [new Cesium.Cartographic(lon, lat)]).then(([p]) => { if (isFinite(p.height)) this._terr = { lat, lon, h: p.height }; }).catch(() => {}).finally(() => { this._terrBusy = false; });
+    }
+    const t = this._terr;
+    if (t && Math.hypot(t.lat - lat, (t.lon - lon) * Math.cos(lat)) * 6371000 < 3000) return t.h;
+    return undefined;
+  }
+
   async waitForScenery(maxMs = 25000, onProgress = () => {}) {
     const scene = this.viewer.scene;
     const t0 = performance.now();
@@ -145,8 +232,8 @@ export class World {
     const fog = { clear: 0.6e-4, few: 0.8e-4, scattered: 1.0e-4, broken: 1.8e-4, overcast: 3.5e-4, storm: 6e-4 }[preset] || 1e-4;
     scene.fog.density = fog;
     this.cloudCfg = {
-      clear: { n: 0 }, few: { n: 40, base: 1400, top: 2200, size: 1.0 }, scattered: { n: 90, base: 1500, top: 2600, size: 1.2 },
-      broken: { n: 160, base: 1200, top: 2600, size: 1.5 }, overcast: { n: 240, base: 900, top: 1800, size: 1.8, dark: true }, storm: { n: 260, base: 700, top: 2400, size: 2.1, dark: true },
+      clear: { n: 0 }, few: { n: 22, base: 1400, top: 2200, size: 1.3 }, scattered: { n: 45, base: 1500, top: 2600, size: 1.6 },
+      broken: { n: 80, base: 1200, top: 2600, size: 2.0 }, overcast: { n: 120, base: 900, top: 1800, size: 2.4, dark: true }, storm: { n: 130, base: 700, top: 2400, size: 2.7, dark: true },
     }[preset] || { n: 0 };
     this.cloudCollection.removeAll();
     this.clouds = [];
@@ -430,7 +517,7 @@ export class World {
         const p = Cesium.Cartesian3.add(target, Cesium.Cartesian3.multiplyByScalar(fwd, ahead, new Cesium.Cartesian3()), new Cesium.Cartesian3());
         Cesium.Cartesian3.add(p, Cesium.Cartesian3.multiplyByScalar(side, L * 1.2 + 25, new Cesium.Cartesian3()), p);
         const carto = Cesium.Cartographic.fromCartesian(p);
-        const gh = this.groundHeight(carto.latitude, carto.longitude);
+        const gh = this.groundFast(carto.latitude, carto.longitude);
         carto.height = Math.max(carto.height - 8, (gh ?? fm.groundH) + 3);
         c.towerPos = Cesium.Cartographic.toCartesian(carto);
       }

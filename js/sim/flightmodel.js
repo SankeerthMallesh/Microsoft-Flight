@@ -222,7 +222,7 @@ export class FlightModel {
       this.fbwRef.pitch = euler.pitch; this.fbwRef.roll = euler.roll;
     } else {
       // --- pitch: commanded Euler pitch rate -> body q via NDI
-      const thMax = (this.isGA ? 10 : 4) * D2R;
+      const thMax = (this.isGA ? 12 : 6) * D2R;
       let thDot;
       if (apCmd && Math.abs(c.pitch) < 0.4) {
         thDot = clamp(1.2 * (apCmd.pitch - euler.pitch), -2.5 * D2R, 2.5 * D2R);
@@ -246,7 +246,7 @@ export class FlightModel {
       const cmReq = (this.Iyy * kq * (qd - this.w[1])) / (qS * this.c) - cmOther;
       de = clamp(cmReq / d.Cmde, -1, 1);
       // --- roll
-      const pMax = (this.isGA ? 35 : 15) * D2R;
+      const pMax = (this.isGA ? 45 : 22) * D2R;
       let pd;
       if (apCmd && Math.abs(c.roll) < 0.4) { pd = clamp(1.0 * (apCmd.roll - euler.roll), -5 * D2R, 5 * D2R); this.fbwRef.roll = euler.roll; }
       else if (Math.abs(c.roll) > 0.02) { pd = c.roll * pMax; this.fbwRef.roll = euler.roll; if (apCmd && Math.abs(c.roll) > 0.4) this.ap.disconnect('pilot input'); }

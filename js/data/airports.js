@@ -10,6 +10,8 @@ export async function loadAirports() {
   return AIRPORTS;
 }
 
+export function allAirports() { return AIRPORTS || []; }
+
 export function getAirport(icao) { return AIRPORTS?.find((a) => a.i === icao.toUpperCase()); }
 
 export function searchAirports(q, limit = 12) {

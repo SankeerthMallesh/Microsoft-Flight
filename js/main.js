@@ -1,7 +1,8 @@
 // OpenSkies Flight Simulator — application controller.
 import { AIRCRAFT, MAKERS, getAircraft, deriveAero } from './data/aircraft.js';
 import { LIVERIES, liveriesFor, getLivery } from './data/liveries.js';
-import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear } from './data/airports.js';
+import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear, allAirports } from './data/airports.js';
+import { MiniMap, gcPoints } from './minimap.js';
 import { getAircraftGLB } from './model/factory.js';
 import { World } from './world.js';
 import { FlightModel } from './sim/flightmodel.js';
@@ -9,7 +10,7 @@ import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
 import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
-import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360 } from './sim/math.js';
+import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360, wrap180, distance, bearing } from './sim/math.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -22,7 +23,7 @@ const settings = Object.assign({ ionToken: '', scenery: 'photoreal', quality: 'm
 // A token in config.js (written by the setup script) is used when none was saved in Settings.
 const fileToken = (window.OPENSKIES_CONFIG && String(window.OPENSKIES_CONFIG.ionToken || '').trim()) || '';
 if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
-const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60 }, store.get('plan', {}));
+const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60, dest: null, destRwy: '' }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const input = new Input();
 const audio = new Audio();
@@ -93,6 +94,15 @@ function refreshSetup() {
     $('runwaySel').innerHTML = ends.map((r) => `<option value="${r.ident}">RWY ${r.ident} — ${Math.round(r.lengthFt).toLocaleString()} ft, hdg ${String(Math.round(wrap360(r.heading * R2D))).padStart(3, '0')}°</option>`).join('');
     if (plan.runway && ends.some((r) => r.ident === plan.runway)) $('runwaySel').value = plan.runway; else plan.runway = ends[0]?.ident;
   }
+  const dap = plan.dest ? getAirport(plan.dest) : null;
+  if (dap) {
+    const from = getAirport(plan.airport);
+    const nm = from ? distance(from.la * D2R, from.lo * D2R, dap.la * D2R, dap.lo * D2R) / NM : 0;
+    $('destPicked').innerHTML = `${dap.i} — ${dap.n}, ${dap.c} · ${Math.round(nm).toLocaleString()} NM <a href="#" id="destClear">clear</a>`;
+    $('destClear').onclick = (e) => { e.preventDefault(); plan.dest = null; plan.destRwy = ''; store.set('plan', plan); refreshSetup(); };
+    $('destRwySel').innerHTML = '<option value="">Best for wind</option>' + runwayEnds(dap).map((r) => `<option value="${r.ident}">RWY ${r.ident} — ${Math.round(r.lengthFt).toLocaleString()} ft</option>`).join('');
+    $('destRwySel').value = plan.destRwy || '';
+  } else { $('destPicked').textContent = 'No destination — free flight. You can also pick one in flight from the map (M).'; $('destRwySel').innerHTML = '<option value="">—</option>'; }
   $('startSel').value = plan.start; $('timeSel').value = plan.hour; $('wxSel').value = plan.weather;
   $('windDir').value = plan.windDir; $('windSpd').value = plan.windSpd; $('turbSel').value = String(plan.turb);
   $('fuelSel').value = plan.fuel; $('payloadSel').value = plan.payload;
@@ -142,6 +152,16 @@ function pickAirport(a) {
   if (app.world && !app.flying) app.world.menuOrbit(a.la, a.lo);
 }
 $('flyBtn').onclick = () => { savePlanFromForm(); startFlight(); };
+let destResults = [];
+$('destSearch').addEventListener('input', () => {
+  destResults = searchAirports($('destSearch').value, 10);
+  const ul = $('destResults');
+  ul.innerHTML = destResults.map((a, i) => `<li data-i="${i}"><b>${a.i}</b><span>${a.n}<br><small class="muted">${a.c}, ${a.k}${a.a ? ' · ' + a.a : ''}</small></span></li>`).join('');
+  ul.classList.toggle('hidden', !destResults.length);
+  ul.querySelectorAll('li').forEach((li) => li.addEventListener('mousedown', (e) => { e.preventDefault(); const a = destResults[+li.dataset.i]; $('destSearch').value = ''; ul.classList.add('hidden'); plan.dest = a.i; plan.destRwy = ''; store.set('plan', plan); refreshSetup(); }));
+});
+document.addEventListener('click', (e) => { if (!e.target.closest('.search')) $('destResults').classList.add('hidden'); });
+$('destRwySel').addEventListener('change', () => { plan.destRwy = $('destRwySel').value; store.set('plan', plan); });
 
 // ------------------------------------------------------------------ hangar
 let hangarSel = { acId: plan.acId, liveryId: plan.liveryId };
@@ -205,6 +225,44 @@ $('hSelect').onclick = () => {
   show('setup');
 };
 
+// ------------------------------------------------------------------ destination / route
+function bestRunwayFor(ap, ident) {
+  const ends = runwayEnds(ap);
+  if (ident) { const e = ends.find((r) => r.ident === ident); if (e) return e; }
+  const maxLen = Math.max(...ends.map((r) => r.length));
+  const cands = ends.filter((r) => r.length >= maxLen * 0.75);
+  return cands.sort((a, b) => Math.abs(wrap180(a.heading * R2D - plan.windDir)) - Math.abs(wrap180(b.heading * R2D - plan.windDir)))[0] || ends[0];
+}
+function buildRoute(ap, ident, isGA) {
+  const rwy = bestRunwayFor(ap, ident);
+  const fafDist = (isGA ? 5 : 10) * NM;
+  const [fla, flo] = destination(rwy.lat, rwy.lon, rwy.heading + Math.PI, fafDist);
+  const [ila, ilo] = destination(rwy.lat, rwy.lon, rwy.heading + Math.PI, fafDist + 8 * NM);
+  return { ap, rwy, fafDist, faf: { lat: fla, lon: flo }, ifix: { lat: ila, lon: ilo } };
+}
+function setDestination(ap, ident, quiet) {
+  if (!ap) return;
+  plan.dest = ap.i; plan.destRwy = ident || ''; store.set('plan', plan);
+  const ac = getAircraft(plan.acId);
+  const route = buildRoute(ap, ident, ac.category === 'General aviation');
+  app.dest = route; app.destAirport = ap; app.destLights = false; app.routeCache = null;
+  if (app.ap && app.flying) app.ap.setRoute(route);
+  app.map?.setDest(ap);
+  if (app.fm && app.flying) {
+    const d = distance(app.fm.lat, app.fm.lon, route.rwy.lat, route.rwy.lon) / NM;
+    if (!quiet) toast(`Destination ${ap.i} RWY ${route.rwy.ident} · ${Math.round(d)} NM` + (app.ap.lat === 'NAV' ? ' — rerouting' : ' — press LNAV + VNAV to let the autopilot fly there'), 'good');
+  } else if (!quiet) refreshSetup();
+}
+function routePoints(fm) {
+  const r = app.dest; if (!r) return null;
+  const pts = [];
+  const nav = app.ap?.navInfo();
+  if (r.ifix && !r.ifDone && !(nav && nav.pastFaf)) pts.push({ ...r.ifix, name: 'IF' });
+  if (!(nav && nav.pastFaf)) pts.push({ ...r.faf, name: 'FAF' });
+  pts.push({ lat: r.rwy.lat, lon: r.rwy.lon, name: r.rwy.airport });
+  return pts;
+}
+
 // ------------------------------------------------------------------ flight start
 async function startFlight() {
   const world = app.world;
@@ -233,6 +291,9 @@ async function startFlight() {
     let hThr;
     for (let i = 0; i < 30 && hThr === undefined; i++) { hThr = world.groundHeight(rwy.lat, rwy.lon); if (hThr === undefined) await new Promise((r) => setTimeout(r, 100)); }
     const geoid = hThr !== undefined ? hThr - rwy.elevM : 0;
+    world.aptGeoid = world.aptGeoid || {}; world.aptGeoid[ap.i] = geoid;
+    app.calibrated = { [ap.i]: true }; app.lastNear = 0;
+    world.setGroundAirports(airportsNear(rwy.lat, rwy.lon, 40 * NM, 12).concat([ap]));
     // spawn
     const fm = new FlightModel(ac, built.physics);
     fm.assist = settings.assist;
@@ -253,13 +314,32 @@ async function startFlight() {
       fm.reset(spawn);
     } else {
       const approach = plan.start === 'approach';
-      const dist = (approach ? 6 : 12) * NM;
-      const [aimLa, aimLo] = destination(rwy.lat, rwy.lon, rwy.heading, rwy.aim);
-      const [la, lo] = destination(aimLa, aimLo, rwy.heading + Math.PI, dist);
-      const altMsl = approach ? rwy.elevM + dist * Math.tan(3 * D2R) + 15 : rwy.elevM + (isGA ? 3000 : ac.engines.type === 'turboprop' ? 5000 : 6000) * FT;
-      fm.reset({ ...base, lat: la, lon: lo, h: altMsl + geoid, groundH: rwy.elevM + geoid, flapIndex: approach ? ac.flaps.length - 1 : 0, gearDown: approach });
+      const destAp = plan.dest ? getAirport(plan.dest) : null;
+      let la, lo, hdg, altMsl, ias, cruise = false;
+      if (plan.start === 'cruise' && destAp && distance(rwy.lat, rwy.lon, destAp.la * D2R, destAp.lo * D2R) > 80 * NM) {
+        cruise = true;
+        const dTot = distance(rwy.lat, rwy.lon, destAp.la * D2R, destAp.lo * D2R);
+        let crzFt = isGA ? 6500 : ac.engines.type === 'turboprop' ? Math.min(ac.perf.ceiling - 3000, 21000) : Math.min(ac.perf.ceiling - 4000, ac.category === 'Business jet' ? 43000 : 35000);
+        crzFt = Math.min(crzFt, Math.max(isGA ? 4500 : 12000, (dTot / NM) * 120));
+        const todNm = (crzFt - destAp.e) / 285 + 18;
+        const togo = Math.min(dTot * 0.6, (todNm + 60) * NM);
+        const brgTot = bearing(rwy.lat, rwy.lon, destAp.la * D2R, destAp.lo * D2R);
+        [la, lo] = destination(rwy.lat, rwy.lon, brgTot, dTot - togo);
+        hdg = bearing(la, lo, destAp.la * D2R, destAp.lo * D2R);
+        altMsl = crzFt * FT;
+        const atmC = isa(altMsl, 0);
+        const tas = ac.perf.cruiseMach ? ac.perf.cruiseMach * atmC.a : (ac.perf.cruiseKtas || 120) * KT;
+        ias = Math.min(ac.perf.vmo - 10, Math.round((tas * Math.sqrt(atmC.sigma)) / KT));
+      } else {
+        const dist = (approach ? 6 : 12) * NM;
+        const [aimLa, aimLo] = destination(rwy.lat, rwy.lon, rwy.heading, rwy.aim);
+        [la, lo] = destination(aimLa, aimLo, rwy.heading + Math.PI, dist);
+        hdg = rwy.heading;
+        altMsl = approach ? rwy.elevM + dist * Math.tan(3 * D2R) + 15 : rwy.elevM + (isGA ? 3000 : ac.engines.type === 'turboprop' ? 5000 : 6000) * FT;
+      }
+      fm.reset({ ...base, heading: hdg, lat: la, lon: lo, h: altMsl + geoid, groundH: cruise ? 0 : rwy.elevM + geoid, flapIndex: approach ? ac.flaps.length - 1 : 0, gearDown: approach });
       const vs = fm.vspeeds();
-      const ias = approach ? vs.vref + 5 : isGA ? 100 : ac.engines.type === 'turboprop' ? 200 : 250;
+      if (!ias) ias = approach ? vs.vref + 5 : isGA ? 100 : ac.engines.type === 'turboprop' ? 200 : 250;
       const atm = isa(altMsl, 0);
       const V = (ias * KT) / Math.sqrt(atm.sigma);
       const gamma = approach ? -3 * D2R : 0;
@@ -267,8 +347,8 @@ async function startFlight() {
       const CL = (fm.mass * G0) / (0.5 * atm.rho * V * V * ac.wingArea);
       const alpha = (CL - A.cl0 - A.dclFlaps * fm.flapLevels[fm.flapIndex].flap * 0.8) / A.clAlpha;
       fm.flap = fm.flapLevels[fm.flapIndex].flap; fm.slat = fm.flapLevels[fm.flapIndex].slat;
-      fm.q = eulerToQuat(rwy.heading, alpha + gamma, 0);
-      fm.vel = [V * Math.cos(gamma) * Math.cos(rwy.heading), V * Math.cos(gamma) * Math.sin(rwy.heading), -V * Math.sin(gamma)];
+      fm.q = eulerToQuat(hdg, alpha + gamma, 0);
+      fm.vel = [V * Math.cos(gamma) * Math.cos(hdg), V * Math.cos(gamma) * Math.sin(hdg), -V * Math.sin(gamma)];
       fm.airTime = 10; fm.gearPos = approach ? 1 : 0;
       // thrust to balance drag (approximate L/D)
       const LD = approach ? (isGA ? 7 : 8.5) : isGA ? 9 : 15;
@@ -283,10 +363,19 @@ async function startFlight() {
       fm.calcOutputs(atm, wind);
       apl.sync();
       if (approach) { apl.setApproach(rwy); apl.appArmed = true; apl.engaged = false; apl.spd = Math.round(ias); }
-      else { apl.alt = Math.round(fm.out.alt / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = ias; apl.vert = 'ALT'; apl.lat = 'HDG'; apl.engaged = true; apl.at = true; apl.runway = rwy; }
+      else { apl.alt = Math.round(fm.out.alt / 100) * 100; apl.hdg = Math.round(wrap360(hdg * R2D)); apl.spd = ias; apl.vert = 'ALT'; apl.lat = 'HDG'; apl.engaged = true; apl.at = true; apl.runway = rwy; }
+      app.cruiseStart = cruise;
     }
     if (plan.start === 'runway') { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
-    world.setRunwayLights(rwy, geoid);
+    // destination route
+    app.dest = null; app.destAirport = null; app.destLights = false;
+    const destAp = plan.dest ? getAirport(plan.dest) : null;
+    if (destAp && destAp.i !== ap.i) {
+      setDestination(destAp, plan.destRwy || null, true);
+      apl.setRoute(app.dest);
+      if (app.cruiseStart) { apl.lat = 'NAV'; apl.vert = 'VNAV'; apl.engaged = true; apl.at = true; }
+    }
+    if (plan.start !== 'cruise' || !app.cruiseStart) world.setRunwayLights(rwy, geoid); else world.setRunwayLights(null);
     world.resetCamera();
     app.view = plan.start === 'runway' ? 'chase' : 'chase';
     setView(app.view);
@@ -296,6 +385,7 @@ async function startFlight() {
     if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
     audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
+    if (app.map) { app.map.reset(fm, plan.start === 'cruise' ? 8 : 11); app.map.setDest(app.destAirport); }
     input.enabled = true;
     $('flightUI').classList.remove('hidden');
     loading(false);
@@ -334,6 +424,8 @@ const act = {
   ap: () => { app.ap?.toggle(); }, at: () => { app.ap?.toggleAT(); },
   camera: () => setView(VIEWS[(VIEWS.indexOf(app.view) + 1) % VIEWS.length]),
   cam1: () => setView('cockpit'), cam2: () => setView('chase'), cam3: () => setView('orbit'), cam4: () => setView('tower'),
+  mouseYoke: () => { input.mouseYoke = !input.mouseYoke; $('yokeMark').classList.toggle('hidden', !input.mouseYoke); toast(input.mouseYoke ? 'Mouse flying ON — move the pointer to steer (Y to turn off)' : 'Mouse flying OFF', 'good'); },
+  map: () => { $('minimap').classList.toggle('hidden-map'); setTimeout(() => app.map?.map?.invalidateSize(), 50); },
   panel: togglePanel, mute: () => { audio.setMuted(!audio.muted); $('btnMute').textContent = audio.muted ? '🔇' : '🔊'; },
   resetView: () => { app.world.cam.lookYaw = 0; app.world.cam.lookPitch = app.view === 'cockpit' ? -6 * D2R : 0; app.world.cam.zoom = 1; },
   idle: () => { if (app.fm) app.fm.ctl.throttle = 0; }, full: () => { if (app.fm) app.fm.ctl.throttle = 1; },
@@ -350,7 +442,7 @@ $('restartBtn').onclick = () => { $('pause').classList.add('hidden'); endFlight(
 $('quitBtn').onclick = () => endFlight(true);
 $('crashRestart').onclick = () => { endFlight(false); startFlight(); };
 $('crashQuit').onclick = () => endFlight(true);
-$('btnView').onclick = act.camera; $('btnPanel').onclick = togglePanel; $('btnMute').onclick = act.mute; $('btnPause').onclick = () => pause(true);
+$('btnView').onclick = act.camera; $('btnMap').onclick = act.map; $('btnYoke').onclick = act.mouseYoke; $('qkClose').onclick = () => $('quickKeys').remove(); $('btnPanel').onclick = togglePanel; $('btnMute').onclick = act.mute; $('btnPause').onclick = () => pause(true);
 $('gearLever').onclick = act.gear;
 $('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('rngUp').onclick = () => { app.ndRange = Math.min(160, app.ndRange * 2); };
 
@@ -389,8 +481,10 @@ document.querySelectorAll('[data-ap]').forEach((b) => b.addEventListener('click'
     case 'hdg': ap.lat = 'HDG'; ap.appArmed = false; break;
     case 'alt': ap.vert = 'ALT'; ap.alt = Math.round(app.fm.out.alt / 100) * 100; break;
     case 'vs': ap.setVert('VS'); break;
-    case 'app': if (ap.appArmed || ap.lat === 'LOC') { ap.appArmed = false; ap.lat = 'HDG'; if (ap.vert === 'GS') ap.vert = 'VS'; toast('Approach disarmed'); } else ap.setApproach(app.rwy); break;
+    case 'app': if (ap.appArmed || ap.lat === 'LOC') { ap.appArmed = false; ap.lat = 'HDG'; if (ap.vert === 'GS') ap.vert = 'VS'; toast('Approach disarmed'); } else ap.setApproach(app.dest && app.destLights ? app.dest.rwy : app.rwy); break;
     case 'cmd': ap.toggle(); break;
+    case 'nav': if (!app.dest) { toast('Pick a destination first — open the map (M) and click an airport', 'warn'); break; } ap.setRoute(app.dest); ap.lat = 'NAV'; if (!ap.engaged) ap.engage(); break;
+    case 'vnav': if (!app.dest) { toast('Pick a destination first — open the map (M) and click an airport', 'warn'); break; } ap.setRoute(app.dest); ap.vert = 'VNAV'; if (!ap.at) ap.toggleAT(); if (!ap.engaged) ap.engage(); break;
   }
 }));
 
@@ -406,6 +500,10 @@ function tick() {
   if (!app.paused && !app.crashed) {
     const c = input.poll(dt, fm);
     fm.ctl.pitch = c.pitch; fm.ctl.roll = c.roll; fm.ctl.yaw = c.yaw;
+    // taxi: roll input also steers the nosewheel at low speed
+    fm.ctl.tiller = fm.onGround && fm.out.gs < 40 ? clamp(c.yaw + c.roll, -1, 1) : 0;
+    // adding takeoff power releases the parking brake automatically
+    if (fm.parkingBrake && fm.onGround && fm.ctl.throttle > 0.4 && c.throttleRate > 0) { fm.parkingBrake = false; toast('Parking brake released'); }
     if (c.throttleAbs != null) fm.ctl.throttle = c.throttleAbs;
     else if (c.throttleRate) { fm.ctl.throttle = clamp(fm.ctl.throttle + c.throttleRate * dt, 0, 1); if (ap.at && Math.abs(c.throttleRate) > 0.1 && !fm.onGround) { /* manual override */ ap.thrI = fm.ctl.throttle; } }
     if (fm.reversers && c.throttleRate > 0) fm.ctl.throttle = clamp(fm.ctl.throttle, 0, 1);
@@ -413,16 +511,17 @@ function tick() {
     if (c.brake && fm.parkingBrake && fm.onGround) { /* holding B with park brake: keep */ }
     if (c.trimRate) fm.trim = clamp(fm.trim + c.trimRate * dt, -1, 1);
     if (c.look) { world.cam.lookPitch = clamp(world.cam.lookPitch + c.look.pitch * dt, -1.2, 1.2); }
-    // ground height sampling
+    // ground height: runway database + async terrain (no per-frame GPU picking)
     groundTimer -= dt;
     if (groundTimer <= 0) {
-      groundTimer = fm.onGround || fm.out.agl < 300 ? 0.08 : 0.3;
-      const hg = world.groundHeight(fm.lat, fm.lon);
+      groundTimer = 0.1;
+      const hg = world.groundFast(fm.lat, fm.lon);
       if (hg !== undefined && isFinite(hg)) {
-        // avoid sudden jumps from sampling parked aircraft / buildings on the runway
-        if (fm.onGround && Math.abs(hg - fm.groundH) > 4) fm.groundH += clamp(hg - fm.groundH, -0.5, 0.5);
-        else fm.groundH = hg;
+        const d = hg - fm.groundH;
+        fm.groundH = Math.abs(d) < 0.05 || !fm.onGround ? hg : fm.groundH + clamp(d, -1.5, 1.5);
       }
+      const lg = world.localGeoid(fm.lat, fm.lon);
+      if (lg !== undefined) fm.geoid += (lg - fm.geoid) * 0.05;
     }
     ap.update(dt);
     fm.step(dt, null);
@@ -440,13 +539,39 @@ function tick() {
   world.updateCamera(fm, dt);
   world.updatePapi(fm);
   cloudTimer -= dt; if (cloudTimer <= 0) { cloudTimer = 1; world.updateClouds(fm.lat, fm.lon, fm.h); }
-  if (now - app.lastNear > 4000) { app.lastNear = now; app.nearby = airportsNear(fm.lat, fm.lon, app.ndRange * NM * 1.3, 25); }
+  if (now - app.lastNear > 4000) {
+    app.lastNear = now; app.nearby = airportsNear(fm.lat, fm.lon, app.ndRange * NM * 1.3, 25);
+    const close = airportsNear(fm.lat, fm.lon, 40 * NM, 12);
+    if (app.destAirport && !close.includes(app.destAirport)) close.push(app.destAirport);
+    world.setGroundAirports(close);
+    app.calibrated = app.calibrated || {};
+    if (app.dest && !app.destLights) {
+      const dd = distance(fm.lat, fm.lon, app.dest.rwy.lat, app.dest.rwy.lon);
+      const g = world.aptGeoid?.[app.dest.ap.i];
+      if (dd < 45 * NM && g !== undefined) { world.setRunwayLights(app.dest.rwy, g); app.rwy = app.dest.rwy; app.destLights = true; }
+    }
+    const near = airportsNear(fm.lat, fm.lon, 12000, 1)[0];
+    if (near && !app.calibrated[near.i] && world.calibrateAirport(near)) app.calibrated[near.i] = true;
+  }
   audio.update(fm, app.view, dt);
+  if (app.map && now - (app.lastMap || 0) > 250) {
+    app.lastMap = now;
+    if (!app.routeCache || now - app.routeCache.t > 2000) {
+      const pts = routePoints(fm);
+      let line = null;
+      if (pts) { const first = pts[0]; line = [...gcPoints(fm.lat * R2D, fm.lon * R2D, first.lat * R2D, first.lon * R2D, 48), ...pts.slice(1).map((p) => [p.lat * R2D, p.lon * R2D])]; }
+      app.routeCache = { t: now, pts, line };
+    }
+    app.map.update(fm, app.routeCache.line);
+  }
   // speed trend (kt per second, smoothed)
   const o = fm.out;
   if (dt > 0) trend += ((o.ias - lastIas) / dt - trend) * Math.min(1, dt * 2); lastIas = o.ias;
-  if (frame % 2 === 0) drawInstruments();
-  if (frame % 4 === 0) updateHud();
+  // frame-rate tracking + adaptive quality
+  app.fps = app.fps ? app.fps + ((1 / Math.max(dt, 1e-3)) - app.fps) * 0.05 : 60;
+  if (now - (app.lastAdapt || 0) > 2000) { app.lastAdapt = now; if (settings.autoQuality !== false) world.adaptQuality(app.fps); $('fpsVal').textContent = Math.round(app.fps) + ' FPS'; }
+  if (now - (app.lastInst || 0) > 50) { app.lastInst = now; drawInstruments(); }
+  if (now - (app.lastHud || 0) > 100) { app.lastHud = now; updateHud(); }
 }
 
 function handleEvent(ev) {
@@ -469,13 +594,14 @@ function instrumentState() {
   const ils = ap.runway ? ap.ils() : null;
   const fma = [
     ap.at ? (ap.retard ? 'RETARD' : ap.engaged && ap.vert === 'FLCH' ? (ap.alt > fm.out.alt ? 'THR' : 'IDLE') : 'SPD') : '',
-    ap.engaged ? (ap.lat === 'LOC' ? 'LOC' : 'HDG SEL') : ap.appArmed ? 'LOC (arm)' : '',
-    ap.engaged ? ({ ALT: 'ALT HOLD', VS: 'V/S', FLCH: 'FLCH SPD', GS: ap.flare ? 'FLARE' : 'G/S' }[ap.vert] || '') : '',
+    ap.engaged ? ({ LOC: 'LOC', NAV: 'LNAV' }[ap.lat] || 'HDG SEL') : ap.appArmed ? 'LOC (arm)' : '',
+    ap.engaged ? ({ ALT: 'ALT HOLD', VS: 'V/S', FLCH: 'FLCH SPD', VNAV: 'VNAV PTH', GS: ap.flare ? 'FLARE' : 'G/S' }[ap.vert] || '') : '',
   ];
   return {
     out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
     trend, fma, ils: ils && ils.along > -200 && ils.d < 30 * NM && (ap.lat === 'LOC' || ap.appArmed) ? ils : null,
-    lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.rwy, dist: ils ? ils.d : null, fm,
+    routePts: app.routeCache?.pts || null,
+    lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.dest ? app.dest.rwy : app.rwy, dist: app.dest ? ap.navInfo()?.togo : ils ? ils.d : null, fm,
     warn: fm._tailStruck ? 'TAIL STRIKE' : fm.out.alt > fm.ac.perf.ceiling + 2000 ? 'ABOVE CEILING' : fm.out.ias > vs.vmo + 5 || fm.out.mach > vs.mmo + 0.01 ? 'OVERSPEED' : '',
   };
 }
@@ -498,15 +624,29 @@ function updateHud() {
   $('mcpSpd').textContent = Math.round(ap.spd); $('mcpHdg').textContent = String(Math.round(ap.hdg) % 360).padStart(3, '0');
   $('mcpAlt').textContent = ap.alt; $('mcpVs').textContent = (ap.vs >= 0 ? '+' : '−') + String(Math.abs(ap.vs)).padStart(4, '0');
   const on = (k, v) => document.querySelector(`[data-ap="${k}"]`)?.classList.toggle('on', !!v);
-  on('at', ap.at); on('cmd', ap.engaged); on('hdg', ap.engaged && ap.lat === 'HDG'); on('alt', ap.engaged && ap.vert === 'ALT'); on('vs', ap.engaged && ap.vert === 'VS'); on('flch', ap.engaged && ap.vert === 'FLCH'); on('app', ap.appArmed || ap.lat === 'LOC');
+  on('at', ap.at); on('cmd', ap.engaged); on('hdg', ap.engaged && ap.lat === 'HDG'); on('alt', ap.engaged && ap.vert === 'ALT'); on('vs', ap.engaged && ap.vert === 'VS'); on('flch', ap.engaged && ap.vert === 'FLCH'); on('nav', ap.engaged && ap.lat === 'NAV'); on('vnav', ap.engaged && ap.vert === 'VNAV'); on('app', ap.appArmed || ap.lat === 'LOC');
   const g = fm.gearPos > 0.98 ? 'g' : fm.gearPos < 0.02 ? '' : 'a';
   for (const id of ['lgtL', 'lgtN', 'lgtR']) $(id).className = g;
   $('rngVal').textContent = app.ndRange;
   $('thrFill').style.width = Math.round(fm.ctl.throttle * 100) + '%'; $('thrVal').textContent = Math.round(fm.ctl.throttle * 100) + '%';
+  const navI = app.dest ? ap.navInfo() : null;
+  if (navI) {
+    const nm = navI.togo / NM, mins = o.gs > 30 ? (nm / o.gs) * 60 : null;
+    $('hDestLbl').textContent = app.dest.ap.i; $('hDest').textContent = `${nm < 100 ? nm.toFixed(1) : Math.round(nm)} NM${mins ? ' · ' + (mins >= 60 ? Math.floor(mins / 60) + 'h' + String(Math.round(mins % 60)).padStart(2, '0') : Math.round(mins) + ' min') : ''}`;
+  } else { $('hDestLbl').textContent = 'DEST'; $('hDest').textContent = '—'; }
+  if (ap.spdAuto && (ap.vert === 'VNAV' || ap.lat === 'NAV' || ap.lat === 'LOC')) $('mcpSpd').textContent = Math.round(ap.spdAuto);
   let hint = '';
+  if (navI && !fm.onGround) {
+    const nm = navI.togo / NM, last = fm.flapLevels.length - 1;
+    if (nm < 6 && fm.flapIndex < last) hint = 'Final approach — landing flaps (F)';
+    else if (nm < 9 && !fm.gearDown) hint = 'Gear down (G)';
+    else if (nm < 12 && !fm.spoilersArmed && !fm.isGA) hint = 'Arm spoilers (Shift + /)';
+    else if (nm < 16 && fm.flapIndex < Math.min(2, last) && o.ias < ap.spdAuto + 40) hint = 'Approach — extend flaps (F) as you slow down';
+  }
   if (fm.parkingBrake && fm.onGround && fm.ctl.throttle > 0.2) hint = 'Parking brake is set — press N';
   else if (o.stall) hint = 'STALL — lower the nose, add thrust';
   else if (fm.onGround && fm.out.gs < 1 && !fm.parkingBrake && fm.ctl.throttle < 0.05 && frame < 400) hint = 'Hold W to add thrust';
+  if (!hint && navI && ap.engaged && ap.lat !== 'NAV' && ap.lat !== 'LOC' && !fm.onGround && o.alt > 1500) hint = 'Destination set — press LNAV and VNAV on the autopilot panel to fly there';
   $('hint').textContent = hint;
 }
 
@@ -525,6 +665,7 @@ async function boot() {
     if (settings.shadows) { const sm = world.viewer.scene.shadowMap; sm.softShadows = true; sm.size = 2048; sm.maximumDistance = 800; }
     loading(true, 'Loading airports…', 0.3);
     await loadAirports();
+    try { app.map = new MiniMap($('minimap'), { airports: allAirports, onSetDest: (a, ident) => setDestination(a, ident) }); } catch (e) { console.warn('map failed', e); }
     loading(true, 'Loading scenery…', 0.5);
     const mode = await world.setScenery(settings.scenery, (t) => loading(true, t, 0.6));
     if (mode !== settings.scenery && settings.scenery !== 'lite') $('tokenNote').textContent = settings.ionToken ? 'Could not load 3D scenery with this token — using Lite scenery.' : $('tokenNote').textContent;
