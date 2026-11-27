@@ -31,6 +31,44 @@ function star(c, s, n = 5) {
 }
 function circle(c, r) { c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); }
 
+// width of a title in metres (as drawn by FuselagePainter.text)
+function textW(p, str, size, o = {}) {
+  const c = p.ctx, px = size * p.kv * 1.35;
+  c.save(); c.font = `${o.italic ? 'italic ' : ''}${o.weight || 800} ${px}px ${o.font || FONTS.sans}`;
+  if ('letterSpacing' in c) c.letterSpacing = o.spacing ? `${o.spacing * px}px` : '0px';
+  const w = c.measureText(str).width / p.kv; c.restore();
+  return o.maxW ? Math.min(w, o.maxW) : w;
+}
+// lay out a multi-part title (text and/or drawn marks) in reading order, centred on cx.
+// The order is mirrored on the right side (nose points right there), so the title reads correctly on both sides.
+// parts: { t, size, color, o, h } or { w, draw, h }, gap: metres between parts
+function titleRow(p, cx, h, parts, gap = 0.5) {
+  const ws = parts.map((q) => q.w ?? textW(p, q.t, q.size, q.o));
+  const tot = ws.reduce((s, w) => s + w, 0) + gap * (parts.length - 1);
+  let off = -tot / 2;
+  parts.forEach((q, i) => {
+    const c = off + ws[i] / 2, x = cx + (p.side === 'L' ? c : -c), y = q.h ?? h;
+    if (q.t) p.text(q.t, x, y, q.size, q.color, q.o);
+    if (q.draw) p.draw(x, y, q.draw);
+    off += ws[i] + gap;
+  });
+}
+// rear-fuselage sweep line: height at x for a line rising/falling linearly from (x0,h0) to (x1,h1)
+const ramp = (x0, h0, x1, h1) => (x) => h0 + (h1 - h0) * Math.max(0, Math.min(1, (x - x0) / (x1 - x0)));
+function taegeuk(c, r) {
+  circle(c, r); c.fillStyle = '#C60C30'; c.fill();
+  // draw frame is y-up: arc(π..2π) is the lower half
+  c.beginPath(); c.arc(0, 0, r, Math.PI, Math.PI * 2); c.closePath(); c.fillStyle = '#003478'; c.fill();
+  c.beginPath(); c.arc(-r / 2, 0, r / 2, Math.PI, Math.PI * 2); c.fillStyle = '#C60C30'; c.fill();
+  c.beginPath(); c.arc(r / 2, 0, r / 2, 0, Math.PI); c.fillStyle = '#003478'; c.fill();
+}
+function koru(c, s, color) {
+  c.strokeStyle = color; c.lineCap = 'round'; c.lineWidth = s * 0.16;
+  c.beginPath();
+  for (let k = 0; k <= 60; k++) { const t = k / 60, a = t * Math.PI * 2.6, r = s * (0.08 + 0.55 * t); const x = Math.cos(a) * r, y = Math.sin(a) * r; k ? c.lineTo(x, y) : c.moveTo(x, y); }
+  c.quadraticCurveTo(-s * 0.2, -s * 1.1, s * 0.5, -s * 1.5); c.stroke();
+}
+
 // waving flag stripes helper on fin: bands = [[color, h0, h1]], hf coords along chord-normal
 function finStripes(f, bands, a0 = 0, a1 = 1, wave = 0.05) {
   for (const [color, h0, h1] of bands) {
@@ -460,8 +498,10 @@ export const LIVERIES = [
       f.draw(0.45, 0.5, (c) => {
         const s = Math.min(f.h, f.midChord) * 0.33; c.fillStyle = '#FFB500';
         c.beginPath(); c.moveTo(-s * 0.8, s); c.quadraticCurveTo(0, s * 1.25, s * 0.8, s); c.lineTo(s * 0.8, -s * 0.1); c.quadraticCurveTo(s * 0.7, -s * 0.8, 0, -s * 1.1); c.quadraticCurveTo(-s * 0.7, -s * 0.8, -s * 0.8, -s * 0.1); c.closePath(); c.fill();
-        c.fillStyle = '#351C15'; c.font = `900 ${s * 0.7}px Arial`; c.save(); c.scale(1, -1); c.textAlign = 'center'; c.fillText('ups', 0, s * 0.25); c.restore();
       });
+      // text via f.text so it is not mirrored on the right side
+      const s = Math.min(f.h, f.midChord) * 0.33;
+      f.text('ups', 0.45, 0.5 + (s * 0.02) / f.h, s * 0.42, '#351C15', { weight: 900, maxW: s * 1.4 });
     },
   },
   {
@@ -507,6 +547,460 @@ export const LIVERIES = [
       f.poly([[-0.2, 0.62], [1.3, 0.62], [1.3, 1.2], [-0.2, 1.2]], '#ffffff');
       f.poly([[-0.2, 0.44], [1.3, 0.44], [1.3, 0.62], [-0.2, 0.62]], '#0039A6');
       f.poly([[-0.2, 0.26], [1.3, 0.26], [1.3, 0.44], [-0.2, 0.44]], '#D52B1E');
+    },
+  },
+  // ------------------------------------------------------------ more airlines
+  {
+    id: 'southwest-canyon', name: 'Southwest Airlines', subtitle: 'Canyon Blue (2001, retro)', country: 'US',
+    fleet: ['b737-700', 'b737-800'],
+    base: '#3D5BA9', wing: '#c4c8ce', engine: '#3D5BA9', engineLip: '#c9cdd3', pylon: '#3D5BA9', stab: '#3D5BA9', finBase: '#3D5BA9',
+    wingletOut: '#3D5BA9', wingletIn: '#3D5BA9', regColor: '#ffffff', doorColor: 'rgba(10,20,60,0.6)', windowColor: '#121a3a',
+    fuselage(p, l) {
+      const L = l.L;
+      // red and gold cheat-sweep: gold belly, red band, both rising into the tail
+      const rise = (x) => (x > L * 0.6 ? Math.pow((x - L * 0.6) / (L * 0.4), 1.5) * 1.6 : 0);
+      p.band((x) => -0.18 + rise(x), (x) => -0.4 + rise(x), '#C8102E', { x0: L * 0.02 });
+      p.band((x) => -0.4 + rise(x), -1.6, '#E9A71C', { x0: 0 });
+      p.text('SOUTHWEST', titleX(l, 0.4), TH, titleSize(l, 0.36), '#ffffff', { font: FONTS.sans, weight: 800, spacing: 0.08, maxW: L * 0.48 * (p.kx / p.kv) });
+    },
+    fin(f) {
+      f.fill('#3D5BA9');
+      f.poly([[0.62, -0.2], [1.3, -0.2], [1.3, 0.35], [0.95, 0.35]], '#C8102E');
+      f.poly([[0.85, -0.2], [1.3, -0.2], [1.3, 0.12], [1.05, 0.12]], '#E9A71C');
+    },
+  },
+  {
+    id: 'spirit', name: 'Spirit Airlines', subtitle: 'Bare Fare yellow', country: 'US',
+    fleet: ['a319neo', 'a320neo', 'a321neo'],
+    base: '#FFE500', belly: '#FFE500', wing: '#c3c8cf', engine: '#FFE500', engineLip: '#bfc3c8', pylon: '#FFE500', stab: '#FFE500', finBase: '#FFE500',
+    wingletOut: '#FFE500', wingletIn: '#FFE500', regColor: '#111111', windowColor: '#111111', doorColor: 'rgba(60,55,0,0.55)',
+    engineText: { text: 'spirit', color: '#111111', font: FONTS.wide },
+    fuselage(p, l) {
+      p.text('spirit', titleX(l, 0.4), 0.42, titleSize(l, 0.66), '#111111', { font: FONTS.wide, weight: 900, spacing: -0.02, maxW: l.L * 0.45 * (p.kx / p.kv) });
+      p.text('spirit.com', l.tailStart - l.L * 0.02, 0.6, titleSize(l, 0.13), '#111111', { font: FONTS.sans, weight: 700 });
+    },
+    fin(f) { f.fill('#FFE500'); },
+  },
+  {
+    id: 'frontier', name: 'Frontier Airlines', subtitle: 'Animal tails · "Flo" the fox', country: 'US',
+    fleet: ['a320neo', 'a321neo'],
+    base: '#ffffff', engine: '#00764C', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#3f86c9', wingletOut: '#00764C', wingletIn: '#00764C', stab: '#d3d6da',
+    fuselage(p, l) {
+      p.text('FRONTIER', titleX(l, 0.38), TH - 0.02, titleSize(l, 0.44), '#00764C', { font: FONTS.wide, weight: 900, spacing: 0.02, maxW: l.L * 0.5 * (p.kx / p.kv) });
+      p.band(-0.62, -1.6, '#00764C', { x0: l.L * 0.12, x1: l.L * 0.74 });
+      p.band(3, ramp(l.tailStart, 0.7, l.L, -0.6), '#3f86c9', { x0: l.tailStart + l.Lt * 0.12 });
+      p.text('FlyFrontier.com', l.tailStart - l.L * 0.04, 0.62, titleSize(l, 0.12), '#00764C', { font: FONTS.sans, weight: 700 });
+    },
+    fin(f) {
+      // sky-to-forest photo background
+      const g = [['#9cc9ef', 0.75, 1.3], ['#6fa9de', 0.5, 0.75], ['#3f86c9', 0.25, 0.5], ['#2f6a3e', -0.2, 0.25]];
+      for (const [col, h0, h1] of g) f.poly([[-0.3, h0], [1.3, h0], [1.3, h1], [-0.3, h1]], col);
+      f.draw(0.5, 0.5, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.42; // fox head facing forward (-x)
+        c.fillStyle = '#E36F1E';
+        c.beginPath(); c.moveTo(-s * 1.0, -s * 0.05); c.quadraticCurveTo(-s * 0.6, s * 0.35, -s * 0.15, s * 0.45); c.lineTo(-s * 0.05, s * 1.0); c.lineTo(s * 0.25, s * 0.55);
+        c.lineTo(s * 0.55, s * 0.95); c.lineTo(s * 0.62, s * 0.35); c.quadraticCurveTo(s * 0.8, -s * 0.3, s * 0.4, -s * 0.75); c.quadraticCurveTo(-s * 0.2, -s * 0.6, -s * 1.0, -s * 0.05); c.fill();
+        c.fillStyle = '#ffffff';
+        c.beginPath(); c.moveTo(-s * 1.0, -s * 0.05); c.quadraticCurveTo(-s * 0.4, -s * 0.05, -s * 0.05, -s * 0.25); c.quadraticCurveTo(s * 0.15, -s * 0.6, s * 0.4, -s * 0.75); c.quadraticCurveTo(-s * 0.2, -s * 0.6, -s * 1.0, -s * 0.05); c.fill();
+        c.beginPath(); c.moveTo(-s * 0.02, s * 0.85); c.lineTo(s * 0.18, s * 0.55); c.lineTo(-s * 0.08, s * 0.5); c.fillStyle = '#3a1d0c'; c.fill();
+        c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(-s * 0.98, -s * 0.03, s * 0.08, 0, 7); c.fill();
+        c.beginPath(); c.ellipse(-s * 0.32, s * 0.2, s * 0.09, s * 0.05, -0.3, 0, 7); c.fill();
+      });
+    },
+  },
+  {
+    id: 'hawaiian', name: 'Hawaiian Airlines', subtitle: 'Pualani (2017)', country: 'US',
+    fleet: ['a321neo', 'a330-200', 'b787-9', 'b717-200'],
+    base: '#ffffff', engine: '#e4e1ea', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#413691', wingletOut: '#413691', wingletIn: '#CE0C88', stab: '#d6d4dc',
+    fuselage(p, l) {
+      p.text('HAWAIIAN', titleX(l, 0.36), TH, titleSize(l, 0.34), '#413691', { font: FONTS.sans, weight: 700, spacing: 0.14, maxW: l.L * 0.42 * (p.kx / p.kv) });
+      // lauhala weave band flowing from the tail
+      const x0 = l.tailStart - l.L * 0.08;
+      p.band(3, ramp(x0, 1.2, l.L, -0.5), '#413691', { x0 });
+      for (let k = 0; k < 26; k++) {
+        const x = x0 + (k / 26) * (l.L - x0), top = ramp(x0, 1.2, l.L, -0.5)(x);
+        for (let j = 0; j < 4; j++) p.poly([[x, top + 0.25 + j * 0.28], [x + 0.25, top + 0.38 + j * 0.28], [x, top + 0.5 + j * 0.28], [x - 0.25, top + 0.38 + j * 0.28]], (k + j) % 2 ? '#5a4aa8' : '#6c2f9a');
+      }
+    },
+    fin(f) {
+      const g = [['#413691', 0.55, 1.3], ['#6a2b97', 0.3, 0.55], ['#9c1b90', 0.1, 0.3], ['#CE0C88', -0.2, 0.1]];
+      for (const [col, h0, h1] of g) f.poly([[-0.3, h0], [1.3, h0], [1.3, h1], [-0.3, h1]], col);
+      f.draw(0.5, 0.5, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.5; // Pualani: profile facing forward with a hibiscus in her hair
+        c.fillStyle = '#2a1b5c';
+        c.beginPath(); c.moveTo(-s * 0.25, s * 0.75); c.quadraticCurveTo(s * 0.6, s * 0.95, s * 0.9, s * 0.3); c.quadraticCurveTo(s * 1.1, -s * 0.4, s * 0.7, -s * 0.95); c.lineTo(0, -s * 0.95); c.quadraticCurveTo(s * 0.2, 0, -s * 0.25, s * 0.75); c.fill();
+        c.fillStyle = '#f3e6ef';
+        c.beginPath(); c.moveTo(-s * 0.25, s * 0.72); c.quadraticCurveTo(-s * 0.32, s * 0.45, -s * 0.48, s * 0.22); c.lineTo(-s * 0.34, s * 0.14); c.lineTo(-s * 0.4, s * 0.02);
+        c.lineTo(-s * 0.33, -s * 0.06); c.lineTo(-s * 0.36, -s * 0.14); c.quadraticCurveTo(-s * 0.3, -s * 0.32, -s * 0.1, -s * 0.32); c.lineTo(-s * 0.02, -s * 0.95); c.lineTo(s * 0.25, -s * 0.95);
+        c.quadraticCurveTo(s * 0.15, -s * 0.2, s * 0.2, s * 0.25); c.quadraticCurveTo(s * 0.1, s * 0.6, -s * 0.25, s * 0.72); c.fill();
+        // hibiscus
+        c.save(); c.translate(s * 0.42, s * 0.42); c.fillStyle = '#ffffff';
+        for (let k = 0; k < 5; k++) { c.rotate((Math.PI * 2) / 5); c.beginPath(); c.ellipse(s * 0.13, 0, s * 0.14, s * 0.09, 0, 0, 7); c.fill(); }
+        c.fillStyle = '#CE0C88'; c.beginPath(); c.arc(0, 0, s * 0.06, 0, 7); c.fill(); c.restore();
+      });
+    },
+  },
+  {
+    id: 'swiss', name: 'SWISS', subtitle: '2011 livery', country: 'CH',
+    fleet: ['a220-300', 'a320neo', 'a321neo', 'a330-300', 'a350-900', 'b777-300er'],
+    base: '#ffffff', engine: '#e4e6e9', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#E2001A', wingletOut: '#E2001A', wingletIn: '#E2001A', stab: '#d4d7db',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.36);
+      const flag = (c) => { const s = sz * 0.62; c.fillStyle = '#E2001A'; c.fillRect(-s, -s, 2 * s, 2 * s); c.fillStyle = '#fff'; c.fillRect(-s * 0.19, -s * 0.62, s * 0.38, s * 1.24); c.fillRect(-s * 0.62, -s * 0.19, s * 1.24, s * 0.38); };
+      titleRow(p, titleX(l, 0.3), TH, [{ w: sz * 1.24, draw: flag }, { t: 'SWISS', size: sz, color: '#1a1a1a', o: { font: FONTS.sans, weight: 800, spacing: 0.04 } }], sz * 0.5);
+      p.text('swiss.com', l.tailStart - l.L * 0.03, 0.62, titleSize(l, 0.12), '#1a1a1a', { font: FONTS.sans, weight: 600 });
+    },
+    fin(f) {
+      f.fill('#E2001A');
+      f.draw(0.5, 0.5, (c) => { const s = Math.min(f.h, f.midChord) * 0.32; c.fillStyle = '#ffffff'; c.fillRect(-s * 0.2, -s * 0.65, s * 0.4, s * 1.3); c.fillRect(-s * 0.65, -s * 0.2, s * 1.3, s * 0.4); });
+    },
+  },
+  {
+    id: 'airindia', name: 'Air India', subtitle: 'The Vista (2023)', country: 'IN',
+    fleet: ['a320neo', 'a321neo', 'a350-900', 'a350-1000', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9'],
+    base: '#ffffff', engine: '#4B1E46', engineLip: '#C9A15B', pylon: '#ffffff', finBase: '#D9152B', wingletOut: '#D9152B', wingletIn: '#4B1E46', stab: '#d6d3d8',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.33);
+      const vista = (c) => { // gold "window" arch
+        const s = sz * 0.75; c.strokeStyle = '#C9A15B'; c.lineWidth = s * 0.14; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(-s * 0.55, -s); c.lineTo(-s * 0.55, s * 0.2); c.quadraticCurveTo(-s * 0.5, s * 0.75, 0, s * 1.05); c.quadraticCurveTo(s * 0.5, s * 0.75, s * 0.55, s * 0.2); c.lineTo(s * 0.55, -s); c.stroke();
+      };
+      titleRow(p, titleX(l, 0.33), TH, [{ w: sz * 0.9, draw: vista }, { t: 'AIR INDIA', size: sz, color: '#D9152B', o: { font: FONTS.sans, weight: 700, spacing: 0.1 } }], sz * 0.5);
+      // aubergine and red sweep from the tail onto the rear fuselage
+      const x0 = l.tailStart - l.L * 0.02;
+      p.band(3, ramp(x0, 1.1, l.L, -0.7), '#4B1E46', { x0 });
+      p.band(3, ramp(x0 + l.Lt * 0.25, 1.1, l.L, 0.1), '#D9152B', { x0: x0 + l.Lt * 0.25 });
+      p.band(ramp(x0, 1.1, l.L, -0.7), ramp(x0, 1.0, l.L, -0.8), '#C9A15B', { x0 });
+    },
+    fin(f) {
+      f.fill('#D9152B');
+      f.poly([[-0.3, -0.2], [1.3, -0.2], [1.3, 0.05], [-0.3, 0.32]], '#4B1E46');
+      f.poly([[-0.3, 0.32], [1.3, 0.05], [1.3, 0.09], [-0.3, 0.36]], '#C9A15B');
+      f.draw(0.5, 0.62, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.34; c.strokeStyle = '#C9A15B'; c.lineWidth = s * 0.09; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(-s * 0.6, -s * 0.9); c.lineTo(-s * 0.6, s * 0.15); c.quadraticCurveTo(-s * 0.55, s * 0.75, 0, s * 1.05); c.quadraticCurveTo(s * 0.55, s * 0.75, s * 0.6, s * 0.15); c.lineTo(s * 0.6, -s * 0.9); c.stroke();
+        c.lineWidth = s * 0.05; c.beginPath(); c.moveTo(-s * 0.35, -s * 0.9); c.lineTo(-s * 0.35, s * 0.1); c.quadraticCurveTo(-s * 0.3, s * 0.55, 0, s * 0.75); c.quadraticCurveTo(s * 0.3, s * 0.55, s * 0.35, s * 0.1); c.lineTo(s * 0.35, -s * 0.9); c.stroke();
+      });
+    },
+  },
+  {
+    id: 'indigo', name: 'IndiGo', subtitle: '6E', country: 'IN',
+    fleet: ['a320neo', 'a321neo', 'atr72-600'],
+    base: '#ffffff', engine: '#1B2A80', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#1B2A80', wingletOut: '#1B2A80', wingletIn: '#1B2A80', stab: '#d3d6db',
+    fuselage(p, l) {
+      p.text('IndiGo', titleX(l, 0.4), TH, titleSize(l, 0.44), '#1B2A80', { font: FONTS.sans, weight: 700, maxW: l.L * 0.4 * (p.kx / p.kv) });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.55), '#1B2A80', { x0: l.tailStart + l.Lt * 0.08 });
+      // trailing dots streaming forward from the tail along the lower fuselage
+      const x0 = l.L * 0.45;
+      for (let i = 0; i < 26; i++) for (let j = 0; j < 4; j++) {
+        const x = x0 + i * (l.tailStart - x0) / 26, t = i / 26, r = 0.04 + 0.16 * t * (1 - j * 0.15);
+        if ((i + j) % 2) continue;
+        p.draw(x, -0.48 - j * 0.16 + 0.35 * t * t, (c) => { c.beginPath(); c.arc(0, 0, r, 0, 7); c.fillStyle = '#1B2A80'; c.fill(); });
+      }
+    },
+    fin(f) {
+      f.fill('#1B2A80');
+      // dotted aircraft symbol
+      f.draw(0.5, 0.48, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.06; c.fillStyle = '#ffffff';
+        const pts = [[-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [0.5, 2], [1, 3], [0, -1], [0.5, -2], [1, -3], [3, 1], [3, -1], [4, 1.5]];
+        for (const [x, y] of pts) { c.beginPath(); c.arc(x * s * 1.3, y * s * 1.3, s * 0.45, 0, 7); c.fill(); }
+      });
+    },
+  },
+  {
+    id: 'ethiopian', name: 'Ethiopian Airlines', subtitle: 'Star Alliance member', country: 'ET',
+    fleet: ['b737-800', 'b737-max8', 'b767-300er', 'b777-200er', 'b777-300er', 'b777f', 'b787-8', 'b787-9', 'a350-900', 'a350-1000', 'dash8-400'],
+    base: '#ffffff', engine: '#e6e8eb', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#078930', wingletIn: '#FCDD09', stab: '#d4d7db',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.38);
+      titleRow(p, titleX(l, 0.36), TH, [
+        { t: 'ethiopian', size: sz, color: '#078930', o: { font: FONTS.sans, weight: 700 } },
+        { t: 'ኢትዮጵያ', size: sz * 0.62, color: '#078930', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.6);
+      // tricolour ribbons along the tail cone
+      const x0 = l.tailStart - l.L * 0.02;
+      const rib = (h0, col) => p.band(ramp(x0, h0, l.L, h0 + 1.0), ramp(x0, h0 - 0.12, l.L, h0 + 0.82), col, { x0 });
+      rib(-0.3, '#078930'); rib(-0.45, '#FCDD09'); rib(-0.6, '#DA121A');
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      // three sweeping feathers: green, yellow, red
+      const feather = (a0, h0, col) => {
+        const pts = [];
+        for (let k = 0; k <= 16; k++) { const t = k / 16; pts.push([a0 + 0.9 * t, h0 + 0.95 * t * t + 0.18]); }
+        for (let k = 16; k >= 0; k--) { const t = k / 16; pts.push([a0 + 0.9 * t + 0.08, h0 + 0.95 * t * t]); }
+        f.poly(pts, col);
+      };
+      feather(0.05, -0.05, '#DA121A'); feather(0.15, 0.12, '#FCDD09'); feather(0.25, 0.29, '#078930');
+    },
+  },
+  {
+    id: 'egyptair', name: 'EGYPTAIR', subtitle: 'Horus', country: 'EG',
+    fleet: ['a220-300', 'a320neo', 'a321neo', 'a330-200', 'a330-300', 'a350-900', 'b737-800', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#e3e5e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#0B2F6B', wingletOut: '#0B2F6B', wingletIn: '#0B2F6B', stab: '#d2d5da',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.33);
+      titleRow(p, titleX(l, 0.36), TH, [
+        { t: 'EGYPTAIR', size: sz, color: '#0B2F6B', o: { font: FONTS.sans, weight: 800, spacing: 0.06 } },
+        { t: 'مصر للطيران', size: sz * 0.9, color: '#0B2F6B', o: { font: FONTS.serif, weight: 700 } },
+      ], sz * 0.8);
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.5), '#0B2F6B', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#0B2F6B');
+      f.draw(0.5, 0.52, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.36; c.fillStyle = '#C9A23A'; // Horus head facing forward
+        c.beginPath(); c.moveTo(s * 0.7, -s * 0.9); c.quadraticCurveTo(s * 0.9, s * 0.4, s * 0.3, s * 0.85); c.quadraticCurveTo(-s * 0.35, s * 1.0, -s * 0.6, s * 0.45);
+        c.quadraticCurveTo(-s * 0.95, s * 0.35, -s * 0.9, s * 0.05); c.quadraticCurveTo(-s * 0.75, s * 0.1, -s * 0.6, s * 0.12); c.quadraticCurveTo(-s * 0.45, -s * 0.2, -s * 0.15, -s * 0.3);
+        c.quadraticCurveTo(-s * 0.05, -s * 0.7, -s * 0.2, -s * 0.9); c.closePath(); c.fill();
+        c.fillStyle = '#0B2F6B';
+        c.beginPath(); c.ellipse(-s * 0.2, s * 0.42, s * 0.14, s * 0.09, 0, 0, 7); c.fill();
+        c.lineWidth = s * 0.07; c.strokeStyle = '#0B2F6B'; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(-s * 0.05, s * 0.42); c.lineTo(s * 0.45, s * 0.42); c.moveTo(-s * 0.18, s * 0.3); c.quadraticCurveTo(-s * 0.1, -s * 0.1, -s * 0.05, -s * 0.2);
+        c.moveTo(s * 0.1, s * 0.25); c.quadraticCurveTo(s * 0.35, -s * 0.2, s * 0.15, -s * 0.45); c.stroke();
+      });
+    },
+  },
+  {
+    id: 'latam', name: 'LATAM Airlines', subtitle: '2016 livery', country: 'CL',
+    fleet: ['a319neo', 'a320neo', 'a321neo', 'b767-300er', 'b787-8', 'b787-9', 'b777-300er'],
+    base: '#ffffff', engine: '#1B0088', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#1B0088', wingletOut: '#1B0088', wingletIn: '#E8114B', stab: '#d2d4dc',
+    regColor: '#ffffff',
+    fuselage(p, l) {
+      // indigo belly with a coral pinstripe, rising into the tail
+      const rise = (x) => (x > l.L * 0.58 ? Math.pow((x - l.L * 0.58) / (l.L * 0.42), 1.5) * 1.6 : 0);
+      p.band((x) => -0.28 + rise(x), (x) => -0.34 + rise(x), '#E8114B', { x0: l.L * 0.06 });
+      p.band((x) => -0.36 + rise(x), -1.6, '#1B0088', { x0: l.L * 0.04 });
+      p.text('LATAM', titleX(l, 0.32), TH, titleSize(l, 0.42), '#1B0088', { font: FONTS.sans, weight: 800, spacing: 0.08 });
+    },
+    fin(f) {
+      f.fill('#1B0088');
+      f.draw(0.5, 0.52, (c) => { // coral crescent swoosh
+        const s = Math.min(f.h, f.midChord) * 0.38; c.fillStyle = '#E8114B';
+        c.beginPath(); c.moveTo(-s * 0.9, -s * 0.35); c.bezierCurveTo(-s * 0.2, s * 0.15, s * 0.4, s * 0.55, s * 0.85, s * 0.95);
+        c.bezierCurveTo(s * 0.55, s * 0.25, -s * 0.1, -s * 0.35, -s * 0.9, -s * 0.35); c.fill();
+        c.beginPath(); c.moveTo(-s * 0.6, -s * 0.75); c.bezierCurveTo(0, -s * 0.5, s * 0.5, 0, s * 0.85, s * 0.6);
+        c.bezierCurveTo(s * 0.4, -s * 0.15, -s * 0.05, -s * 0.6, -s * 0.6, -s * 0.75); c.fill();
+      });
+    },
+  },
+  {
+    id: 'aeromexico', name: 'Aeroméxico', subtitle: 'Caballero Águila (2014)', country: 'MX',
+    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'b787-8', 'b787-9', 'e190'],
+    base: '#ffffff', engine: '#0B2343', engineLip: '#b9bec5', pylon: '#ffffff', finBase: '#0B2343', wingletOut: '#0B2343', wingletIn: '#0B2343', stab: '#d0d4da',
+    fuselage(p, l) {
+      p.band(-0.5, -1.6, '#0B2343', { x0: l.L * 0.05 });
+      p.band(-0.42, -0.5, '#9aa4b1', { x0: l.L * 0.08 });
+      p.text('AEROMEXICO', titleX(l, 0.35), TH, titleSize(l, 0.32), '#0B2343', { font: FONTS.sans, weight: 700, spacing: 0.1 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.6), '#0B2343', { x0: l.tailStart + l.Lt * 0.08 });
+    },
+    fin(f) {
+      f.fill('#0B2343');
+      f.draw(0.52, 0.5, (c) => { // eagle-knight head facing forward, in silver
+        const s = Math.min(f.h, f.midChord) * 0.4;
+        c.fillStyle = '#c9cfd8';
+        c.beginPath(); c.moveTo(s * 0.8, -s * 0.9); c.quadraticCurveTo(s * 0.9, s * 0.6, s * 0.1, s * 0.9); c.quadraticCurveTo(-s * 0.5, s * 0.95, -s * 0.7, s * 0.5);
+        c.lineTo(-s * 1.0, s * 0.3); c.quadraticCurveTo(-s * 0.95, s * 0.05, -s * 0.7, -s * 0.05); c.lineTo(-s * 0.6, s * 0.1); c.quadraticCurveTo(-s * 0.3, -s * 0.2, -s * 0.2, -s * 0.9); c.closePath(); c.fill();
+        c.fillStyle = '#0B2343';
+        c.beginPath(); c.moveTo(-s * 0.45, s * 0.42); c.quadraticCurveTo(-s * 0.2, s * 0.55, s * 0.05, s * 0.4); c.quadraticCurveTo(-s * 0.2, s * 0.32, -s * 0.45, s * 0.42); c.fill();
+        // feather plumes of the helmet
+        c.strokeStyle = '#0B2343'; c.lineWidth = s * 0.06;
+        for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(s * (0.05 + k * 0.17), s * 0.7); c.quadraticCurveTo(s * (0.2 + k * 0.17), s * 0.1, s * (0.05 + k * 0.17), -s * 0.7); c.stroke(); }
+      });
+    },
+  },
+  {
+    id: 'westjet', name: 'WestJet', subtitle: '2018 livery', country: 'CA',
+    fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max7', 'b787-9', 'dash8-400'],
+    base: '#ffffff', engine: '#00505A', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#00505A', wingletOut: '#00505A', wingletIn: '#00A7A5', stab: '#d0d5d8',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.34);
+      const leaf = (c) => { mapleLeaf(c, sz * 1.05); c.fillStyle = '#00A7A5'; c.fill(); };
+      titleRow(p, titleX(l, 0.33), TH, [{ w: sz * 1.7, draw: leaf }, { t: 'WESTJET', size: sz, color: '#00505A', o: { font: FONTS.sans, weight: 800, spacing: 0.08 } }], sz * 0.45);
+      const x0 = l.L * 0.55;
+      p.band(ramp(x0, -0.75, l.L, 1.1), -1.6, '#00505A', { x0: l.L * 0.4 });
+      p.band(ramp(x0, -0.62, l.L, 1.3), ramp(x0, -0.75, l.L, 1.1), '#00A7A5', { x0: l.L * 0.45 });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.5), '#00505A', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#00505A');
+      f.draw(0.48, 0.48, (c) => { const s = Math.min(f.h, f.midChord) * 0.42; mapleLeaf(c, s); c.fillStyle = '#00A7A5'; c.fill(); c.lineWidth = s * 0.05; c.strokeStyle = '#ffffff'; c.stroke(); });
+    },
+  },
+  {
+    id: 'iberia', name: 'Iberia', subtitle: '2013 livery', country: 'ES',
+    fleet: ['a320neo', 'a321neo', 'a330-200', 'a330-300', 'a350-900'],
+    base: '#ffffff', engine: '#e4e6e9', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#D7192D', wingletIn: '#D7192D', stab: '#d3d6da',
+    fuselage(p, l) {
+      p.text('IBERIA', titleX(l, 0.33), TH, titleSize(l, 0.4), '#D7192D', { font: FONTS.sans, weight: 800, spacing: 0.12 });
+      p.band(3, ramp(l.tailStart, 1.0, l.L, -0.2), '#D7192D', { x0: l.tailStart + l.Lt * 0.2 });
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      // red top sweeping down to the trailing edge, then the orange and yellow crown strokes
+      const curve = (h0, dh) => Array.from({ length: 17 }, (_, k) => { const a = -0.3 + 1.6 * k / 16; return [a, h0 - dh * Math.pow((a + 0.3) / 1.6, 1.3)]; });
+      const band = (h0, h1, dh, col) => f.poly([...curve(h0, dh), ...curve(h1, dh).reverse()], col);
+      band(1.3, 0.62, 0.55, '#D7192D');
+      band(0.56, 0.44, 0.55, '#F39200');
+      band(0.38, 0.28, 0.55, '#FFCC00');
+    },
+  },
+  {
+    id: 'austrian', name: 'Austrian Airlines', subtitle: '2018 livery', country: 'AT',
+    fleet: ['a320neo', 'b767-300er', 'b777-200er', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#e3e5e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#E30613', wingletOut: '#E30613', wingletIn: '#E30613', stab: '#d3d6da',
+    fuselage(p, l) {
+      p.text('Austrian', titleX(l, 0.34), TH, titleSize(l, 0.42), '#E30613', { font: FONTS.sans, weight: 700 });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.5), '#E30613', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#E30613');
+      // red-white-red: white band with the forward-pointing chevron
+      f.poly([[-0.3, 0.4], [1.3, 0.4], [1.3, 0.6], [-0.3, 0.6]], '#ffffff');
+      f.draw(0.38, 0.5, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.3; c.fillStyle = '#E30613';
+        c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(s * 0.1, s * 0.55); c.lineTo(s * 0.1, s * 0.28); c.lineTo(-s * 0.35, 0); c.lineTo(s * 0.1, -s * 0.28); c.lineTo(s * 0.1, -s * 0.55); c.closePath(); c.fill();
+      });
+    },
+  },
+  {
+    id: 'finnair', name: 'Finnair', subtitle: '2010 livery', country: 'FI',
+    fleet: ['a330-300', 'a350-900', 'atr72-600', 'e190'],
+    base: '#ffffff', engine: '#e6e8eb', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#ffffff', wingletIn: '#ffffff', stab: '#d6d9dd',
+    fuselage(p, l) {
+      p.text('FINNAIR', titleX(l, 0.34), TH, titleSize(l, 0.4), '#0B1560', { font: FONTS.sans, weight: 800, spacing: 0.08 });
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      f.text('FINNAIR', 0.5, 0.42, f.h * 0.11, '#0B1560', { weight: 800, maxW: f.midChord * 0.72 });
+    },
+  },
+  {
+    id: 'koreanair', name: 'Korean Air', subtitle: 'Sky blue (classic)', country: 'KR',
+    fleet: ['a220-300', 'a321neo', 'a330-300', 'a380-800', 'b737-800', 'b737-900er', 'b737-max8', 'b747-8i', 'b747-8f', 'b777-200er', 'b777-300er', 'b777f', 'b787-9', 'b787-10', 'a330-200'],
+    base: '#8FC9EC', belly: '#c4c9cf', engine: '#8FC9EC', engineLip: '#c8ccd2', pylon: '#8FC9EC', finBase: '#8FC9EC', wingletOut: '#8FC9EC', wingletIn: '#8FC9EC', stab: '#8FC9EC',
+    windowColor: '#14283a', regColor: '#0B2265',
+    fuselage(p, l) {
+      p.band(-0.3, -1.6, '#c4c9cf');
+      p.band(-0.25, -0.3, '#ffffff');
+      p.band(-0.3, -0.34, '#0B2265', { x0: l.L * 0.04, x1: l.L * 0.9 });
+      const sz = titleSize(l, 0.32);
+      titleRow(p, titleX(l, 0.37), TH, [
+        { t: 'KOREAN AIR', size: sz, color: '#0B2265', o: { font: FONTS.sans, weight: 700, spacing: 0.08 } },
+        { t: '대한항공', size: sz * 0.8, color: '#0B2265', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.9);
+    },
+    fin(f) {
+      f.fill('#8FC9EC');
+      f.draw(0.48, 0.5, (c) => { const r = Math.min(f.h, f.midChord) * 0.3; circle(c, r * 1.1); c.fillStyle = '#ffffff'; c.fill(); taegeuk(c, r); });
+    },
+  },
+  {
+    id: 'eva', name: 'EVA Air', subtitle: '2015 livery', country: 'TW',
+    fleet: ['a321neo', 'a330-300', 'a350-1000', 'b777-300er', 'b777f', 'b787-9', 'b787-10'],
+    base: '#ffffff', engine: '#00563F', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#00563F', wingletOut: '#00563F', wingletIn: '#00563F', stab: '#cfd4d2',
+    regColor: '#ffffff',
+    fuselage(p, l) {
+      p.band(-0.22, -1.6, '#00563F');
+      p.band(-0.17, -0.22, '#F08300');
+      p.text('EVA AIR', titleX(l, 0.3), TH, titleSize(l, 0.38), '#00563F', { font: FONTS.sans, weight: 800, spacing: 0.12 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.4), '#00563F', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#00563F');
+      f.draw(0.48, 0.5, (c) => { // globe with orange ring
+        const r = Math.min(f.h, f.midChord) * 0.3;
+        circle(c, r * 1.12); c.fillStyle = '#F08300'; c.fill();
+        circle(c, r); c.fillStyle = '#ffffff'; c.fill();
+        c.strokeStyle = '#00563F'; c.lineWidth = r * 0.08;
+        for (const k of [0.35, 0.7]) { c.beginPath(); c.ellipse(0, 0, r * k, r, 0, 0, 7); c.stroke(); }
+        for (const y of [-0.5, 0, 0.5]) { const w = Math.sqrt(1 - y * y) * r; c.beginPath(); c.moveTo(-w, y * r); c.lineTo(w, y * r); c.stroke(); }
+      });
+    },
+  },
+  {
+    id: 'thai', name: 'Thai Airways', subtitle: 'Royal Orchid', country: 'TH',
+    fleet: ['a321neo', 'a330-300', 'a350-900', 'b777-300er', 'b787-8', 'b787-9'],
+    base: '#ffffff', engine: '#e4e2e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#4E1A74', wingletOut: '#4E1A74', wingletIn: '#4E1A74', stab: '#d4d2da',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.36);
+      titleRow(p, titleX(l, 0.33), TH, [
+        { t: 'THAI', size: sz, color: '#4E1A74', o: { font: FONTS.sans, weight: 800, spacing: 0.12 } },
+        { t: 'การบินไทย', size: sz * 0.7, color: '#4E1A74', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.8);
+      // purple, gold and magenta sweep under the tail
+      const x0 = l.tailStart - l.L * 0.06;
+      p.band(3, ramp(x0, 1.1, l.L, -0.55), '#4E1A74', { x0 });
+      p.band(ramp(x0, 1.1, l.L, -0.55), ramp(x0, 0.98, l.L, -0.7), '#D4A017', { x0 });
+      p.band(ramp(x0, 0.98, l.L, -0.7), ramp(x0, 0.82, l.L, -0.9), '#C3228B', { x0 });
+    },
+    fin(f) {
+      f.fill('#4E1A74');
+      f.draw(0.5, 0.5, (c) => { // stylised orchid
+        const s = Math.min(f.h, f.midChord) * 0.36;
+        const petal = (rot, len, wid, col) => { c.save(); c.rotate(rot); c.beginPath(); c.ellipse(0, len * 0.5, wid, len * 0.55, 0, 0, 7); c.fillStyle = col; c.fill(); c.restore(); };
+        petal(0.0, s * 1.1, s * 0.32, '#D4A017');
+        petal(1.25, s * 1.0, s * 0.3, '#C3228B'); petal(-1.25, s * 1.0, s * 0.3, '#C3228B');
+        petal(2.45, s * 0.85, s * 0.28, '#D4A017'); petal(-2.45, s * 0.85, s * 0.28, '#D4A017');
+        circle(c, s * 0.22); c.fillStyle = '#ffffff'; c.fill();
+      });
+    },
+  },
+  {
+    id: 'airnz', name: 'Air New Zealand', subtitle: 'Koru (2012)', country: 'NZ',
+    fleet: ['a320neo', 'a321neo', 'atr72-600', 'b777-200er', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#111111', engineLip: '#b9bec5', pylon: '#ffffff', finBase: '#111111', wingletOut: '#111111', wingletIn: '#111111', stab: '#d0d3d6',
+    fuselage(p, l) {
+      p.text('AIR NEW ZEALAND', titleX(l, 0.35), TH, titleSize(l, 0.28), '#111111', { font: FONTS.sans, weight: 700, spacing: 0.1 });
+      p.band(3, ramp(l.tailStart - l.L * 0.03, 1.0, l.L, -0.65), '#111111', { x0: l.tailStart - l.L * 0.03 });
+    },
+    fin(f) {
+      f.fill('#111111');
+      f.draw(0.5, 0.55, (c) => koru(c, Math.min(f.h, f.midChord) * 0.4, '#ffffff'));
+    },
+  },
+  {
+    id: 'vietnam', name: 'Vietnam Airlines', subtitle: 'Golden Lotus', country: 'VN',
+    fleet: ['a321neo', 'a350-900', 'b787-9', 'b787-10', 'atr72-600'],
+    base: '#ffffff', engine: '#005C8F', engineLip: '#C9A14A', pylon: '#ffffff', finBase: '#005C8F', wingletOut: '#005C8F', wingletIn: '#005C8F', stab: '#d2d6da',
+    fuselage(p, l) {
+      p.text('VIETNAM AIRLINES', titleX(l, 0.35), TH, titleSize(l, 0.28), '#005C8F', { font: FONTS.sans, weight: 700, spacing: 0.08 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.5), '#005C8F', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#005C8F');
+      f.draw(0.5, 0.48, (c) => { // golden lotus
+        const s = Math.min(f.h, f.midChord) * 0.34; c.fillStyle = '#C9A14A';
+        const petal = (rot, len, wid) => { c.save(); c.rotate(rot); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-wid, len * 0.55, 0, len); c.quadraticCurveTo(wid, len * 0.55, 0, 0); c.fill(); c.restore(); };
+        petal(0, s * 1.15, s * 0.42); petal(0.6, s, s * 0.38); petal(-0.6, s, s * 0.38); petal(1.15, s * 0.8, s * 0.32); petal(-1.15, s * 0.8, s * 0.32);
+        c.beginPath(); c.ellipse(0, -s * 0.12, s * 0.75, s * 0.1, 0, 0, 7); c.fill();
+      });
+    },
+  },
+  {
+    id: 'saudia', name: 'Saudia', subtitle: '2016 livery', country: 'SA',
+    fleet: ['a320neo', 'a321neo', 'a330-300', 'b777-300er', 'b787-9', 'b787-10'],
+    base: '#ffffff', belly: '#CDB78A', engine: '#e4e6e9', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#0B5DA7', wingletOut: '#0B5DA7', wingletIn: '#CDB78A', stab: '#d3d5d6',
+    fuselage(p, l) {
+      p.band(-0.5, -1.6, '#CDB78A', { x0: l.L * 0.03 });
+      p.band(-0.44, -0.5, '#0B5DA7', { x0: l.L * 0.05, x1: l.L * 0.92 });
+      const sz = titleSize(l, 0.34);
+      titleRow(p, titleX(l, 0.35), TH, [
+        { t: 'SAUDIA', size: sz, color: '#1F3D7A', o: { font: FONTS.sans, weight: 700, spacing: 0.14 } },
+        { t: 'السعودية', size: sz * 1.0, color: '#1F3D7A', o: { font: FONTS.serif, weight: 700 } },
+      ], sz * 0.9);
+    },
+    fin(f) {
+      const g = [['#0B5DA7', 0.55, 1.3], ['#1475BE', 0.4, 0.55], ['#1F8FD0', 0.28, 0.4]];
+      for (const [col, h0, h1] of g) f.poly([[-0.3, h0], [1.3, h0], [1.3, h1], [-0.3, h1]], col);
+      f.poly([[-0.3, -0.2], [1.3, -0.2], [1.3, 0.12], [-0.3, 0.32]], '#CDB78A');
+      f.draw(0.5, 0.64, (c) => { // palm and crossed swords
+        const s = Math.min(f.h, f.midChord) * 0.3; c.strokeStyle = '#E3CE9B'; c.fillStyle = '#E3CE9B'; c.lineCap = 'round';
+        c.lineWidth = s * 0.08; c.beginPath(); c.moveTo(-s * 0.75, -s * 0.55); c.quadraticCurveTo(0, -s * 0.95, s * 0.75, -s * 0.2); c.moveTo(s * 0.75, -s * 0.55); c.quadraticCurveTo(0, -s * 0.95, -s * 0.75, -s * 0.2); c.stroke();
+        c.lineWidth = s * 0.1; c.beginPath(); c.moveTo(0, -s * 0.8); c.lineTo(0, s * 0.35); c.stroke();
+        for (let k = 0; k < 7; k++) { const a = Math.PI * (0.1 + 0.8 * k / 6); c.save(); c.translate(0, s * 0.38); c.rotate(a - Math.PI / 2); c.beginPath(); c.ellipse(0, s * 0.32, s * 0.08, s * 0.34, 0, 0, 7); c.fill(); c.restore(); }
+      });
     },
   },
   // ------------------------------------------------------------ house & generic
