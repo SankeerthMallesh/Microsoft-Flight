@@ -266,7 +266,7 @@ export class AirportLights {
         if (lv > 0.02) for (let i = 0; i < c.length; i++) { const b = c.get(i); if (b._c) b.color = C.Color.fromAlpha(b._c, b._c.alpha * lv, b.color); }
       }
     }
-    if (this.pools) { const v = this.levels.flood || 0; this.pools.show = v > 0.02; this.poolMat.uniforms.color = new C.Color(1, 1, 1, 0.42 * v); }
+    if (this.pools) { const v = this.levels.flood || 0; this.pools.show = v > 0.02; this.poolMat.uniforms.color = new C.Color(1, 1, 1, 0.2 * v); }
   }
   // ---------------------------------------------------------------- per frame: faces, flashers, PAPI, guards
   frame() {
