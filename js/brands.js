@@ -40,6 +40,9 @@ const E = {
   dotPlane: (c) => [[-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [0, -1], [0.5, -2], [1, -3], [0, 1], [0.5, 2], [1, 3], [3, -1], [3, 1]].map(([x, y]) => `<circle cx="${x * 3}" cy="${y * 3}" r="1.2" fill="${c}"/>`).join(''),
   feathers: () => ['#DA121A', '#FCDD09', '#078930'].map((c, i) => `<path d="M${-12 + i * 4},${12 - i * 6} Q${2 + i * 3},${8 - i * 6} ${10 + i * 2},${-6 - i * 4} L${12 + i * 2},${-5 - i * 4} Q${4 + i * 3},${12 - i * 6} ${-12 + i * 4},${15 - i * 6} Z" fill="${c}"/>`).join(''),
   horus: () => '<rect x="-14" y="-14" width="28" height="28" rx="4" fill="#0B2F6B"/><path d="M7,11 Q9,-4 3,-9 Q-4,-11 -6,-5 Q-9,-4 -9,-1 Q-7,-1 -6,-1 Q-4,2 -1,3 Q-1,8 -2,11 Z" fill="#C9A23A"/><ellipse cx="-2" cy="-4.5" rx="1.6" ry="1" fill="#0B2F6B"/><path d="M0,-4.5 H5 M-1,-3 Q0,1 0,3" stroke="#0B2F6B" stroke-width="0.9" fill="none"/>',
+  latam: () => '<path d="M-13,4 C-4,6 4,9 12,15 C8,6 0,2 -13,4 Z M-9,-6 C0,-4 7,2 12,10 C8,0 0,-4 -9,-6 Z" fill="#E8114B"/>',
+  eagleKnight: () => '<path d="M10,-12 Q12,8 1,12 Q-6,13 -9,7 L-13,4 Q-12,1 -9,-1 L-8,1 Q-4,-3 -3,-12 Z" fill="#c9cfd8"/><path d="M-6,6 Q-3,7.5 0,6 Q-3,5 -6,6 Z" fill="#0B2343"/><path d="M1,9 Q3,1 1,-9 M4,9 Q6,1 4,-9 M7,8 Q9,1 7,-9" stroke="#0B2343" stroke-width="1" fill="none"/>',
+  iberia: () => '<path d="M-14,-14 H14 V2 Q0,-2 -14,-10 Z" fill="#D7192D"/><path d="M-14,-7 Q0,1 14,5 V8 Q0,4 -14,-4 Z" fill="#F39200"/><path d="M-14,-1 Q0,7 14,11 V13 Q0,10 -14,2 Z" fill="#FFCC00"/>',
   circleMark: (c, t) => `<circle r="13" fill="none" stroke="${c}" stroke-width="2"/><text y="4.5" text-anchor="middle" font-family="${F.wide}" font-size="11" fill="${c}">${t}</text>`,
 };
 
@@ -82,6 +85,10 @@ const B = {
   indigo: { bg: '#1B2A80', word: 'IndiGo', color: '#fff', font: F.sans, weight: 700, size: 21, emblem: E.dotPlane('#fff'), pos: 'left' },
   ethiopian: { bg: '#ffffff', word: 'ethiopian', color: '#078930', font: F.sans, weight: 700, size: 17, emblem: E.feathers(), pos: 'left' },
   egyptair: { bg: '#ffffff', word: 'EGYPTAIR', color: '#0B2F6B', font: F.sans, weight: 800, size: 14, ls: 1, emblem: E.horus(), pos: 'left' },
+  latam: { bg: '#1B0088', word: 'LATAM', color: '#fff', font: F.sans, weight: 800, size: 22, ls: 2, emblem: E.latam(), pos: 'left' },
+  aeromexico: { bg: '#0B2343', word: 'AEROMEXICO', color: '#fff', font: F.sans, weight: 700, size: 12, ls: 1, emblem: E.eagleKnight(), pos: 'left' },
+  westjet: { bg: '#00505A', word: 'WESTJET', color: '#fff', font: F.sans, weight: 800, size: 15, ls: 2, emblem: E.maple('#00A7A5'), pos: 'left' },
+  iberia: { bg: '#ffffff', word: 'IBERIA', color: '#D7192D', font: F.sans, weight: 800, size: 20, ls: 2, emblem: E.iberia(), pos: 'left' },
   'airbus-house': { bg: '#00205B', word: 'AIRBUS', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, pos: 'none' },
   'boeing-house': { bg: '#0039A6', word: 'BOEING', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, emblem: E.circleMark('#fff', 'B'), pos: 'left' },
   'embraer-house': { bg: '#1b2a3f', word: 'EMBRAER', color: '#fff', font: F.sans, weight: 700, size: 16, ls: 3, pos: 'none' },

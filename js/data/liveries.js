@@ -760,6 +760,90 @@ export const LIVERIES = [
       });
     },
   },
+  {
+    id: 'latam', name: 'LATAM Airlines', subtitle: '2016 livery', country: 'CL',
+    fleet: ['a319neo', 'a320neo', 'a321neo', 'b767-300er', 'b787-8', 'b787-9', 'b777-300er'],
+    base: '#ffffff', engine: '#1B0088', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#1B0088', wingletOut: '#1B0088', wingletIn: '#E8114B', stab: '#d2d4dc',
+    regColor: '#ffffff',
+    fuselage(p, l) {
+      // indigo belly with a coral pinstripe, rising into the tail
+      const rise = (x) => (x > l.L * 0.58 ? Math.pow((x - l.L * 0.58) / (l.L * 0.42), 1.5) * 1.6 : 0);
+      p.band((x) => -0.28 + rise(x), (x) => -0.34 + rise(x), '#E8114B', { x0: l.L * 0.06 });
+      p.band((x) => -0.36 + rise(x), -1.6, '#1B0088', { x0: l.L * 0.04 });
+      p.text('LATAM', titleX(l, 0.32), TH, titleSize(l, 0.42), '#1B0088', { font: FONTS.sans, weight: 800, spacing: 0.08 });
+    },
+    fin(f) {
+      f.fill('#1B0088');
+      f.draw(0.5, 0.52, (c) => { // coral crescent swoosh
+        const s = Math.min(f.h, f.midChord) * 0.38; c.fillStyle = '#E8114B';
+        c.beginPath(); c.moveTo(-s * 0.9, -s * 0.35); c.bezierCurveTo(-s * 0.2, s * 0.15, s * 0.4, s * 0.55, s * 0.85, s * 0.95);
+        c.bezierCurveTo(s * 0.55, s * 0.25, -s * 0.1, -s * 0.35, -s * 0.9, -s * 0.35); c.fill();
+        c.beginPath(); c.moveTo(-s * 0.6, -s * 0.75); c.bezierCurveTo(0, -s * 0.5, s * 0.5, 0, s * 0.85, s * 0.6);
+        c.bezierCurveTo(s * 0.4, -s * 0.15, -s * 0.05, -s * 0.6, -s * 0.6, -s * 0.75); c.fill();
+      });
+    },
+  },
+  {
+    id: 'aeromexico', name: 'Aeroméxico', subtitle: 'Caballero Águila (2014)', country: 'MX',
+    fleet: ['b737-800', 'b737-max8', 'b737-max9', 'b787-8', 'b787-9', 'e190'],
+    base: '#ffffff', engine: '#0B2343', engineLip: '#b9bec5', pylon: '#ffffff', finBase: '#0B2343', wingletOut: '#0B2343', wingletIn: '#0B2343', stab: '#d0d4da',
+    fuselage(p, l) {
+      p.band(-0.5, -1.6, '#0B2343', { x0: l.L * 0.05 });
+      p.band(-0.42, -0.5, '#9aa4b1', { x0: l.L * 0.08 });
+      p.text('AEROMEXICO', titleX(l, 0.35), TH, titleSize(l, 0.32), '#0B2343', { font: FONTS.sans, weight: 700, spacing: 0.1 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.6), '#0B2343', { x0: l.tailStart + l.Lt * 0.08 });
+    },
+    fin(f) {
+      f.fill('#0B2343');
+      f.draw(0.52, 0.5, (c) => { // eagle-knight head facing forward, in silver
+        const s = Math.min(f.h, f.midChord) * 0.4;
+        c.fillStyle = '#c9cfd8';
+        c.beginPath(); c.moveTo(s * 0.8, -s * 0.9); c.quadraticCurveTo(s * 0.9, s * 0.6, s * 0.1, s * 0.9); c.quadraticCurveTo(-s * 0.5, s * 0.95, -s * 0.7, s * 0.5);
+        c.lineTo(-s * 1.0, s * 0.3); c.quadraticCurveTo(-s * 0.95, s * 0.05, -s * 0.7, -s * 0.05); c.lineTo(-s * 0.6, s * 0.1); c.quadraticCurveTo(-s * 0.3, -s * 0.2, -s * 0.2, -s * 0.9); c.closePath(); c.fill();
+        c.fillStyle = '#0B2343';
+        c.beginPath(); c.moveTo(-s * 0.45, s * 0.42); c.quadraticCurveTo(-s * 0.2, s * 0.55, s * 0.05, s * 0.4); c.quadraticCurveTo(-s * 0.2, s * 0.32, -s * 0.45, s * 0.42); c.fill();
+        // feather plumes of the helmet
+        c.strokeStyle = '#0B2343'; c.lineWidth = s * 0.06;
+        for (let k = 0; k < 4; k++) { c.beginPath(); c.moveTo(s * (0.05 + k * 0.17), s * 0.7); c.quadraticCurveTo(s * (0.2 + k * 0.17), s * 0.1, s * (0.05 + k * 0.17), -s * 0.7); c.stroke(); }
+      });
+    },
+  },
+  {
+    id: 'westjet', name: 'WestJet', subtitle: '2018 livery', country: 'CA',
+    fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max7', 'b787-9', 'dash8-400'],
+    base: '#ffffff', engine: '#00505A', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#00505A', wingletOut: '#00505A', wingletIn: '#00A7A5', stab: '#d0d5d8',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.34);
+      const leaf = (c) => { mapleLeaf(c, sz * 1.05); c.fillStyle = '#00A7A5'; c.fill(); };
+      titleRow(p, titleX(l, 0.33), TH, [{ w: sz * 1.7, draw: leaf }, { t: 'WESTJET', size: sz, color: '#00505A', o: { font: FONTS.sans, weight: 800, spacing: 0.08 } }], sz * 0.45);
+      const x0 = l.L * 0.55;
+      p.band(ramp(x0, -0.75, l.L, 1.1), -1.6, '#00505A', { x0: l.L * 0.4 });
+      p.band(ramp(x0, -0.62, l.L, 1.3), ramp(x0, -0.75, l.L, 1.1), '#00A7A5', { x0: l.L * 0.45 });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.5), '#00505A', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#00505A');
+      f.draw(0.48, 0.48, (c) => { const s = Math.min(f.h, f.midChord) * 0.42; mapleLeaf(c, s); c.fillStyle = '#00A7A5'; c.fill(); c.lineWidth = s * 0.05; c.strokeStyle = '#ffffff'; c.stroke(); });
+    },
+  },
+  {
+    id: 'iberia', name: 'Iberia', subtitle: '2013 livery', country: 'ES',
+    fleet: ['a320neo', 'a321neo', 'a330-200', 'a330-300', 'a350-900'],
+    base: '#ffffff', engine: '#e4e6e9', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#D7192D', wingletIn: '#D7192D', stab: '#d3d6da',
+    fuselage(p, l) {
+      p.text('IBERIA', titleX(l, 0.33), TH, titleSize(l, 0.4), '#D7192D', { font: FONTS.sans, weight: 800, spacing: 0.12 });
+      p.band(3, ramp(l.tailStart, 1.0, l.L, -0.2), '#D7192D', { x0: l.tailStart + l.Lt * 0.2 });
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      // red top sweeping down to the trailing edge, then the orange and yellow crown strokes
+      const curve = (h0, dh) => Array.from({ length: 17 }, (_, k) => { const a = -0.3 + 1.6 * k / 16; return [a, h0 - dh * Math.pow((a + 0.3) / 1.6, 1.3)]; });
+      const band = (h0, h1, dh, col) => f.poly([...curve(h0, dh), ...curve(h1, dh).reverse()], col);
+      band(1.3, 0.62, 0.55, '#D7192D');
+      band(0.56, 0.44, 0.55, '#F39200');
+      band(0.38, 0.28, 0.55, '#FFCC00');
+    },
+  },
   // ------------------------------------------------------------ house & generic
   {
     id: 'airbus-house', name: 'Airbus House', subtitle: 'Manufacturer demonstrator', country: 'EU',
