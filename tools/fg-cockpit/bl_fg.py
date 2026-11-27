@@ -135,11 +135,13 @@ def load_ac(path, M, tag):
     except Exception as e:
         print('AC parse error', path, e)
 
-def offsets_matrix(el):
+def offsets_matrix(el, root=None):
     o = el.find('offsets')
     if o is None: return Matrix.Identity(4)
-    def g(k):  # tolerate stray characters in hand-written XML (e.g. '0.0001s')
-        m = re.match(r'\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)', o.findtext(k) or '')
+    def g(k):  # tolerate stray characters in hand-written XML (e.g. '0.0001s'); resolve alias="/params/..." in this file
+        e = o.find(k); t = e.text if e is not None else None
+        if e is not None and e.get('alias') and root is not None: t = root.findtext(e.get('alias').strip('/'))
+        m = re.match(r'\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)', t or '')
         return float(m.group(1)) if m else 0.0
     T = Matrix.Translation((g('x-m'), g('y-m'), g('z-m')))
     R = (Matrix.Rotation(math.radians(g('heading-deg')), 4, 'Z') @ Matrix.Rotation(math.radians(g('pitch-deg')), 4, 'Y') @ Matrix.Rotation(math.radians(g('roll-deg')), 4, 'X'))
@@ -177,7 +179,7 @@ def load_xml(path, M, depth=0):
     try: root = parse_prop(path)
     except Exception as e: print('xml error', path, e); return
     base = os.path.dirname(path)
-    Mr = M @ offsets_matrix(root)
+    Mr = M @ offsets_matrix(root, root)
     p = root.findtext('path')
     if p:
         f = resolve(p, base)
@@ -187,7 +189,7 @@ def load_xml(path, M, depth=0):
         mp = m.findtext('path')
         if not mp: continue
         f = resolve(mp, base)
-        Mm = Mr @ offsets_matrix(m)
+        Mm = Mr @ offsets_matrix(m, root)
         if f and f.endswith('.xml'): load_xml(f, Mm, depth + 1)
         elif f and f.endswith('.ac') and (KEEP is None or KEEP.search(f)): load_ac(f, Mm, os.path.relpath(f, ACDIR))
 

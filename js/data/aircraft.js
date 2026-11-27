@@ -378,6 +378,7 @@ export const AIRCRAFT = [
   // ---------------------------------------------------- BOMBARDIER / MHI
   {
     id: 'crj900', maker: 'Bombardier', name: 'CRJ900', family: 'CRJ', category: 'Regional jet',
+    cockpit: { glb: 'models/crj700-cockpit.glb', meta: 'models/crj700-cockpit.meta.json', offset: [1.875, 0, 0], credit: 'FlightGear CRJ700 family flight deck (GPL v2), adapted for the CRJ900' },
     length: 36.2, span: 24.9, height: 7.5, wingArea: 70.6, mtow: 38330, oew: 21845, fuel: 8820,
     engines: { count: 2, type: 'turbofan', thrust: 64.5, name: 'GE CF34-8C5' },
     perf: { mmo: 0.85, vmo: 335, cruiseMach: 0.78, ceiling: 41000, range: 2956, seats: '76–90' },
@@ -535,6 +536,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'crj700', maker: 'Bombardier', name: 'CRJ700', family: 'CRJ', category: 'Regional jet',
+    cockpit: { glb: 'models/crj700-cockpit.glb', meta: 'models/crj700-cockpit.meta.json', credit: 'FlightGear CRJ700 family flight deck (GPL v2)' },
     length: 32.51, span: 23.24, height: 7.57, wingArea: 70.6, mtow: 34019, oew: 19731, fuel: 8820,
     engines: { count: 2, type: 'turbofan', thrust: 61.3, name: 'GE CF34-8C5B1' },
     perf: { mmo: 0.85, vmo: 335, cruiseMach: 0.78, ceiling: 41000, range: 2593, seats: '66–78' },

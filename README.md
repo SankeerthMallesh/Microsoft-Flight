@@ -115,6 +115,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The 3D Boeing 787 flight deck (787-9, also used on the 787-8 and 787-10) comes from the [FlightGear](https://www.flightgear.org/) Boeing 787-8 Dreamliner (Omega95, Joshua W, Redneck, Jentron, Hooray, Thomas Albrecht and contributors), GPL v2.
 - The 3D Airbus A380 flight deck comes from the [FlightGear](https://www.flightgear.org/) Airbus A380 (K. Ampere, I. Cunningham, F. Dalvi, S. Hamilton and contributors), GPL v2.
 - The 3D Boeing 747 flight deck (747-8i, also used on the 747-8F and 747-400) comes from the [FlightGear](https://www.flightgear.org/) 747-8i (John Williams; original cockpit by Gijs de Rooy with Ivan Ngeow, Jentron, Syd Adams, Torsten Dreyer, Markus Bulik; Grupo FGBr), GPL v2.
+- The 3D CRJ700/CRJ900 flight deck comes from the [FlightGear](https://www.flightgear.org/) CRJ700 family (Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and contributors), GPL v2.
 
 ### License
 

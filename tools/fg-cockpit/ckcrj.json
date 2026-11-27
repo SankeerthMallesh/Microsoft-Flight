@@ -1,0 +1,10 @@
+{ "exterior": "Models/CRJ700.ac", "extNames": "^Fuselage\\.001$", "xcg": 16.4002,
+  "groundFG": -3.6, "groundZ": -1.945,
+  "keep": "^Models/(Flightdeck/|Instruments/)",
+  "dropSrcNames": "(Standby/standby\\.ac:(?!(AI|Bezel\\.001|BaroKnob|CageBtn)$)|EFIS/EFIS[1-6]\\.ac:(?!(EFIS[1-6]|Border.*)$))",
+  "dropNames": "_lit$|_on$|halo|^hud|^HUD|[Ll]ight[Cc]one",
+  "decimateOver": 1500, "decimateMin": 0.15,
+  "darkScreens": true,
+  "screens": { "pfd": ["EFIS1"], "nd": ["EFIS2"], "eicas": ["EFIS3"], "eicas2": ["EFIS4"], "nd2": ["EFIS5"], "pfd2": ["EFIS6"], "isis": ["AI"] },
+  "screenCrop": { "pfd": [0, 1, 0.075, 0.925], "nd": [0, 1, 0.075, 0.925], "pfd2": [0, 1, 0.075, 0.925], "nd2": [0, 1, 0.075, 0.925], "eicas": [0, 1, 0.075, 0.925] },
+  "eyeFG": [-13.305, -0.528, -0.48], "pitchDeg": -14 }
