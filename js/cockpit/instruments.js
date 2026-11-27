@@ -17,6 +17,8 @@ function txt(ctx, s, x, y, size, color, align = 'center', weight = 600) {
   ctx.font = `${weight} ${size}px ${FONT}`; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y);
 }
 function box(ctx, x, y, w, h, stroke, fill = '#000', lw = 1.5) { ctx.fillStyle = fill; ctx.fillRect(x, y, w, h); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.strokeRect(x, y, w, h); }
+// shared with the type-specific panels in panels.js
+export { COL, FONT, setup, txt, box };
 
 // ================================================================== PFD
 export function drawPFD(canvas, s) {
@@ -178,6 +180,9 @@ export function drawND(canvas, s) {
   const range = s.ndRange || 20; // nm
   const pxPerM = R / (range * 1852);
   const hdg = o.hdg;
+  // Airbus NDs draw the active route green, selected heading cyan and the aircraft symbol yellow
+  const ab = s.style === 'airbus';
+  const P = ab ? { route: COL.green, bug: COL.cyan, acft: '#ffe600', wpt: COL.green, lbl: COL.white, rwy: COL.green } : { route: COL.magenta, bug: COL.magenta, acft: COL.white, wpt: COL.magenta, lbl: COL.green, rwy: COL.magenta };
   // range arcs
   ctx.strokeStyle = COL.white; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.arc(cx, cy, R, (-90 - 60) * D2R, (-90 + 60) * D2R); ctx.stroke();
@@ -209,38 +214,50 @@ export function drawND(canvas, s) {
   }
   // active route (magenta)
   if (s.routePts && s.routePts.length) {
-    ctx.strokeStyle = COL.magenta; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy);
+    ctx.strokeStyle = P.route; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy);
     for (const p of s.routePts) ctx.lineTo(...proj(p.lat, p.lon));
     ctx.stroke();
-    for (const p of s.routePts) { const q = proj(p.lat, p.lon); ctx.strokeStyle = COL.white; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(q[0], q[1] - 6); ctx.lineTo(q[0] + 6, q[1]); ctx.lineTo(q[0], q[1] + 6); ctx.lineTo(q[0] - 6, q[1]); ctx.closePath(); ctx.stroke(); if (p.name) txt(ctx, p.name, q[0] + 9, q[1] - 9, 11, COL.magenta, 'left'); }
+    for (const p of s.routePts) { const q = proj(p.lat, p.lon); ctx.strokeStyle = COL.white; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(q[0], q[1] - 6); ctx.lineTo(q[0] + 6, q[1]); ctx.lineTo(q[0], q[1] + 6); ctx.lineTo(q[0] - 6, q[1]); ctx.closePath(); ctx.stroke(); if (p.name) txt(ctx, p.name, q[0] + 9, q[1] - 9, 11, P.wpt, 'left'); }
   }
   // selected runway extended centreline
   if (s.runway) {
     const r = s.runway; const p1 = proj(r.lat, r.lon);
     const far = [r.lat - Math.cos(r.heading) * (15 * 1852) / 6371000, r.lon - Math.sin(r.heading) * (15 * 1852) / (6371000 * Math.cos(r.lat))];
     const p2 = proj(far[0], far[1]);
-    ctx.strokeStyle = COL.magenta; ctx.setLineDash([8, 6]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke(); ctx.setLineDash([]);
-    txt(ctx, `${r.airport} ${r.ident}`, p1[0] + 12, p1[1] + 10, 11, COL.magenta, 'left');
+    ctx.strokeStyle = P.rwy; ctx.setLineDash([8, 6]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke(); ctx.setLineDash([]);
+    txt(ctx, `${r.airport} ${r.ident}`, p1[0] + 12, p1[1] + 10, 11, P.rwy, 'left');
   }
   ctx.restore();
   // heading bug
-  if (s.ap) { const rel = wrap180(s.ap.hdg - hdg); if (Math.abs(rel) < 62) { const a = (rel - 90) * D2R; ctx.save(); ctx.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.rotate(a + Math.PI / 2); ctx.strokeStyle = COL.magenta; ctx.lineWidth = 2; ctx.strokeRect(-7, -7, 14, 7); ctx.restore(); } }
+  if (s.ap) { const rel = wrap180(s.ap.hdg - hdg); if (Math.abs(rel) < 62) { const a = (rel - 90) * D2R; ctx.save(); ctx.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.rotate(a + Math.PI / 2);
+    if (ab) { ctx.fillStyle = P.bug; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -11); ctx.lineTo(7, -11); ctx.closePath(); ctx.fill(); } else { ctx.strokeStyle = P.bug; ctx.lineWidth = 2; ctx.strokeRect(-7, -7, 14, 7); }
+    ctx.restore(); } }
   // track line
   const trel = wrap180(o.track - hdg) * D2R;
-  if (o.gs > 20) { ctx.strokeStyle = COL.white; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(trel) * R, cy - Math.cos(trel) * R); ctx.stroke(); }
+  if (o.gs > 20 && !ab) { ctx.strokeStyle = COL.white; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.sin(trel) * R, cy - Math.cos(trel) * R); ctx.stroke(); }
+  if (o.gs > 20 && ab) { const tx = cx + Math.sin(trel) * R, ty = cy - Math.cos(trel) * R; ctx.strokeStyle = COL.green; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(tx, ty - 6); ctx.lineTo(tx + 5, ty); ctx.lineTo(tx, ty + 6); ctx.lineTo(tx - 5, ty); ctx.closePath(); ctx.stroke(); }
+  if (ab) { ctx.strokeStyle = P.acft; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy - R - 2); ctx.lineTo(cx, cy - R + 14); ctx.stroke(); }
   // aircraft symbol
-  ctx.strokeStyle = COL.white; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14); ctx.moveTo(cx - 12, cy - 2); ctx.lineTo(cx + 12, cy - 2); ctx.moveTo(cx - 5, cy + 12); ctx.lineTo(cx + 5, cy + 12); ctx.stroke();
+  ctx.strokeStyle = P.acft; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(cx, cy - 14); ctx.lineTo(cx, cy + 14); ctx.moveTo(cx - 12, cy - 2); ctx.lineTo(cx + 12, cy - 2); ctx.moveTo(cx - 5, cy + 12); ctx.lineTo(cx + 5, cy + 12); ctx.stroke();
   // header
-  box(ctx, cx - 26, 6, 52, 24, COL.white, '#000');
-  txt(ctx, String(Math.round(hdg) % 360).padStart(3, '0'), cx, 18, 16, COL.white, 'center', 700);
-  txt(ctx, 'TRK', cx - 50, 18, 12, COL.green); txt(ctx, 'MAG', cx + 52, 18, 12, COL.green);
-  txt(ctx, `GS ${Math.round(o.gs)}  TAS ${Math.round(o.tas)}`, 8, 14, 12, COL.white, 'left');
+  if (ab) {
+    txt(ctx, 'GS', 8, 14, 11, COL.white, 'left'); txt(ctx, Math.round(o.gs), 30, 14, 13, COL.green, 'left', 700);
+    txt(ctx, 'TAS', 64, 14, 11, COL.white, 'left'); txt(ctx, Math.round(o.tas), 92, 14, 13, COL.green, 'left', 700);
+  } else {
+    box(ctx, cx - 26, 6, 52, 24, COL.white, '#000');
+    txt(ctx, String(Math.round(hdg) % 360).padStart(3, '0'), cx, 18, 16, COL.white, 'center', 700);
+    txt(ctx, 'TRK', cx - 50, 18, 12, COL.green); txt(ctx, 'MAG', cx + 52, 18, 12, COL.green);
+    txt(ctx, `GS ${Math.round(o.gs)}  TAS ${Math.round(o.tas)}`, 8, 14, 12, COL.white, 'left');
+  }
   if (o.windSpd > 1) {
     txt(ctx, `${String(Math.round(o.windDir)).padStart(3, '0')}°/${Math.round(o.windSpd)}`, 8, 32, 12, COL.white, 'left');
     const a = (o.windDir + 180 - hdg) * D2R; ctx.save(); ctx.translate(26, 58); ctx.rotate(a); ctx.strokeStyle = COL.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -12); ctx.lineTo(0, 12); ctx.moveTo(-5, 6); ctx.lineTo(0, 12); ctx.lineTo(5, 6); ctx.stroke(); ctx.restore();
   }
-  txt(ctx, `RNG ${range}`, w - 8, 14, 12, COL.cyan, 'right');
-  if (s.runway && s.dist != null) txt(ctx, `${s.runway.airport}/${s.runway.ident}  ${(s.dist / 1852).toFixed(1)} NM`, w - 8, 32, 12, COL.magenta, 'right');
+  txt(ctx, `RNG ${range}`, w - 8, ab ? h - 12 : 14, 12, COL.cyan, 'right');
+  if (s.runway && s.dist != null) {
+    if (ab) { txt(ctx, `${s.runway.airport}${s.runway.ident}`, w - 8, 14, 12, COL.white, 'right'); txt(ctx, `${(s.dist / 1852).toFixed(1)} NM`, w - 8, 32, 12, COL.green, 'right', 700); }
+    else txt(ctx, `${s.runway.airport}/${s.runway.ident}  ${(s.dist / 1852).toFixed(1)} NM`, w - 8, 32, 12, COL.magenta, 'right');
+  }
 }
 
 // ================================================================== EICAS
@@ -251,7 +268,7 @@ export function drawEICAS(canvas, s) {
   const fm = s.fm;
   const n = fm.engines.length;
   const prop = fm.engines[0].type !== 'turbofan';
-  const dialR = Math.max(10, Math.min(w / (n * 2.5), h * 0.12, (h * 0.74 - 62 - h * 0.17) / 4.4));
+  const dialR = Math.max(10, Math.min(w / (n * 2.5), h * 0.12, (h * 0.74 - 62 - h * 0.17) / (prop ? 4.9 : 4.4)));
   const dial = (x, y, v, max, label, red, val, rev) => {
     const a0 = Math.PI * 0.75, a1 = Math.PI * 2.0;
     ctx.strokeStyle = COL.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, dialR, a0, a1); ctx.stroke();
@@ -266,14 +283,24 @@ export function drawEICAS(canvas, s) {
   const top = h * 0.17;
   fm.engines.forEach((e, i) => {
     const x = (w / (n + 1)) * (i + 1) - dialR * 0.3;
-    if (prop) dial(x, top, e.n1, 105, '', 0.95, Math.round(clamp((e.n1 - e.idle) / (100 - e.idle), 0, 1.05) * 100) + '', e.reverse > 0.5);
-    else dial(x, top, e.n1, 110, '', 0.93, e.n1.toFixed(1), e.reverse > 0.5);
-    dial(x, top + dialR * 2.6, e.egt, 1100, '', 0.86, Math.round(e.egt) + '');
-    txt(ctx, (e.ff * 3600).toFixed(0), x, top + dialR * 4.25, 12, COL.white);
+    if (prop) {
+      // torque: shaft power as a share of rated power; ITT is the turbine temperature; NP the governed propeller speed
+      const tq = e.maxPower > 0 && e.power != null && e.running ? (e.power / e.maxPower) * 100 : clamp((e.n1 - e.idle) / (100 - e.idle), 0, 1.05) * 100;
+      dial(x, top, tq, 120, '', 106 / 120, Math.round(tq) + '', e.reverse > 0.5);
+      dial(x, top + dialR * 2.6, e.egt, 1000, '', 0.88, Math.round(e.egt) + '');
+      const np = e.running ? 70 + 30 * clamp((e.n1 - e.idle) / (100 - e.idle), 0, 1) : e.n1 * 0.5;
+      txt(ctx, Math.round(np) + '', x, top + dialR * 4.0, 12, COL.white, 'center', 700);
+      txt(ctx, (e.ff * 3600).toFixed(0), x, top + dialR * 4.6, 12, COL.white);
+    } else {
+      dial(x, top, e.n1, 110, '', 0.93, e.n1.toFixed(1), e.reverse > 0.5);
+      dial(x, top + dialR * 2.6, e.egt, 1100, '', 0.86, Math.round(e.egt) + '');
+      txt(ctx, (e.ff * 3600).toFixed(0), x, top + dialR * 4.25, 12, COL.white);
+    }
   });
-  txt(ctx, prop ? 'TQ %' : 'N1', w / 2, top - dialR - 4, 12, COL.cyan);
-  txt(ctx, 'EGT', w / 2, top + dialR * 2.6 - dialR - 4, 12, COL.cyan);
-  txt(ctx, 'FF KG/H', w * 0.04, top + dialR * 4.25, 10, COL.cyan, 'left');
+  txt(ctx, prop ? 'TRQ %' : 'N1', w / 2, top - dialR - 4, 12, COL.cyan);
+  txt(ctx, prop ? 'ITT' : 'EGT', w / 2, top + dialR * 2.6 - dialR - 4, 12, COL.cyan);
+  if (prop) txt(ctx, 'NP %', w * 0.04, top + dialR * 4.0, 10, COL.cyan, 'left');
+  txt(ctx, 'FF KG/H', w * 0.04, top + dialR * (prop ? 4.6 : 4.25), 10, COL.cyan, 'left');
   // lower: fuel, gear, flaps
   const ly = h * 0.74;
   txt(ctx, 'FUEL', w * 0.12, ly - 26, 12, COL.cyan);

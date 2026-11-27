@@ -13,6 +13,7 @@ import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
 import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
+import { panelStyleFor, drawAirbusPFD, drawECAM, drawSixPack, drawEngineStrip } from './cockpit/panels.js';
 import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360, wrap180, distance, bearing } from './sim/math.js';
 
 const $ = (id) => document.getElementById(id);
@@ -315,6 +316,9 @@ async function startFlight() {
     loading(true, 'Loading 3D cockpit…', 0.17);
     const ck = built.detailed && ac.cockpit && settings.cockpit3d !== false ? await world.loadCockpit(ac.cockpit) : await world.loadCockpit(null);
     $('flightUI').classList.toggle('ck3d', !!ck);
+    // 2D panel style for aircraft without a 3D flight deck (3D decks keep the shared glass displays)
+    app.panelStyle = ck ? 'boeing' : panelStyleFor(ac);
+    for (const k of ['airbus', 'ga', 'boeing']) $('flightUI').classList.toggle('panel-' + k, app.panelStyle === k);
     world.model.show = false;
     world.stopMenuOrbit();
     world.viewer.scene.screenSpaceCameraController.enableInputs = false;
@@ -667,7 +671,7 @@ function instrumentState() {
     ap.engaged ? ({ ALT: 'ALT HOLD', VS: 'V/S', FLCH: 'FLCH SPD', VNAV: 'VNAV PTH', GS: ap.flare ? 'FLARE' : 'G/S' }[ap.vert] || '') : '',
   ];
   return {
-    out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
+    style: app.panelStyle, out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
     trend, fma, ils: ils && ils.along > -200 && ils.d < 30 * NM && (ap.lat === 'LOC' || ap.appArmed) ? ils : null,
     routePts: app.routeCache?.pts || null,
     lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.dest ? app.dest.rwy : app.rwy, dist: app.dest ? ap.navInfo()?.togo : ils ? ils.d : null, fm,
@@ -714,9 +718,13 @@ function drawCockpit3D(s) {
 function drawInstruments() {
   const s = instrumentState();
   if (app.view === 'cockpit' && app.world.ckMeta) { drawCockpit3D(s); return; }
+  const st = app.panelStyle;
   if (app.view === 'cockpit') {
-    if (app.panel) { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
-  } else if (app.panel) drawPFD($('pfdMini'), s);
+    if (!app.panel) return;
+    if (st === 'ga') { drawSixPack($('pfd'), s); drawEngineStrip($('eicas'), s); }
+    else if (st === 'airbus') { drawAirbusPFD($('pfd'), s); drawND($('nd'), s); drawECAM($('eicas'), s); }
+    else { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
+  } else if (app.panel) (st === 'ga' ? drawSixPack : st === 'airbus' ? drawAirbusPFD : drawPFD)($('pfdMini'), s);
 }
 function updateHud() {
   const fm = app.fm, o = fm.out, ap = app.ap;
