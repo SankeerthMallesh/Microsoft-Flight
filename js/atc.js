@@ -132,7 +132,7 @@ export class ATC {
     // phase from the start position
     this.freeArr = null;
     this.arrOverride = plan.start === 'approach' || (plan.start === 'air' && !app.dest) ? { ap: this.origin, rwy: app.rwy } : null;
-    if (plan.start === 'runway') { this.phase = 'PARKED'; this.fac = this.facility(this.origin, 'clearance'); }
+    if (plan.start === 'runway' || plan.start === 'gate') { this.phase = 'PARKED'; this.fac = this.facility(this.origin, 'clearance'); }
     else if (plan.start === 'cruise') { this.phase = 'CRUISE'; this.fac = this.centerFacility(); this.assigned.alt = Math.round(fm.out.alt / 100) * 100; this.later(3, () => this.checkIn()); }
     else if (plan.start === 'approach') { this.phase = 'APPROACH'; this.flags.appCleared = true; this.flags.twr = true; this.fac = this.facility(this.arrival().ap, 'tower'); this.assigned.alt = Math.round(fm.out.alt / 100) * 100; this.later(2, () => this.handoffTower()); }
     else if (app.dest) { this.phase = 'DEPARTURE'; this.fac = this.facility(this.origin, 'departure'); this.assigned.alt = Math.round(fm.out.alt / 100) * 100; this.later(3, () => this.checkIn()); }
@@ -174,7 +174,8 @@ export class ATC {
     const app = this.app;
     if (this.arrOverride) return this.arrOverride;
     if (app.dest) return { ap: app.dest.ap, rwy: app.dest.rwy, route: app.dest };
-    return this.freeArr;
+    // no destination: treat the departure airport as the arrival (pattern work / return)
+    return this.freeArr || { ap: this.origin, rwy: app.rwy || this.depRwy };
   }
   estimateCruise() {
     const app = this.app, ac = app.fm.ac, dest = app.dest?.ap;
