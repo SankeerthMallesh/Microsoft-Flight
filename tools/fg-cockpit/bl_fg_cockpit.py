@@ -21,8 +21,15 @@ A = Matrix(((-1, 0, 0, xcg + noseFG), (0, -1, 0, 0), (0, 0, 1, -czFG), (0, 0, 0,
 keep = re.compile(cfg['keep']); drop = re.compile(cfg.get('dropNames', '^$'))
 dropsn = re.compile(cfg.get('dropSrcNames', '^$'))  # matched against '<src .ac>:<object name>'
 for o in list(objs):
-    if not keep.search(o.get('src', '')) or drop.search(o.name) or dropsn.search(o.get('src', '') + ':' + o.name):
+    kept = o.get('src') == 'added' or keep.search(o.get('src', '')) or (cfg.get('keepNames') and o.get('src') == cfg['exterior'] and re.search(cfg['keepNames'], o.name))
+    if not kept or drop.search(o.name) or dropsn.search(o.get('src', '') + ':' + o.name):
         bpy.data.objects.remove(o, do_unlink=True)
+# optional: extra flat quads (FG coords, 4 corners) to cap holes, e.g. a display unit missing its screen face
+for qn, qp in cfg.get('addQuads', {}).items():
+    me = bpy.data.meshes.new(qn); me.from_pydata([Vector(p) for p in qp], [], [(0, 1, 2, 3)]); me.update()
+    qo = bpy.data.objects.new(qn, me); qo['src'] = 'added'; bpy.context.scene.collection.objects.link(qo)
+    mq = bpy.data.materials.new(qn); mq.use_nodes = True
+    mq.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.012, 0.013, 0.015, 1); me.materials.append(mq)
 objs = [o for o in bpy.data.objects if o.type == 'MESH']
 # optional: collapse-decimate over-dense small parts (knobs, screws, cords) to keep the web GLB small
 dec = cfg.get('decimateOver')
@@ -68,10 +75,13 @@ for key, names in cfg['screens'].items():
 # screen objects become plain dark glass (the live canvas covers them; cropped margins must not show FG page textures)
 if cfg.get('darkScreens'):
     glass = bpy.data.materials.new('screenGlass'); glass.use_nodes = True
-    gb = glass.node_tree.nodes['Principled BSDF']; gb.inputs['Base Color'].default_value = (0.012, 0.013, 0.015, 1); gb.inputs['Roughness'].default_value = 0.25
+    gb = glass.node_tree.nodes['Principled BSDF']; gb.inputs['Base Color'].default_value = (0.012, 0.013, 0.015, 1); gb.inputs['Roughness'].default_value = 0.55
     for names in cfg['screens'].values():
         for nm in names:
             if nm in byname: byname[nm].data.materials.clear(); byname[nm].data.materials.append(glass)
+    if cfg.get('darkNames'):  # other blank display surfaces (e.g. MFDs with no live page)
+        for o in objs:
+            if re.search(cfg['darkNames'], o.name): o.data.materials.clear(); o.data.materials.append(glass)
 eyeFG = Vector(cfg['eyeFG'])
 eye = list(A @ eyeFG)
 # untextured pure-white faces are placeholders for external FG instrument packs: make them dark glass/bezel

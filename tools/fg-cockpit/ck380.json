@@ -1,0 +1,95 @@
+{
+ "exterior": "Models/a380.ac",
+ "extNames": "^Fuselage$",
+ "xcg": 30.242,
+ "groundFG": -8.72,
+ "groundZ": -6.105,
+ "keep": "^Models/(FlightDeck/(?!cockpit-light|FrontPanel/panel-light)|Instruments/)",
+ "dropNames": "[Gg]lass|_lit$|_on$|halo|^hud|^HUD|[Ll]ight[Cc]one|^Void$",
+ "dropSrcNames": "(FrontPanel/pfd3\\.ac:(?!PFD_Mask)|FrontPanel/eicas\\.ac:(?!rect\\.001$)|STBY/stby-ai\\.ac:(Plane\\.028))",
+ "darkScreens": true,
+ "screens": {
+  "pfd": [
+   "PFD_Mask.001"
+  ],
+  "nd": [
+   "EFIS.screen.001"
+  ],
+  "eicas": [
+   "rect.001"
+  ],
+  "pfd2": [
+   "PFD_Mask"
+  ],
+  "nd2": [
+   "EFIS.screen"
+  ],
+  "isis": [
+   "StbyAIface"
+  ]
+ },
+ "screenCrop": {
+  "pfd": [
+   0,
+   1,
+   0.12,
+   0.88
+  ],
+  "pfd2": [
+   0,
+   1,
+   0.12,
+   0.88
+  ],
+  "nd": [
+   0,
+   1,
+   0.13,
+   0.87
+  ],
+  "nd2": [
+   0,
+   1,
+   0.13,
+   0.87
+  ],
+  "eicas": [
+   0,
+   1,
+   0.24,
+   1
+  ]
+ },
+ "eyeFG": [
+  -19.2,
+  -0.558,
+  -1.58
+ ],
+ "pitchDeg": -9,
+ "darkNames": "^[1-4] - Default\\.001$|^menu\\.|^dropdown|^fltpln\\.(menu|button)|^system\\.menu",
+ "keepNames": "^(centreconsole|ohpanel)",
+ "addQuads": {
+  "sdScreen": [
+   [
+    -20.335,
+    -0.095,
+    -2.17
+   ],
+   [
+    -20.335,
+    0.095,
+    -2.17
+   ],
+   [
+    -20.165,
+    0.095,
+    -2.265
+   ],
+   [
+    -20.165,
+    -0.095,
+    -2.265
+   ]
+  ]
+ }
+}

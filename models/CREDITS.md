@@ -43,3 +43,10 @@ decimated, baked ambient occlusion, web-optimised). The 777-200ER, 777F and 777-
 
 Converted the same way; the FlightGear display pages were removed and the display units turned into dark glass for OpenSkies' live
 PFD, ND, EICAS and standby displays. The 787-8 and 787-10 reuse this flight deck, repositioned to their noses.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `a380-800-cockpit.glb` | Airbus A380 for [FlightGear](https://www.flightgear.org/) (flight deck, front panel, glareshield, overhead, pedestal), from the official FlightGear aircraft download mirror | K. Ampere, I. Cunningham, F. Dalvi, S. Hamilton and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way; FlightGear's own PFD/EWD needle objects were removed so OpenSkies' live displays sit on the portrait
+display units, and a missing lower-display face was capped.

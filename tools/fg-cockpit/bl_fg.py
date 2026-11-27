@@ -138,7 +138,9 @@ def load_ac(path, M, tag):
 def offsets_matrix(el):
     o = el.find('offsets')
     if o is None: return Matrix.Identity(4)
-    g = lambda k: float((o.findtext(k) or '0').strip() or 0)
+    def g(k):  # tolerate stray characters in hand-written XML (e.g. '0.0001s')
+        m = re.match(r'\s*([-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)', o.findtext(k) or '')
+        return float(m.group(1)) if m else 0.0
     T = Matrix.Translation((g('x-m'), g('y-m'), g('z-m')))
     R = (Matrix.Rotation(math.radians(g('heading-deg')), 4, 'Z') @ Matrix.Rotation(math.radians(g('pitch-deg')), 4, 'Y') @ Matrix.Rotation(math.radians(g('roll-deg')), 4, 'X'))
     return T @ R

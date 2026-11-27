@@ -179,6 +179,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'a380-800', maker: 'Airbus', name: 'A380-800', family: 'A380', category: 'Wide-body',
+    cockpit: { glb: 'models/a380-800-cockpit.glb', meta: 'models/a380-800-cockpit.meta.json', credit: 'FlightGear Airbus A380 flight deck (GPL v2)' },
     length: 72.72, span: 79.75, height: 24.09, wingArea: 845, mtow: 575000, oew: 277000, fuel: 254000,
     engines: { count: 4, type: 'turbofan', thrust: 334, name: 'RR Trent 900 / EA GP7200' },
     perf: { mmo: 0.89, vmo: 340, cruiseMach: 0.85, ceiling: 43000, range: 14800, seats: '525–853' },
