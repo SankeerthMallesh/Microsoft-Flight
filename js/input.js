@@ -6,7 +6,7 @@ export const KEY_HELP = [
   ['Throttle', 'W / S  ·  PgUp / PgDn  ·  F1 idle · F4 full'], ['Flaps', 'F extend · R retract'], ['Landing gear', 'G'],
   ['Brakes', 'B (hold) · N parking brake'], ['Speedbrake', '/  toggle · Shift+/ arm'], ['Reverse thrust', 'T (on ground)'],
   ['Trim', '[ nose down · ] nose up  (Home / End)'], ['Autopilot', 'Z master · X autothrottle'], ['Camera', 'C cycle · 1 cockpit · 2 chase · 3 orbit · 4 fly-by'],
-  ['Mouse flying', 'Y toggles mouse-yoke mode (steer with the pointer)'], ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Map / fly to airport', 'M map · click an airport → Fly here'], ['Autopilot route', 'LNAV + VNAV on the panel fly to your destination'], ['Cockpit panel', 'H show / hide'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'U'],
+  ['Mouse flying', 'Y toggles mouse-yoke mode (steer with the pointer)'], ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Map / fly to airport', 'M map · click an airport → Fly here'], ['Autopilot route', 'LNAV + VNAV on the panel fly to your destination'], ['Cockpit panel', 'H show / hide'], ['Air traffic control', '` or L opens the ATC window · 1–9 pick a request while it is open'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'U'],
 ];
 
 export class Input {

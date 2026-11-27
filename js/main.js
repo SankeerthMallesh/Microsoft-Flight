@@ -13,6 +13,7 @@ import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
+import { ATC } from './atc.js';
 import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
 import { panelStyleFor, drawAirbusPFD, drawECAM, drawSixPack, drawEngineStrip } from './cockpit/panels.js';
 import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360, wrap180, distance, bearing } from './sim/math.js';
@@ -36,6 +37,7 @@ const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: '
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const input = new Input();
 const audio = new Audio();
+const atc = new ATC(audio); // air traffic control (js/atc.js): talks only, never moves the controls
 input.invertPitch = settings.invertPitch;
 audio.setVolume(settings.volume);
 
@@ -505,9 +507,10 @@ async function startFlight() {
     world.updateAircraft(fm, 0, true);
     world.updateCamera(fm, 0.016);
     if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
-    audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
+    audio.start(ac.engines.type, ac); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
     if (app.traffic) app.traffic.start({ ap, rwy, geoid }); // live / AI air traffic
+    atc.start(app, plan);
     music.stop(4);
     if (app.map) { app.map.reset(fm, plan.start === 'cruise' ? 8 : 11); app.map.setDest(app.destAirport); }
     input.enabled = true;
@@ -577,7 +580,7 @@ $('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('r
 
 function endFlight(toMenu) {
   app.flying = false; input.enabled = false; app.paused = false;
-  audio.stopEngines();
+  audio.stopEngines(); atc.stop();
   if (app.traffic) app.traffic.stop();
   $('flightUI').classList.add('hidden');
   if (app.world.model) app.world.model.show = false;
@@ -700,7 +703,11 @@ function tick() {
     if (near && !app.calibrated[near.i] && world.calibrateAirport(near)) app.calibrated[near.i] = true;
     if (near && app.calibrated[near.i]) world.flattenAirport(near);
   }
-  audio.update(fm, app.view, dt);
+  // exterior views: the camera position drives distance attenuation, directivity and Doppler
+  let camGeo = null;
+  if (app.view !== 'cockpit') { try { const cc = window.Cesium.Cartographic.fromCartesian(world.viewer.camera.positionWC); camGeo = { lat: cc.latitude, lon: cc.longitude, h: cc.height }; } catch (e) { /* */ } }
+  audio.update(fm, app.view, dt, camGeo);
+  if (!app.paused) atc.update(dt);
   if (app.map && now - (app.lastMap || 0) > 250 && !$('minimap').classList.contains('hidden-map')) {
     app.lastMap = now;
     if (!app.routeCache || now - app.routeCache.t > 2000) {
@@ -723,6 +730,7 @@ function tick() {
 }
 
 function handleEvent(ev) {
+  atc.event(ev);
   if (ev.type === 'touchdown') {
     toast(`Touchdown ${-ev.fpm > 0 ? '' : '-'}${Math.abs(ev.fpm)} fpm · ${ev.rating}`, ev.fpm > 600 ? 'bad' : ev.fpm > 360 ? 'warn' : 'good');
     audio.thump(clamp(ev.fpm / 400, 0.3, 1.5));
@@ -732,7 +740,7 @@ function handleEvent(ev) {
   } else if (ev.type === 'crash') {
     app.crashed = true; input.enabled = false; audio.thump(2); audio.stopEngines();
     $('crashReason').textContent = ev.reason; show('crash', false);
-  } else if (ev.type === 'warn') { toast(ev.text, 'bad'); }
+  } else if (ev.type === 'warn') { toast(ev.text, 'bad'); audio.masterCaution(); }
   else if (ev.type === 'msg') toast(ev.text, 'warn');
 }
 
