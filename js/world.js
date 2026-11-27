@@ -350,6 +350,17 @@ export class World {
     try {
       const base = new URL('../', import.meta.url);
       const meta = await (await fetch(new URL(spec.meta, base))).json();
+      // per-aircraft placement of a shared flight deck (e.g. 737NG deck in the 737 MAX) and display size
+      const off = spec.offset || [0, 0, 0], add = (p) => [p[0] + off[0], p[1] + off[1], p[2] + off[2]];
+      meta.eye = add(meta.eye); if (spec.pitchDeg != null) meta.pitchDeg = spec.pitchDeg;
+      const [sx, sy] = spec.screenScale || [1, 1];
+      for (const k of Object.keys(meta.screens || {})) {
+        const q = meta.screens[k].map(add);
+        const c = [0, 1, 2].map((i) => (q[0][i] + q[1][i] + q[2][i] + q[3][i]) / 4);
+        const top = [0, 1, 2].map((i) => (q[0][i] + q[1][i]) / 2 - c[i]), right = [0, 1, 2].map((i) => (q[1][i] + q[2][i]) / 2 - c[i]);
+        meta.screens[k] = [[-1, 1], [1, 1], [1, -1], [-1, -1]].map(([a, b]) => [0, 1, 2].map((i) => c[i] + a * right[i] * sx + b * top[i] * sy));
+      }
+      meta.offset = off;
       const model = await Cesium.Model.fromGltfAsync({
         url: new URL(spec.glb, base).href, upAxis: Cesium.Axis.Z, forwardAxis: Cesium.Axis.X,
         shadows: Cesium.ShadowMode.DISABLED, backFaceCulling: false,
@@ -454,7 +465,9 @@ export class World {
     }
     this.model.show = visible;
     if (this.cockpit) {
-      this.cockpit.modelMatrix = m; this.cockpit.show = !visible;
+      const o = this.ckMeta.offset;
+      this.cockpit.modelMatrix = o && (o[0] || o[1] || o[2]) ? Cesium.Matrix4.multiplyByTranslation(m, new Cesium.Cartesian3(o[0], o[1], o[2]), new Cesium.Matrix4()) : m;
+      this.cockpit.show = !visible;
       if (this.sunK != null) { const k = Math.max(0.35, this.sunK); this.cockpit.lightColor = new Cesium.Cartesian3(k * 1.6, k * 1.56, k * 1.5); }
     }
     this.animateParts(fm);

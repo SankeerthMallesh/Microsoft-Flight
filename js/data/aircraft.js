@@ -209,6 +209,8 @@ export const AIRCRAFT = [
   {
     id: 'b737-max8', maker: 'Boeing', name: '737 MAX 8', family: '737 MAX', category: 'Narrow-body',
     detailed: { glb: 'models/b737-max8.glb', meta: 'models/b737-max8.meta.json', credit: '"Boeing 737 MAX 8" by Dlourine (Sketchfab), CC BY 4.0 — modified' },
+    // 737NG flight deck from FlightGear, aligned to the MAX fuselage; larger MAX display units
+    cockpit: { glb: 'models/b737-800-cockpit.glb', meta: 'models/b737-800-cockpit.meta.json', offset: [0.03, 0, -0.3], screenScale: [1.12, 1.04], credit: 'FlightGear 737-800 flight deck (GPL v2), adapted for the 737 MAX' },
     length: 39.52, span: 35.9, height: 12.3, wingArea: 127, mtow: 82190, oew: 45070, fuel: 20700,
     engines: { count: 2, type: 'turbofan', thrust: 130.4, name: 'CFM LEAP-1B' },
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.79, ceiling: 41000, range: 6570, seats: '162–210' },

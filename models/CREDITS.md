@@ -20,4 +20,5 @@ the landing gear and simplified some parts.
 OpenSkies converted the cockpit from AC3D to glTF, aligned it with the sim's model axes,
 darkened untextured placeholder faces, switched cut-out textures to alpha masks and
 compressed it with meshoptimizer. The live PFD, ND and EICAS are drawn by OpenSkies
-and projected onto the model's display screens.
+and projected onto the model's display screens. The 737 MAX 8 reuses this flight deck,
+repositioned to the MAX fuselage and with larger display units.
