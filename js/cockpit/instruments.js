@@ -5,7 +5,7 @@ const COL = { sky: '#1f78d1', ground: '#7a4a1e', white: '#f2f2f2', green: '#3cf2
 const FONT = '"Roboto Mono", "DejaVu Sans Mono", Consolas, monospace';
 
 function setup(canvas) {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const dpr = Math.min(window.devicePixelRatio || 1, canvas.dataset.dpr ? +canvas.dataset.dpr : 2);
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) { canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr); }
   const ctx = canvas.getContext('2d');

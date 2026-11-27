@@ -36,7 +36,7 @@ export class World {
     scene.skyAtmosphere.show = true;
     this.applyGraphics(settings.quality || 'medium');
     scene.screenSpaceCameraController.enableCollisionDetection = true;
-    viewer.resolutionScale = settings.resolutionScale || ({ high: 1, medium: 0.85, low: 0.6 }[settings.quality] ?? 0.85);
+    this.setRenderBudget(settings.quality || 'medium');
     scene.camera.frustum.near = 0.2;
     viewer.cesiumWidget.creditContainer.style.display = 'block';
     viewer.clock.shouldAnimate = true;
@@ -60,7 +60,7 @@ export class World {
     try { scene.atmosphere.dynamicLighting = Cesium.DynamicAtmosphereLightingType.SUNLIGHT; } catch (e) { /* */ }
     // bloom: gentle glow on sun glare, bright paint and lights
     const bloom = pp.bloom;
-    bloom.enabled = q !== 'low';
+    bloom.enabled = q === 'high'; // full-screen passes are expensive at Retina resolution
     bloom.uniforms.glowOnly = false; bloom.uniforms.contrast = 118; bloom.uniforms.brightness = -0.45; bloom.uniforms.delta = 1.0; bloom.uniforms.sigma = 2.6; bloom.uniforms.stepSize = 1.2;
     // ambient occlusion: contact shadows between parts and on buildings (high only, it is expensive)
     const ao = pp.ambientOcclusion;
@@ -91,7 +91,12 @@ export class World {
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
         const sse = { high: 6, medium: 10, low: 18 }[this.settings.quality] ?? 10;
         this.baseSSE = sse;
-        const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, { maximumScreenSpaceError: sse, cacheBytes: 1536 * 1024 * 1024, maximumCacheOverflowBytes: 1024 * 1024 * 1024, preloadFlightDestinations: true, foveatedScreenSpaceError: true });
+        const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
+          maximumScreenSpaceError: sse, cacheBytes: 640 * 1024 * 1024, maximumCacheOverflowBytes: 384 * 1024 * 1024,
+          preloadFlightDestinations: true, foveatedScreenSpaceError: true,
+          // lower detail toward the horizon (big saving at low altitude, barely visible)
+          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 2.0e-4, dynamicScreenSpaceErrorFactor: 24, dynamicScreenSpaceErrorHeightFalloff: 0.25,
+        });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
         scene.globe.show = false;
@@ -140,17 +145,32 @@ export class World {
     return hg;
   }
 
-  // ---------------------------------------------------------------- adaptive quality
-  // Keeps the frame rate smooth: first trims 3D-tile detail, then render resolution; restores when there's headroom.
+  // ---------------------------------------------------------------- render budget + adaptive quality
+  // Resolution is budgeted in "pixels per CSS pixel" (RPR) instead of the raw device pixel ratio: a Retina
+  // MacBook would otherwise render 4x the pixels of a normal screen. Never drops below 1.0 (no blurry upscaling).
+  setRenderBudget(q) {
+    const dpr = window.devicePixelRatio || 1;
+    this.dpr = dpr;
+    this.rprTarget = Math.min(dpr, { high: 2, medium: 1.35, low: 1 }[q] ?? 1.35);
+    this.rprMin = Math.min(dpr, 1);
+    this.rpr = this.rprTarget;
+    this.viewer.resolutionScale = this.rpr / dpr;
+  }
+  // Keeps the frame rate smooth: first trims resolution toward 1.15x, then distant 3D-tile detail (mildly),
+  // then resolution down to 1.0x; restores in reverse when there's headroom.
   adaptQuality(fps) {
-    const v = this.viewer; const target = this.targetScale ?? v.resolutionScale;
-    this.targetScale = target;
-    if (fps < 30) {
-      if (this.tileset && this.tileset.maximumScreenSpaceError < (this.baseSSE || 10) * 2.4) this.tileset.maximumScreenSpaceError += 2;
-      else v.resolutionScale = Math.max(0.5, +(v.resolutionScale - 0.1).toFixed(2));
-    } else if (fps > 52) {
-      if (v.resolutionScale < target) v.resolutionScale = Math.min(target, +(v.resolutionScale + 0.05).toFixed(2));
-      else if (this.tileset && this.tileset.maximumScreenSpaceError > (this.baseSSE || 10)) this.tileset.maximumScreenSpaceError -= 1;
+    const v = this.viewer, ts = this.tileset, base = this.baseSSE || 10;
+    if (!this.rpr) this.setRenderBudget(this.quality || 'medium');
+    const setR = (r) => { this.rpr = Math.max(this.rprMin, Math.min(this.rprTarget, +r.toFixed(2))); v.resolutionScale = this.rpr / this.dpr; };
+    const mid = Math.max(this.rprMin, Math.min(this.rprTarget, 1.15));
+    if (fps < 28) {
+      if (this.rpr > mid + 0.01) setR(this.rpr - 0.1);
+      else if (ts && ts.maximumScreenSpaceError < base * 1.6) ts.maximumScreenSpaceError = Math.min(base * 1.6, ts.maximumScreenSpaceError + 2);
+      else setR(this.rpr - 0.05);
+    } else if (fps > 50) {
+      if (this.rpr < mid - 0.01) setR(this.rpr + 0.05);
+      else if (ts && ts.maximumScreenSpaceError > base) ts.maximumScreenSpaceError = Math.max(base, ts.maximumScreenSpaceError - 1);
+      else if (this.rpr < this.rprTarget) setR(this.rpr + 0.05);
     }
   }
 

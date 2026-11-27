@@ -641,7 +641,7 @@ function instrumentState() {
 }
 // live displays projected onto the 3D cockpit's screens (CSS homography of the canvas onto the screen quad)
 const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND], ['isis', drawPFD]];
-const CK_PX = 360;
+const CK_PX = 320;
 function homography(q) {
   // maps unit square (0,0),(1,0),(1,1),(0,1) -> quad q (TL,TR,BR,BL)
   const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
@@ -654,12 +654,15 @@ function homography(q) {
 }
 function drawCockpit3D(s) {
   const box = $('ck3dScreens');
-  if (!box.children.length) for (const [k] of CK_SCREENS) { const c = document.createElement('canvas'); c.dataset.k = k; c.style.width = c.style.height = CK_PX + 'px'; box.appendChild(c); }
+  if (!box.children.length) for (const [k] of CK_SCREENS) { const c = document.createElement('canvas'); c.dataset.k = k; c.dataset.dpr = '1.2'; c.style.width = c.style.height = CK_PX + 'px'; box.appendChild(c); }
+  app.ckTick = (app.ckTick || 0) + 1;
   const rect = app.world.viewer.canvas.getBoundingClientRect();
   for (const c of box.children) {
     const k = c.dataset.k, q = app.world.screenQuad(k), m = q && homography(q.map(([x, y]) => [x + rect.left, y + rect.top]));
     if (!m || q.every(([x]) => x < 0) || q.every(([x]) => x > rect.width) || q.every(([, y]) => y > rect.height) || q.every(([, y]) => y < 0)) { c.style.display = 'none'; continue; }
     c.style.display = 'block'; c.style.transform = `matrix3d(${m.join(',')})`;
+    // first officer's side and standby refresh at half rate (they are usually off to the side)
+    if (/2$|isis/.test(k) && app.ckTick % 2 && c.width) continue;
     CK_SCREENS.find((e) => e[0] === k)[1](c, s);
     // cover glass: soft diagonal glare + slight edge falloff, like a real display unit
     const g = c.getContext('2d'), w = c.width, h = c.height;
