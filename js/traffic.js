@@ -263,7 +263,9 @@ export class Traffic {
       const p = this.extrapolate(tg, t);
       tg.off[0] *= blend; tg.off[1] *= blend; tg.off[2] *= blend;
       p.lat += tg.off[0] / 6371008.8; p.lon += tg.off[1] / (6371008.8 * Math.cos(p.lat));
-      const gnd = this.groundAt(p.lat, p.lon);
+      // ground under the aircraft: re-sampled every ~0.5 s near the ground (runway slope), every 3 s up high
+      if (tg.gnd === undefined || t - tg.gndT > (tg.r && tg.r.agl < 300 ? 0.5 : 3)) { tg.gnd = this.groundAt(p.lat, p.lon); tg.gndT = t; }
+      const gnd = tg.gnd;
       const phys = tg.variant?.physics;
       const gz = phys ? -phys.groundZ : 2.5;
       if (p.ground) p.h = gnd + gz;

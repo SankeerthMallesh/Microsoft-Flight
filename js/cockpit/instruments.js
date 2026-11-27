@@ -312,13 +312,15 @@ export function drawEICAS(canvas, s) {
 // TCAS-style symbols: hollow diamond = other traffic, filled = proximate (<6 nm, ±1200 ft),
 // amber circle = traffic advisory, red square = resolution advisory; relative altitude in hundreds of feet
 function drawTraffic(ctx, s, proj, range, alt) {
+  const inhibit = (s.out.agl ?? 9999) < 400; // TCAS alerts are inhibited close to the ground
   for (const t of s.traffic) {
+    if (t.ground) continue;
     const dNm = distance(s.lat, s.lon, t.lat, t.lon) / 1852;
     if (dNm > range * 1.05) continue;
     const rel = t.altFt == null ? null : t.altFt - alt;
     if (rel != null && Math.abs(rel) > 9900) continue;
     const [x, y] = proj(t.lat, t.lon), ar = rel == null ? 1e9 : Math.abs(rel);
-    const kind = dNm < 2 && ar < 600 ? 'ra' : dNm < 3.5 && ar < 900 ? 'ta' : dNm < 6 && ar < 1200 ? 'prox' : 'other';
+    const kind = inhibit ? (dNm < 6 && ar < 1200 ? 'prox' : 'other') : dNm < 2 && ar < 600 ? 'ra' : dNm < 3.5 && ar < 900 ? 'ta' : dNm < 6 && ar < 1200 ? 'prox' : 'other';
     const col = kind === 'ra' ? COL.red : kind === 'ta' ? COL.amber : COL.cyan;
     ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath();
     if (kind === 'ra') ctx.rect(x - 5, y - 5, 10, 10);
