@@ -77,7 +77,7 @@ function takeoff(id, ref, opts = {}) {
       if (!gearUp && o.vs > 300) { fm.gearDown = false; gearUp = true; }
     }
     const pe = pitchTgt - o.pitch;
-    fm.ctl.pitch = rotT != null ? clamp(0.25 * pe - 0.5 * fm.w[1] * R2D * 0.2, -1, 1) : 0;
+    fm.ctl.pitch = rotT != null ? clamp((fm.isGA ? 0.45 : 0.25) * pe - 0.5 * fm.w[1] * R2D * 0.2, -1, 1) : 0;
     // keep the centreline with rudder / roll on the wings level
     const xte = distance(LAT0, LON0, LAT0, fm.lon) * Math.sign(fm.lon - LON0);
     maxXte = Math.max(maxXte, Math.abs(xte));
