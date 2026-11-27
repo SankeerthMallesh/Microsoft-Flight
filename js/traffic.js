@@ -217,11 +217,11 @@ export class Traffic {
       const raw = wrapPi(rep.trk - tg.rep.trk) / dtr;
       tg.turn = rep.gs > 25 && dtr < 30 ? clamp(tg.turn * 0.4 + raw * 0.6, -0.06, 0.06) : 0;
     }
-    const before = tg.r ? { lat: tg.r.lat, lon: tg.r.lon, h: tg.r.h } : null;
+    const before = tg.r ? { lat: tg.r.lat, lon: tg.r.lon, altR: tg.r.altR } : null;
     tg.rep = rep;
     const p = this.extrapolate(tg, t);
     if (before && !tg.ai) {
-      const [n, e] = dNE(p.lat, p.lon, before.lat, before.lon), u = before.h - p.h;
+      const [n, e] = dNE(p.lat, p.lon, before.lat, before.lon), u = before.altR != null && p.altFt != null && !p.ground ? (before.altR - p.altFt) * FT : 0;
       tg.off = Math.hypot(n, e) < 3000 && Math.abs(u) < 600 ? [n, e, u] : [0, 0, 0];
     } else tg.off = [0, 0, 0];
   }
@@ -275,6 +275,7 @@ export class Traffic {
         if (p.h - gnd < 15 && p.gs < 90) p.ground = true; // on the runway in the feed's eyes but reported airborne
       }
       p.agl = (p.h - gnd) / FT;
+      p.altR = p.ground ? null : p.altFt + tg.off[2] / FT; // drawn altitude, for blending the next report
       // attitude: smoothed heading, bank from turn rate, pitch from flight path + a little AoA
       const hdgTgt = p.trk;
       tg.hdg = tg.hdg == null ? hdgTgt : tg.hdg + wrapPi(hdgTgt - tg.hdg) * (1 - Math.exp(-dt / 0.8));
