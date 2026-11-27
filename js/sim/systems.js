@@ -533,7 +533,7 @@ export class Systems {
     if (o.ias > fm.ac.perf.vmo + 6 || (fm.ac.perf.mmo && o.mach > fm.ac.perf.mmo + 0.01)) W('ovspd', 'OVERSPEED');
     if (fm.lawDegraded && air) C('law', 'F/CTL ALTN LAW');
     if (this.autobrake !== 'OFF' && fm.hyd.brakes < 0.9) C('ab', 'AUTOBRAKE FAULT');
-    if (!fm.hyd.nws && fm.onGround && this.kind !== 'ga') C('nws', 'NOSE WHEEL STEERING');
+    if (!fm.hyd.nws && fm.onGround && this.kind !== 'ga' && fm.engines.some((e) => e.running)) C('nws', 'NOSE WHEEL STEERING');
     if (this.apu.state === 'starting' && this.apu.t > 120) C('apu', 'APU FAULT');
     return out;
   }
