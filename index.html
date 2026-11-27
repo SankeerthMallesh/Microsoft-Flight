@@ -207,8 +207,12 @@
     <button class="btn" data-go="help">Controls</button><button class="btn" id="quitBtn">Main menu</button></div></div>
   <div id="crash" class="screen hidden"><div class="panel small-panel"><h2>Crashed</h2><p id="crashReason"></p>
     <button class="btn primary" id="crashRestart">Try again</button><button class="btn" id="crashQuit">Main menu</button></div></div>
-  <div id="loading" class="screen hidden"><div class="loading-card"><div class="spinner"></div><p id="loadingText">Loading…</p><div class="bar"><i id="loadingBar"></i></div>
-    <div class="fact-card off" id="factCard"><img id="factImg" alt="" /><span class="fact-label">Did you know?</span><b id="factTitle"></b><p id="factText"></p></div></div></div>
+  <div id="loading" class="screen hidden">
+    <div class="ld-bg" id="ldBgA"></div><div class="ld-bg" id="ldBgB"></div><div class="ld-shade"></div>
+    <div class="ld-top"><span class="ld-brand">OpenSkies</span><span id="ldFlight"></span></div>
+    <div class="fact-card off" id="factCard"><span class="fact-label">Did you know?</span><b id="factTitle"></b><p id="factText"></p></div>
+    <div class="loading-card"><div class="spinner"></div><p id="loadingText">Loading…</p><div class="bar"><i id="loadingBar"></i></div></div>
+  </div>
   <div id="toasts"></div>
 
   <!-- optional local config (created by the setup script, never committed): window.OPENSKIES_CONFIG = { ionToken: "..." } -->

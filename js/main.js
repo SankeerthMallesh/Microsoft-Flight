@@ -75,17 +75,33 @@ function nextFact() {
   const card = $('factCard');
   card.classList.add('fade');
   const img = kind === 'ac' ? `images/aircraft/${v}.jpg` : (FACTS[plan.acId] ? `images/aircraft/${plan.acId}.jpg` : '');
-  const apply = () => { $('factTitle').textContent = title; $('factText').textContent = text; $('factImg').src = img; card.classList.remove('fade'); };
-  // preload the picture so the card swaps cleanly
-  if (img) { const pre = new Image(); pre.onload = pre.onerror = () => setTimeout(apply, factTimer ? 450 : 0); pre.src = img; } else setTimeout(apply, factTimer ? 450 : 0);
+  const apply = () => {
+    $('factTitle').textContent = title; $('factText').textContent = text; card.classList.remove('fade');
+    if (img && img !== factBgImg) {
+      // crossfade between two full-screen layers
+      factBgImg = img; factBgFlip = !factBgFlip;
+      const show = $(factBgFlip ? 'ldBgA' : 'ldBgB'), hide = $(factBgFlip ? 'ldBgB' : 'ldBgA');
+      show.style.backgroundImage = `url("${img}")`;
+      show.classList.remove('show'); void show.offsetWidth; show.classList.add('show'); hide.classList.remove('show');
+    }
+  };
+  // preload the picture so the swap is clean
+  if (img) { const pre = new Image(); pre.onload = pre.onerror = () => setTimeout(apply, factTimer ? 600 : 0); pre.src = img; } else setTimeout(apply, factTimer ? 600 : 0);
 }
+let factBgImg = null, factBgFlip = false;
 function startFacts() {
   if (factTimer) return;
   factQueue = FACTS[plan.acId] ? [['ac', plan.acId]] : [];
   $('factCard').classList.remove('off');
-  nextFact(); factTimer = setInterval(nextFact, 8000);
+  $('loading').classList.add('cinematic');
+  const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId), ap = getAirport(plan.airport);
+  $('ldFlight').innerHTML = `<b>${ac.maker} ${ac.name}</b> · ${lv.name}<br>${ap ? ap.i + ' · ' + ap.n : ''}${plan.dest ? ' → ' + plan.dest : ''}`;
+  nextFact(); factTimer = setInterval(nextFact, 9000);
 }
-function stopFacts() { clearInterval(factTimer); factTimer = null; $('factCard').classList.add('off'); }
+function stopFacts() {
+  clearInterval(factTimer); factTimer = null; $('factCard').classList.add('off'); $('loading').classList.remove('cinematic');
+  for (const id of ['ldBgA', 'ldBgB']) $(id).classList.remove('show'); factBgImg = null;
+}
 function loading(on, text, frac) {
   $('loading').classList.toggle('hidden', !on);
   if (on && app.screen !== 'menu' && !$('loading').dataset.boot) startFacts(); else if (!on) stopFacts();
