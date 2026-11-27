@@ -57,7 +57,7 @@ export class World {
     scene.highDynamicRange = false;
     pp.fxaa.enabled = true;
     scene.light = new Cesium.SunLight({ intensity: 2.0 });
-    try { scene.atmosphere.dynamicLighting = Cesium.DynamicAtmosphereLightingType.SUNLIGHT; } catch (e) { /* */ }
+    try { scene.atmosphere.dynamicLighting = Cesium.DynamicAtmosphereLightingType.OFF; } catch (e) { /* */ } // our own day/night tint handles darkness; sun-driven atmosphere turned tiles red
     // bloom: gentle glow on sun glare, bright paint and lights
     const bloom = pp.bloom;
     bloom.enabled = q === 'high'; // full-screen passes are expensive at Retina resolution
@@ -89,10 +89,12 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const sse = { high: 6, medium: 10, low: 18 }[this.settings.quality] ?? 10;
+        const sse = { high: 7, medium: 12, low: 20 }[this.settings.quality] ?? 12;
         this.baseSSE = sse;
         const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
-          maximumScreenSpaceError: sse, cacheBytes: 640 * 1024 * 1024, maximumCacheOverflowBytes: 384 * 1024 * 1024,
+          maximumScreenSpaceError: sse,
+          cacheBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
+          maximumCacheOverflowBytes: ({ high: 256, medium: 192, low: 128 }[this.settings.quality] ?? 192) * 1024 * 1024,
           preloadFlightDestinations: true, foveatedScreenSpaceError: true,
           // lower detail toward the horizon (big saving at low altitude, barely visible)
           dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 2.0e-4, dynamicScreenSpaceErrorFactor: 24, dynamicScreenSpaceErrorHeightFalloff: 0.25,
@@ -294,7 +296,7 @@ export class World {
           ] },
         }),
       });
-      ts.maximumScreenSpaceError = 16;
+      ts.maximumScreenSpaceError = 20;
       ts.shadows = Cesium.ShadowMode.ENABLED;
       if (this.osmMatrix) ts.modelMatrix = this.osmMatrix;
       this.osmBuildings = this.viewer.scene.primitives.add(ts);
@@ -453,6 +455,8 @@ export class World {
       clear: { n: 0 }, few: { n: 22, base: 1400, top: 2200, size: 1.3 }, scattered: { n: 45, base: 1500, top: 2600, size: 1.6 },
       broken: { n: 80, base: 1200, top: 2600, size: 2.0 }, overcast: { n: 120, base: 900, top: 1800, size: 2.4, dark: true }, storm: { n: 130, base: 700, top: 2400, size: 2.7, dark: true },
     }[preset] || { n: 0 };
+    const cq = { high: 1, medium: 0.6, low: 0.35 }[this.quality] ?? 0.6;
+    if (this.cloudCfg.n) this.cloudCfg.n = Math.max(8, Math.round(this.cloudCfg.n * cq));
     this.cloudCollection.removeAll();
     this.clouds = [];
     this.cloudsCenter = null;
@@ -514,7 +518,7 @@ export class World {
     });
     this.viewer.scene.primitives.add(model);
     await new Promise((res) => { if (model.ready) res(); else { const r = model.readyEvent.addEventListener(() => { r(); res(); }); } });
-    this.model = model;
+    this.model = model; this._modelK = undefined; this._sunT = 0; // new model: re-apply lighting on the next frame
     this.physics = physics;
     this.nodes = { props: [] };
     const anim = physics.anim || { surfaces: [], gear: [] };
@@ -654,8 +658,11 @@ export class World {
       const k = 0.12 + 0.88 * t * t * (3 - 2 * t);
       this.sunK = k;
       this.applyNightTint();
-      this.model.lightColor = new Cesium.Cartesian3(k * 2.0, k * 1.95, k * 1.85);
-      this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
+      if (this._modelK === undefined || Math.abs(this._modelK - k) > 0.005) {
+        this._modelK = k;
+        this.model.lightColor = new Cesium.Cartesian3(k * 2.0, k * 1.95, k * 1.85);
+        this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
+      }
     }
     this.model.show = visible;
     if (this.cockpit) {
@@ -831,6 +838,7 @@ export class World {
     const Cesium = C();
     const cam = this.viewer.camera;
     this.viewer.scene.screenSpaceCameraController.enableInputs = false;
+    this.setTimeOfDay(11, lonD * Math.PI / 180); this.sunK = 1; this.applyNightTint();
     let a = 0;
     if (this._menuCb) this.viewer.scene.preUpdate.removeEventListener(this._menuCb);
     this._menuCb = () => {

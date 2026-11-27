@@ -11,10 +11,10 @@ export class MiniMap {
     if (!window.L) { el.innerHTML = '<div class="map-off">Map unavailable (offline)</div>'; return; }
     const map = L.map(el.querySelector('.map-canvas'), { zoomControl: false, attributionControl: true, worldCopyJump: true, preferCanvas: true }).setView([0, 0], 9);
     // free, no-key tile services (Esri satellite by default; street map and OpenStreetMap selectable)
-    const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri' });
-    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
-    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' });
-    const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.9 });
+    const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Tiles © Esri', updateInterval: 300, keepBuffer: 1 });
+    const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics', updateInterval: 300, keepBuffer: 1 });
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors', updateInterval: 300, keepBuffer: 1 });
+    const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, opacity: 0.9, updateInterval: 300, keepBuffer: 1 });
     sat.addTo(map); labels.addTo(map);
     L.control.layers({ Satellite: sat, Map: street, OpenStreetMap: osm }, { Labels: labels }, { position: 'bottomright', collapsed: true }).addTo(map);
     this.map = map;
@@ -24,7 +24,8 @@ export class MiniMap {
     this.route = L.polyline([], { color: '#ff3df5', weight: 3, dashArray: '8 6' }).addTo(map);
     this.apLayer = L.layerGroup().addTo(map);
     map.on('dragstart', () => { this.follow = false; el.classList.add('free'); });
-    map.on('moveend zoomend', () => this.drawAirports());
+    map.on('zoomend', () => this.drawAirports());
+    map.on('moveend', () => this.scheduleAirports());
     el.querySelector('.map-recenter').onclick = (e) => { e.stopPropagation(); this.follow = true; el.classList.remove('free'); };
     el.querySelector('.map-expand').onclick = (e) => { e.stopPropagation(); this.setExpanded(!this.expanded); };
     el.querySelector('.map-zin').onclick = (e) => { e.stopPropagation(); map.zoomIn(); };
@@ -42,6 +43,11 @@ export class MiniMap {
     this.expanded = on; this.el.classList.toggle('expanded', on);
     setTimeout(() => this.map && this.map.invalidateSize(), 220);
   }
+  // while the map follows the aircraft it pans constantly; rebuilding every marker on each pan is wasted main-thread work
+  scheduleAirports() {
+    if (this._apTimer) return;
+    this._apTimer = setTimeout(() => { this._apTimer = null; this.drawAirports(); }, this.follow ? 1500 : 120);
+  }
   drawAirports() {
     if (!this.map) return;
     const b = this.map.getBounds(), z = this.map.getZoom();
@@ -50,7 +56,7 @@ export class MiniMap {
     for (const a of this.airports()) {
       if (!a.L && z < 8) continue;
       if (!b.contains([a.la, a.lo])) continue;
-      if (++n > 400) break;
+      if (++n > 250) break;
       const isDest = this.dest && this.dest.i === a.i;
       const m = L.circleMarker([a.la, a.lo], { radius: a.L ? 6 : 4, color: isDest ? '#ff3df5' : a.L ? '#1d6fd1' : '#5b7083', weight: 2, fillColor: '#fff', fillOpacity: 0.9 });
       m.bindTooltip(`${a.i}${a.a ? ' / ' + a.a : ''}`, { direction: 'top', offset: [0, -6] });

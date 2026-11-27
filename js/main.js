@@ -587,7 +587,7 @@ function tick() {
     if (near && app.calibrated[near.i]) world.flattenAirport(near);
   }
   audio.update(fm, app.view, dt);
-  if (app.map && now - (app.lastMap || 0) > 250) {
+  if (app.map && now - (app.lastMap || 0) > 250 && !$('minimap').classList.contains('hidden-map')) {
     app.lastMap = now;
     if (!app.routeCache || now - app.routeCache.t > 2000) {
       const pts = routePoints(fm);
