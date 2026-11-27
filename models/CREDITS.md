@@ -18,7 +18,7 @@ the landing gear and simplified some parts.
 | `b737-800-cockpit.glb` | Boeing 737-800 for [FlightGear](https://www.flightgear.org/) (flight deck, panels, pedestal, overhead and instruments), from the official FlightGear aircraft download mirror | Innis Cunningham (3D and panel), Syd Adams (glass instruments), David Culp, Michael Soitanen and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) or later |
 
 OpenSkies converted the cockpit from AC3D to glTF, aligned it with the sim's model axes,
-darkened untextured placeholder faces, switched cut-out textures to alpha masks and
+darkened untextured placeholder faces, baked ambient-occlusion contact shadows (Blender Cycles), switched cut-out textures to alpha masks and
 compressed it with meshoptimizer. The live PFD, ND and EICAS are drawn by OpenSkies
 and projected onto the model's display screens. The 737 MAX 8 reuses this flight deck,
 repositioned to the MAX fuselage and with larger display units.

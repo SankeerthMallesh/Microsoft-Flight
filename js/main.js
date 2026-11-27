@@ -660,6 +660,16 @@ function drawCockpit3D(s) {
     if (!m || q.every(([x]) => x < 0) || q.every(([x]) => x > rect.width) || q.every(([, y]) => y > rect.height) || q.every(([, y]) => y < 0)) { c.style.display = 'none'; continue; }
     c.style.display = 'block'; c.style.transform = `matrix3d(${m.join(',')})`;
     CK_SCREENS.find((e) => e[0] === k)[1](c, s);
+    // cover glass: soft diagonal glare + slight edge falloff, like a real display unit
+    const g = c.getContext('2d'), w = c.width, h = c.height;
+    g.save(); g.setTransform(1, 0, 0, 1, 0, 0);
+    const gl = g.createLinearGradient(0, 0, w, h);
+    gl.addColorStop(0, 'rgba(255,255,255,0.07)'); gl.addColorStop(0.35, 'rgba(255,255,255,0.015)'); gl.addColorStop(0.36, 'rgba(255,255,255,0)'); gl.addColorStop(1, 'rgba(255,255,255,0.03)');
+    g.fillStyle = gl; g.fillRect(0, 0, w, h);
+    const vg = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35, w / 2, h / 2, Math.max(w, h) * 0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.22)');
+    g.fillStyle = vg; g.fillRect(0, 0, w, h);
+    g.restore();
   }
 }
 function drawInstruments() {
