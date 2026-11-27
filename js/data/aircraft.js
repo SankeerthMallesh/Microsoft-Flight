@@ -3,6 +3,8 @@
 // Figures come from manufacturer published specifications (rounded). Geometry hints
 // (geo) drive the procedural 3D model builder; perf drives the flight model.
 
+import { aeroTune } from './perf.js';
+
 const KT = 0.514444;
 
 // Shared presets -----------------------------------------------------------
@@ -601,18 +603,18 @@ export function deriveAero(ac) {
   const g = ac.geo;
   const isJet = ac.engines.type === 'turbofan';
   const isGA = ac.category === 'General aviation';
-  const clmaxClean = isGA ? 1.55 : isJet ? 1.45 : 1.6;
-  const dclFlaps = isGA ? 0.55 : ac.engines.type === 'turboprop' ? 0.95 : 1.15;
-  const dclSlats = isJet ? 0.35 : 0;
-  const cd0 = isGA ? 0.032 : ac.engines.type === 'turboprop' ? 0.028 : ac.category === 'Business jet' ? 0.021 : ac.category === 'Wide-body' || ac.category === 'Cargo' ? 0.0195 : 0.023;
-  const e = isGA ? 0.75 : ac.category === 'Wide-body' || ac.category === 'Cargo' ? 0.88 : 0.82;
+  // lift / speed schedule calibrated per type against published stall & reference speeds (perf.js)
+  const tune = aeroTune(ac);
+  const { clmaxClean, dclFlaps, dclSlats } = tune;
+  const cd0 = tune.cd0 ?? (isGA ? 0.032 : ac.engines.type === 'turboprop' ? 0.028 : ac.category === 'Business jet' ? 0.021 : ac.category === 'Wide-body' || ac.category === 'Cargo' ? 0.0195 : 0.023);
+  const e = tune.e ?? (isGA ? 0.75 : ac.category === 'Wide-body' || ac.category === 'Cargo' ? 0.88 : 0.82);
   const L = ac.length;
   // Inertia from empirical radii of gyration (Roskam).
   const kx = 0.13 * b, ky = 0.19 * L, kz = 0.22 * Math.max(L, b * 0.9);
   const sweepRad = (g.sweep * Math.PI) / 180;
   const mcrit = isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
   return {
-    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit,
+    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune,
     clAlpha: (2 * Math.PI * AR) / (2 + Math.sqrt(4 + AR * AR * (1 + Math.tan(sweepRad) ** 2))) * 1.05,
     cl0: isGA ? 0.3 : 0.22,
     kx, ky, kz,
