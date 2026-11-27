@@ -266,6 +266,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b777-200er', maker: 'Boeing', name: '777-200ER', family: '777', category: 'Wide-body',
+    cockpit: { glb: 'models/b777-300er-cockpit.glb', meta: 'models/b777-300er-cockpit.meta.json', offset: [-4.384, 0, 0.23], credit: 'FlightGear Boeing 777 flight deck (GPL v2), adapted for the 777-200ER' },
     length: 63.7, span: 60.9, height: 18.5, wingArea: 427.8, mtow: 297550, oew: 138100, fuel: 137000,
     engines: { count: 2, type: 'turbofan', thrust: 417, name: 'GE90-94B / Trent 895 / PW4090' },
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13080, seats: '301–400' },
@@ -275,6 +276,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b777-300er', maker: 'Boeing', name: '777-300ER', family: '777', category: 'Wide-body',
+    cockpit: { glb: 'models/b777-300er-cockpit.glb', meta: 'models/b777-300er-cockpit.meta.json', credit: 'FlightGear Boeing 777 flight deck (GPL v2)' },
     length: 73.9, span: 64.8, height: 18.5, wingArea: 436.8, mtow: 351500, oew: 167800, fuel: 145500,
     engines: { count: 2, type: 'turbofan', thrust: 513, name: 'GE90-115B' },
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13650, seats: '350–396' },
@@ -284,6 +286,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b777f', maker: 'Boeing', name: '777 Freighter', family: '777', category: 'Cargo',
+    cockpit: { glb: 'models/b777-300er-cockpit.glb', meta: 'models/b777-300er-cockpit.meta.json', offset: [-4.411, 0, 0], credit: 'FlightGear Boeing 777 flight deck (GPL v2), adapted for the 777F' },
     length: 63.7, span: 64.8, height: 18.6, wingArea: 436.8, mtow: 347800, oew: 144400, fuel: 145500,
     engines: { count: 2, type: 'turbofan', thrust: 493, name: 'GE90-110B1' },
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 9070, seats: 'Cargo 102 t' },
@@ -293,6 +296,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b777-9', maker: 'Boeing', name: '777-9', family: '777X', category: 'Wide-body',
+    cockpit: { glb: 'models/b777-300er-cockpit.glb', meta: 'models/b777-300er-cockpit.meta.json', offset: [0.531, 0, -0.128], credit: 'FlightGear Boeing 777 flight deck (GPL v2), adapted for the 777-9' },
     length: 76.7, span: 71.8, height: 19.7, wingArea: 516.7, mtow: 351500, oew: 181400, fuel: 158900,
     engines: { count: 2, type: 'turbofan', thrust: 470, name: 'GE GE9X' },
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13500, seats: '426' },

@@ -111,6 +111,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The detailed Boeing 737-800 model is "B737-800 Model" by hakai315 on Sketchfab, licensed CC BY 4.0 and modified for this sim. See [models/CREDITS.md](models/CREDITS.md).
 - The 3D A320neo flight deck comes from the [FlightGear](https://www.flightgear.org/) A320-family (Josh Davidson, Jonathan Redpath, merspieler, Matthew Maring, Thorsten Herrmann, Semir Gebran), GPL v2.
 - The 3D 737-800 flight deck comes from the [FlightGear](https://www.flightgear.org/) Boeing 737-800 (Innis Cunningham, Syd Adams, David Culp, Michael Soitanen and contributors), licensed GNU GPL v2 or later and converted for this sim.
+- The 3D Boeing 777 flight deck (777-300ER, also used on the 777-200ER, 777F and 777-9) comes from the [FlightGear](https://www.flightgear.org/) Boeing 777 Series (Syd Adams, Justin Smithies, Karla, Thorsten Brehm, Joshua Davidson, Isaak Dieleman, Sidi Liang, Yongfan Li, Valkmjolnir, Lars Van Hattum and contributors), GPL v2.
 
 ### License
 
