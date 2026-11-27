@@ -142,6 +142,7 @@ export class World {
     if (this.tileset && scene.sampleHeightSupported) {
       try {
         const ex = [this.points, this.rwyPoints, this.cloudCollection]; if (this.model) ex.push(this.model);
+        if (this.excludeExtra) ex.push(...this.excludeExtra()); // e.g. traffic models / lights
         const hgt = scene.sampleHeight(carto, ex, 1.5);
         if (hgt !== undefined) return hgt;
       } catch (e) { /* ignore */ }
@@ -205,7 +206,7 @@ export class World {
     const Cesium = C(), scene = this.viewer.scene;
     if (!this.tileset || !scene.sampleHeightSupported) return undefined;
     try {
-      const ex = [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : []), ...(this.cockpit ? [this.cockpit] : []), ...this.runwayPrims()];
+      const ex = [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : []), ...(this.cockpit ? [this.cockpit] : []), ...this.runwayPrims(), ...(this.excludeExtra ? this.excludeExtra() : [])];
       return scene.sampleHeight(new Cesium.Cartographic(lon, lat), ex, 1);
     } catch (e) { return undefined; }
   }

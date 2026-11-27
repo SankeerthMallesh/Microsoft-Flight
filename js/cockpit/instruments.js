@@ -227,6 +227,7 @@ export function drawND(canvas, s) {
     ctx.strokeStyle = P.rwy; ctx.setLineDash([8, 6]); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(...p1); ctx.lineTo(...p2); ctx.stroke(); ctx.setLineDash([]);
     txt(ctx, `${r.airport} ${r.ident}`, p1[0] + 12, p1[1] + 10, 11, P.rwy, 'left');
   }
+  if (s.traffic) drawTraffic(ctx, s, proj, range, o.alt); // optional TCAS-style traffic
   ctx.restore();
   // heading bug
   if (s.ap) { const rel = wrap180(s.ap.hdg - hdg); if (Math.abs(rel) < 62) { const a = (rel - 90) * D2R; ctx.save(); ctx.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.rotate(a + Math.PI / 2);
@@ -334,4 +335,30 @@ export function drawEICAS(canvas, s) {
   if (!fm.onGround && fm.gearPos < 0.98 && s.out.agl < 800 && fm.ctl.throttle < 0.3 && s.out.vs < 0) msgs.push(['GEAR NOT DOWN', COL.red]);
   msgs.slice(0, 5).forEach(([m, c], i) => txt(ctx, m, w * 0.04, h * 0.9 + i * 16 - (msgs.length > 2 ? 16 : 0), 12, c, 'left', 700));
   txt(ctx, `TAT ${Math.round(s.out.oat)}°C`, w * 0.96, h * 0.92, 12, COL.white, 'right');
+}
+
+// TCAS-style symbols: hollow diamond = other traffic, filled = proximate (<6 nm, ±1200 ft),
+// amber circle = traffic advisory, red square = resolution advisory; relative altitude in hundreds of feet
+function drawTraffic(ctx, s, proj, range, alt) {
+  const inhibit = (s.out.agl ?? 9999) < 400; // TCAS alerts are inhibited close to the ground
+  for (const t of s.traffic) {
+    if (t.ground) continue;
+    const dNm = distance(s.lat, s.lon, t.lat, t.lon) / 1852;
+    if (dNm > range * 1.05) continue;
+    const rel = t.altFt == null ? null : t.altFt - alt;
+    if (rel != null && Math.abs(rel) > 9900) continue;
+    const [x, y] = proj(t.lat, t.lon), ar = rel == null ? 1e9 : Math.abs(rel);
+    const kind = inhibit ? (dNm < 6 && ar < 1200 ? 'prox' : 'other') : dNm < 2 && ar < 600 ? 'ra' : dNm < 3.5 && ar < 900 ? 'ta' : dNm < 6 && ar < 1200 ? 'prox' : 'other';
+    const col = kind === 'ra' ? COL.red : kind === 'ta' ? COL.amber : COL.cyan;
+    ctx.fillStyle = col; ctx.strokeStyle = col; ctx.lineWidth = 1.6; ctx.beginPath();
+    if (kind === 'ra') ctx.rect(x - 5, y - 5, 10, 10);
+    else if (kind === 'ta') ctx.arc(x, y, 5.5, 0, 7);
+    else { ctx.moveTo(x, y - 6); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 6); ctx.lineTo(x - 5, y); ctx.closePath(); }
+    if (kind === 'other') ctx.stroke(); else ctx.fill();
+    if (rel != null) {
+      const v = Math.round(rel / 100), lbl = (v >= 0 ? '+' : '−') + String(Math.abs(v)).padStart(2, '0');
+      txt(ctx, lbl, x, v >= 0 ? y - 13 : y + 13, 10, col);
+      if (Math.abs(t.vsFpm) > 500) { const up = t.vsFpm > 0; ctx.beginPath(); ctx.moveTo(x + 10, y - 5); ctx.lineTo(x + 10, y + 5); ctx.moveTo(x + 7, up ? y - 2 : y + 2); ctx.lineTo(x + 10, up ? y - 6 : y + 6); ctx.lineTo(x + 13, up ? y - 2 : y + 2); ctx.stroke(); }
+    }
+  }
 }

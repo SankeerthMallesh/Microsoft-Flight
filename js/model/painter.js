@@ -297,6 +297,7 @@ export async function paintLivery(layout, livery, opts = {}) {
     if (lv.fin) lv.fin(f, layout);
   }
 
+  if (opts.canvasOnly) return { canvas }; // caller encodes (e.g. traffic models downscale first)
   let bytes;
   if (canvas.convertToBlob) bytes = new Uint8Array(await (await canvas.convertToBlob({ type: 'image/png' })).arrayBuffer());
   else bytes = await new Promise((res) => canvas.toBlob(async (b) => res(new Uint8Array(await b.arrayBuffer())), 'image/png'));
