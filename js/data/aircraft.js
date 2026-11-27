@@ -614,9 +614,9 @@ export function deriveAero(ac) {
   const sweepRad = (g.sweep * Math.PI) / 180;
   const mcrit = isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
   return {
-    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune,
+    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps,
     clAlpha: (2 * Math.PI * AR) / (2 + Math.sqrt(4 + AR * AR * (1 + Math.tan(sweepRad) ** 2))) * 1.05,
-    cl0: tune.cl0 ?? (isGA ? 0.34 : 0.4), // camber + wing incidence: ~2-2.5 deg body attitude in cruise
+    cl0: tune.cl0 ?? (isGA ? 0.34 : ac.engines.type === 'turboprop' ? 0.32 : 0.4), // camber + wing incidence: ~2-2.5 deg body attitude in cruise
     kx, ky, kz,
   };
 }

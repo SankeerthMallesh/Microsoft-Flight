@@ -31,7 +31,7 @@ const FAMILY = {
   A330: { clmaxClean: 1.45, dclFlaps: 0.65, dclSlats: 0.4, law: 'airbus', ab: AB_AIRBUS, spool: 7.5 },
   A340: { clmaxClean: 1.45, dclFlaps: 0.6, dclSlats: 0.4, law: 'airbus', ab: AB_AIRBUS, spool: 7.5 },
   A350: { clmaxClean: 1.45, dclFlaps: 0.6, dclSlats: 0.4, law: 'airbus', ab: AB_AIRBUS, spool: 7.5 },
-  A380: { clmaxClean: 1.45, dclFlaps: 0.53, dclSlats: 0.35, law: 'airbus', ab: AB_AIRBUS, spool: 8, vrK: 1.06, v2K: 1.13, revK: 0.3, revInboardOnly: true, cd0: 0.0178, e: 0.9 },
+  A380: { clmaxClean: 1.45, dclFlaps: 0.53, dclSlats: 0.35, law: 'airbus', ab: AB_AIRBUS, spool: 8, vrK: 1.06, v2K: 1.13, revK: 0.3, revInboardOnly: true, cd0: 0.0148, e: 0.92 },
   A300: { clmaxClean: 1.42, dclFlaps: 0.6, dclSlats: 0.4, law: 'conv', ab: AB_AIRBUS, spool: 7.5 },
   SSJ: { clmaxClean: 1.42, dclFlaps: 0.75, dclSlats: 0.4, law: 'airbus', ab: AB_AIRBUS },
   // Boeing: higher wing loading -> higher Vref
@@ -50,8 +50,8 @@ const FAMILY = {
   'E-Jet E2': { clmaxClean: 1.42, dclFlaps: 0.78, dclSlats: 0.4, ab: AB_BOEING, law: 'boeing-fbw' },
   CRJ: { clmaxClean: 1.4, dclFlaps: 0.48, dclSlats: 0.3, ab: null },
   // turboprops: big Fowler flaps, no slats, no autobrake, beta-range reverse
-  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
-  'Dash 8': { clmaxClean: 1.6, dclFlaps: 1.2, dclSlats: 0, ab: null, spool: 3, revK: 0.32 },
+  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, flapLin: 0.8, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
+  'Dash 8': { clmaxClean: 1.6, dclFlaps: 1.2, flapLin: 0.9, dclSlats: 0, ab: null, spool: 3, revK: 0.32 },
   'King Air': { clmaxClean: 1.5, dclFlaps: 0.55, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },
   'PC-12': { clmaxClean: 1.6, dclFlaps: 0.6, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },
   // business jets
@@ -78,7 +78,7 @@ const BY_ID = {
   'b737-800': { cd0: 0.0212, e: 0.83, sfc: 1.0 },
   'b737-max8': { sfc: 0.86 }, 'b737-max9': { sfc: 0.86 }, 'b737-max7': { sfc: 0.86 }, 'b737-max10': { sfc: 0.86 },
   'b777-300er': { cd0: 0.0172, e: 0.9, sfc: 0.9 },
-  'a380-800': { sfc: 0.92 },
+  'a380-800': { sfc: 0.86 },
   'atr72-600': { cd0: 0.027, e: 0.82 },
 };
 const DEFAULTS = { vrK: 1.06, v2K: 1.13, vrefK: 1.23, landFlap: 0, law: 'conv', ab: null, spool: 7, revK: 0.35, sfc: 1 };
@@ -119,7 +119,7 @@ export const PERF_REF = {
     crzMass: 21000, crzAlt: 17000, burn: [650, 850], crzN1: null, spool: [2, 5], idleN1: null, vs1: [102, 115],
   },
   c172: {
-    toMass: 1157, toFlap: 0, toPitch: 9, vr: 55, v2: [70, 76], vlof: [54, 60], toRoll: [260, 330], to35: [400, 500], climb: [650, 800],
+    toMass: 1157, toFlap: 0, toPitch: 11, vr: 55, v2: [70, 76], vlof: [54, 60], toRoll: [260, 330], to35: [400, 500], climb: [650, 800],
     ldgMass: 1100, ldgFlapFromFull: 0, vref: [56, 65], ldgRoll: [150, 200], ldgDist: [360, 450],
     crzMass: 1100, crzAlt: 8000, burn: [21, 26], crzN1: null, spool: [0.3, 2], idleN1: null, vs1: [48, 54],
   },

@@ -69,10 +69,10 @@ function takeoff(id, ref, opts = {}) {
     const targetMax = ref.toPitch;
     if (o.ias >= Vr && rotT == null) rotT = time;
     // rotate ~2.5-3 deg/s; on the gear stay ~1.5 deg below the tail-strike attitude
-    if (rotT != null) pitchTgt = Math.min(fm.onGround ? Math.min(targetMax, t.phys.tailAngle - 1.5) : targetMax, (time - rotT) * (fm.isGA ? 4 : 2.8) + (fm.onGround ? 0 : 0));
+    if (rotT != null) pitchTgt = Math.min(fm.onGround ? Math.min(targetMax, t.phys.tailAngle - 1) : targetMax, (time - rotT) * (fm.isGA ? 4 : 2.8) + (fm.onGround ? 0 : 0));
     if (x35 != null) {
       // pitch for V2+15 once airborne
-      const spdErr = o.ias - (V2 + 15);
+      const spdErr = o.ias - (fm.isGA ? V2 : V2 + 15); // GA: climb at Vy
       pitchTgt = clamp(targetMax + spdErr * 0.4, 3, targetMax + 6);
       if (!gearUp && o.vs > 300) { fm.gearDown = false; gearUp = true; }
     }
@@ -84,6 +84,7 @@ function takeoff(id, ref, opts = {}) {
     if (fm.onGround) { fm.ctl.yaw = clamp(-xte * 0.05 - (o.hdg > 180 ? o.hdg - 360 : o.hdg) * 0.15 - fm.w[2] * 2, -1, 1); fm.ctl.roll = clamp(-o.roll * 0.1, -1, 1); }
     else { fm.ctl.yaw = 0; fm.ctl.roll = clamp(-o.roll * 0.05 - ((o.track > 180 ? o.track - 360 : o.track)) * 0.05, -1, 1); }
     fm.step(DT); time += DT;
+    if (process.env.TRACE && rotT != null && Math.round(time * 60) % 15 === 0 && x35 == null) console.log(`   t${(time - rotT).toFixed(2)} ias ${fm.out.ias.toFixed(1)} pitch ${fm.out.pitch.toFixed(1)} tgt ${pitchTgt.toFixed(1)} alpha ${fm.out.alpha.toFixed(1)} de ${fm.surf.de.toFixed(2)} ctl ${fm.ctl.pitch.toFixed(2)} wow ${fm.wow} CL ${fm.air.CL.toFixed(2)} agl ${fm.out.agl.toFixed(1)}`);
     for (const e of fm.events.splice(0)) if (e.type === 'tailstrike') tailStrike = true;
     maxPitch = Math.max(maxPitch, fm.out.pitch);
     if (lofX == null && !fm.onGround && fm.airTime > 0.3) { lofX = along(fm) - xs; lofV = fm.out.ias; }
@@ -148,7 +149,7 @@ function trimAir(fm, altMsl, ias, gamma, approach) {
   const A = fm.aero;
   fm.flap = fm.flapLevels[fm.flapIndex].flap; fm.slat = fm.flapLevels[fm.flapIndex].slat;
   const CL = (fm.mass * G0 * Math.cos(gamma)) / (0.5 * atm.rho * V * V * fm.S);
-  const alpha = (CL - A.cl0 - A.dclFlaps * fm.flap * 0.8) / A.clAlpha;
+  const alpha = (CL - A.cl0 - A.flapLin * fm.flap) / A.clAlpha;
   const hdg = 0;
   fm.q = eulerToQuat(hdg, alpha + gamma, 0);
   fm.vel = [V * Math.cos(gamma), 0, -V * Math.sin(gamma)];

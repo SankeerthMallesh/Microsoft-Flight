@@ -158,7 +158,7 @@ export class FlightModel {
 
     // ----- lift
     const flap = this.flap, slat = this.slat;
-    const clLin0 = A.cl0 + A.dclFlaps * flap * 0.8;
+    const clLin0 = A.cl0 + A.flapLin * flap; // flaps shift the lift curve (camber) as well as raising CLmax
     const clmax = A.clmaxClean + A.dclFlaps * flap + A.dclSlats * slat;
     const aStall = (clmax - clLin0) / A.clAlpha;
     const aStallNeg = -(clmax * 0.75 + clLin0) / A.clAlpha;
@@ -188,7 +188,7 @@ export class FlightModel {
     // ----- drag
     const Mcrit = A.mcrit;
     const wave = M > Mcrit ? 25 * (M - Mcrit) ** 3 + 0.6 * Math.max(0, M - Mcrit - 0.08) ** 2 : 0;
-    const CD = A.cd0 + (CL * CL) / (Math.PI * A.e * A.AR) * ge + 0.075 * flap + 0.012 * slat + 0.02 * this.gearPos + 0.07 * this.spoiler + wave + 1.2 * Math.sin(alpha) ** 2 * stall + 0.3 * Math.abs(Math.sin(beta));
+    const CD = A.cd0 + (CL * CL) / (Math.PI * A.e * A.AR) * ge + 0.075 * flap + 0.012 * slat + (ac.geo.fixedGear ? 0 : 0.02) * this.gearPos + 0.07 * this.spoiler + wave + 1.2 * Math.sin(alpha) ** 2 * stall + 0.3 * Math.abs(Math.sin(beta));
     const CY = d.CYb * beta;
     const Lf = qbar * this.S * CL, Df = qbar * this.S * CD, Yf = qbar * this.S * CY;
     // wind axes -> body
@@ -368,7 +368,12 @@ export class FlightModel {
         const lapse = e.type === 'piston' ? Math.pow(atm.sigma, 1.05) : Math.min(1, Math.pow(atm.sigma, 0.7) * 1.25);
         const P = e.maxPower * lapse * (0.06 + 0.94 * f);
         const Tstatic = e.maxPower * (e.type === 'piston' ? 0.0192 : 0.0135) * lapse * (0.06 + 0.94 * f);
-        T = Math.min(Tstatic, (0.82 * P) / Math.max(V, 1));
+        // propeller efficiency: constant-speed turboprop ~0.82; a fixed-pitch light-aircraft
+        // prop loses efficiency at climb speeds (~0.63 at Vy, ~0.85 at cruise)
+        const eta = e.type === 'piston' ? clamp(0.85 * Math.pow(Math.max(V, 1) / 62, 0.6), 0, 0.86) : 0.82;
+        T = Math.min(Tstatic, (eta * P) / Math.max(V, 1));
+        // at flight idle a propeller windmills: net drag that bleeds speed quickly in the flare
+        T -= e.maxPower * (e.type === 'piston' ? 0.004 : 0.0035) * lapse * (1 - clamp(f * 3, 0, 1)) * clamp(V / 45, 0, 1);
         // BSFC: piston ~0.245 kg/kWh (best-economy mixture), PW127 ~0.29 kg/kWh
         e.ff = (P * (e.type === 'piston' ? 0.245 : 0.29) / 3.6e6 + (e.type === 'piston' ? 0.0006 : 0.004)) * e.sfc;
         const egtTarget = 450 + 400 * f + (atm.T - 288) * 0.8;
