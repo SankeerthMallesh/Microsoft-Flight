@@ -234,7 +234,7 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 .wx-info .warn { color: var(--warn, #f5b041); }
 .wx-cat { display: inline-block; font: 700 0.68rem 'Roboto Mono', monospace; padding: 1px 6px; border-radius: 4px; color: #fff; vertical-align: 1px; }
 .wx-cat.VFR { background: #1e9e50; } .wx-cat.MVFR { background: #2a6fdb; } .wx-cat.IFR { background: #d13b3b; } .wx-cat.LIFR { background: #b03ab8; }
-#wxHud { position: absolute; top: 12px; left: 12px; max-width: min(460px, 60vw); background: rgba(8, 12, 18, 0.66); backdrop-filter: blur(8px); border: 1px solid var(--line, rgba(255,255,255,0.12)); border-radius: 10px; padding: 6px 10px; font-size: 0.78rem; color: #e8eef5; cursor: pointer; pointer-events: auto; z-index: 5; }
+#wxHud { position: absolute; top: 58px; right: 12px; max-width: min(460px, 60vw); background: rgba(8, 12, 18, 0.66); backdrop-filter: blur(8px); border: 1px solid var(--line, rgba(255,255,255,0.12)); border-radius: 10px; padding: 6px 10px; font-size: 0.78rem; color: #e8eef5; cursor: pointer; pointer-events: auto; z-index: 5; }
 #wxHud .wx-row { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
 #wxHud .wx-raw { font-family: 'Roboto Mono', monospace; font-size: 0.72rem; opacity: 0.85; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #wxHud .wx-dec { display: none; margin-top: 4px; line-height: 1.4; }

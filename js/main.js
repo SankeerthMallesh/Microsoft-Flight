@@ -34,6 +34,7 @@ if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
 const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60, dest: null, destRwy: '' }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const wxSys = new LiveWeather();
+window.__wx = wxSys; // console debugging
 const input = new Input();
 const audio = new Audio();
 input.invertPitch = settings.invertPitch;
