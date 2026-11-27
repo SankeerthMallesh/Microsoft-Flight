@@ -298,8 +298,12 @@ async function startFlight() {
     if (!plausible(hThr) && world.mode !== 'lite') {
       try { const [p] = await window.Cesium.sampleTerrainMostDetailed(world.viewer.scene.terrainProvider, [new window.Cesium.Cartographic(rwy.lon, rwy.lat)]); if (plausible(p.height)) hThr = p.height; } catch (e) { /* ignore */ }
     }
-    const geoid = plausible(hThr) ? hThr - rwy.elevM : 0;
+    let geoid = plausible(hThr) ? hThr - rwy.elevM : 0;
     world.aptGeoid = world.aptGeoid || {}; world.aptGeoid[ap.i] = geoid;
+    // refine against the median of the 3D tiles along the runways, then lay flat runway surfaces
+    world.clearRunwaySurfaces();
+    if (world.mode === 'photoreal' && world.calibrateAirport(ap)) geoid = world.aptGeoid[ap.i];
+    world.flattenAirport(ap);
     app.calibrated = { [ap.i]: true }; app.lastNear = 0;
     world.setGroundAirports(airportsNear(rwy.lat, rwy.lon, 40 * NM, 12).concat([ap]));
     // spawn
@@ -503,7 +507,7 @@ document.querySelectorAll('[data-ap]').forEach((b) => b.addEventListener('click'
 }));
 
 // ------------------------------------------------------------------ main loop
-let frame = 0, groundTimer = 0, cloudTimer = 0, lastIas = 0, trend = 0;
+let frame = 0, groundTimer = 0, tileTimer = 0, cloudTimer = 0, lastIas = 0, trend = 0;
 function tick() {
   if (!app.flying) return;
   const now = performance.now();
@@ -529,7 +533,12 @@ function tick() {
     groundTimer -= dt;
     if (groundTimer <= 0) {
       groundTimer = 0.1;
-      const hg = world.groundFast(fm.lat, fm.lon);
+      let hg = world.groundFast(fm.lat, fm.lon);
+      if (world.tileset && world.runwayHeight(fm.lat, fm.lon) === undefined && (fm.onGround || fm.out.agl < 12)) {
+        tileTimer -= 0.1;
+        if (tileTimer <= 0) { tileTimer = 0.3; const ht = world.sampleTile(fm.lat, fm.lon); app.tileH = ht !== undefined && isFinite(ht) && (hg === undefined || Math.abs(ht - hg) < 40) ? ht : undefined; }
+        if (app.tileH !== undefined) hg = app.tileH;
+      } else app.tileH = undefined;
       if (hg !== undefined && isFinite(hg)) {
         const d = hg - fm.groundH;
         fm.groundH = Math.abs(d) < 0.05 || !fm.onGround ? hg : fm.groundH + clamp(d, -1.5, 1.5);
@@ -574,6 +583,7 @@ function tick() {
     }
     const near = airportsNear(fm.lat, fm.lon, 12000, 1)[0];
     if (near && !app.calibrated[near.i] && world.calibrateAirport(near)) app.calibrated[near.i] = true;
+    if (near && app.calibrated[near.i]) world.flattenAirport(near);
   }
   audio.update(fm, app.view, dt);
   if (app.map && now - (app.lastMap || 0) > 250) {

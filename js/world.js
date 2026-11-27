@@ -2,6 +2,7 @@
 /* global Cesium */
 import { D2R, R2D, clamp, lerp, qrot, quatToEuler, wrapPi } from './sim/math.js';
 
+import { buildAirportRunways, runwayInfo, offsetLL } from './runways.js';
 const C = () => window.Cesium;
 
 export class World {
@@ -76,7 +77,7 @@ export class World {
     const Cesium = C(), viewer = this.viewer, scene = viewer.scene;
     if (this.mode === mode) return this.mode;
     // clean previous
-    if (this.tileset) { scene.primitives.remove(this.tileset); this.tileset = null; }
+    if (this.tileset) { this.clearRunwaySurfaces(); scene.primitives.remove(this.tileset); this.tileset = null; }
     if (this.buildings) { scene.primitives.remove(this.buildings); this.buildings = null; }
     viewer.imageryLayers.removeAll();
     scene.globe.show = true;
@@ -172,17 +173,62 @@ export class World {
     } catch (e) { /* keep undefined */ }
     this._geoPending[a.i] = false;
   }
-  // one-off calibration against the rendered 3D tiles (so wheels sit exactly on the photoreal runway)
-  calibrateAirport(a) {
+  // one-off calibration against the rendered 3D tiles: median of samples along every runway centreline,
+  // so one bump or dip in lumpy photogrammetry can't put the runway too high or too low
+  sampleTile(lat, lon) {
     const Cesium = C(), scene = this.viewer.scene;
-    if (!this.tileset || !scene.sampleHeightSupported || !a.r.length) return false;
-    const r = a.r[0];
+    if (!this.tileset || !scene.sampleHeightSupported) return undefined;
     try {
-      const h = scene.sampleHeight(Cesium.Cartographic.fromDegrees((r[2] + r[6]) / 2, (r[1] + r[5]) / 2), [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : [])], 2);
-      const g = h - ((r[3] + r[7]) / 2) * 0.3048;
-      if (h !== undefined && isFinite(h) && Math.abs(g) < 130) { this.aptGeoid[a.i] = g; return true; }
-    } catch (e) { /* ignore */ }
-    return false;
+      const ex = [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : []), ...(this.cockpit ? [this.cockpit] : []), ...this.runwayPrims()];
+      return scene.sampleHeight(new Cesium.Cartographic(lon, lat), ex, 1);
+    } catch (e) { return undefined; }
+  }
+  calibrateAirport(a) {
+    if (!this.tileset || !this.viewer.scene.sampleHeightSupported || !a.r.length) return false;
+    if (this.rwySurf?.has(a.i)) return true; // already flattened: tiles under the runway are clipped
+    const offs = [];
+    for (const r of a.r.slice(0, 4)) {
+      const info = runwayInfo(r);
+      for (let k = 1; k <= 7; k++) {
+        const t = k / 8, [la, lo] = offsetLL(info.la1, info.lo1, info.hdg, info.L * t);
+        const h = this.sampleTile(la, lo);
+        if (h !== undefined && isFinite(h)) offs.push(h - (info.e1 + (info.e2 - info.e1) * t));
+      }
+    }
+    if (offs.length < 3) return false;
+    offs.sort((x, y) => x - y);
+    const g = offs[Math.floor(offs.length / 2)];
+    if (Math.abs(g) >= 130) return false;
+    this.aptGeoid[a.i] = g;
+    return true;
+  }
+  // replace the (often lumpy) photogrammetry under an airport's runways with flat textured strips
+  runwayPrims() { const out = []; for (const v of (this.rwySurf || new Map()).values()) out.push(...v.prims); return out; }
+  flattenAirport(a) {
+    const Cesium = C();
+    if (!this.tileset || this.mode !== 'photoreal' || !a?.r?.length) return false;
+    this.rwySurf = this.rwySurf || new Map();
+    if (this.rwySurf.has(a.i)) return true;
+    const g = this.aptGeoid?.[a.i]; if (g === undefined) return false;
+    let built;
+    try { built = buildAirportRunways(a, g, (la, lo) => this.sampleTile(la, lo)); } catch (e) { console.warn('runway build failed', e); return false; }
+    for (const p of built.prims) this.viewer.scene.primitives.add(p);
+    this.rwySurf.set(a.i, built);
+    // keep at most a few airports flattened (departure, destination, nearby)
+    while (this.rwySurf.size > 4) { const [k, v] = this.rwySurf.entries().next().value; for (const p of v.prims) this.viewer.scene.primitives.remove(p); this.rwySurf.delete(k); }
+    this.applyClipping();
+    return true;
+  }
+  clearRunwaySurfaces() {
+    for (const v of (this.rwySurf || new Map()).values()) for (const p of v.prims) this.viewer.scene.primitives.remove(p);
+    this.rwySurf = new Map();
+    this.applyClipping();
+  }
+  applyClipping() {
+    const Cesium = C();
+    if (!this.tileset) return;
+    const polys = []; for (const v of this.rwySurf.values()) polys.push(...v.clips);
+    this.tileset.clippingPolygons = polys.length ? new Cesium.ClippingPolygonCollection({ polygons: polys }) : undefined;
   }
   runwayHeight(lat, lon) {
     const R = 6371008.8, D = Math.PI / 180;
