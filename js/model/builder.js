@@ -206,6 +206,8 @@ export function buildAircraft(ac) {
       top = H0 - H0 * (1 - endTop) * Math.pow(t, 1.6);
       if (bot > top - 0.08 * H0) bot = top - 0.08 * H0;
       hw = R * (1 - (isGA ? 0.88 : 0.86) * Math.pow(t, 1.25));
+      // 777 family: the tail cone ends in a laterally flattened vertical "blade" around the APU exhaust
+      if (g.tailCone === '777' && !ac.detailed) hw *= 1 - 0.4 * smooth((t - 0.55) / 0.45);
     }
     if (g.nose === 'c172' && x >= Ln) {
       // cabin: tall, then tapering tail boom
@@ -782,6 +784,15 @@ export function buildAircraft(ac) {
   function strut(node, x, y, z0, z1, r) {
     revolveZ(node, x, y, z0, z1, r);
   }
+  function rod(node, a, b2, r) {
+    // cylinder between two points
+    const pc = node.piece(); const seg = 8; const [u, v] = swatchUV(SW.gear);
+    const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(...d) || 1; d[0] /= l; d[1] /= l; d[2] /= l;
+    let e1 = Math.abs(d[2]) < 0.9 ? [d[1], -d[0], 0] : [0, d[2], -d[1]]; const l1 = Math.hypot(...e1); e1 = e1.map((q) => q / l1);
+    const e2 = [d[1] * e1[2] - d[2] * e1[1], d[2] * e1[0] - d[0] * e1[2], d[0] * e1[1] - d[1] * e1[0]];
+    const rings = [a, b2].map((P) => { const ring = []; for (let k = 0; k <= seg; k++) { const t = (k / seg) * Math.PI * 2, c = Math.cos(t) * r, s2 = Math.sin(t) * r; ring.push([P[0] + e1[0] * c + e2[0] * s2, P[1] + e1[1] * c + e2[1] * s2, P[2] + e1[2] * c + e2[2] * s2, u, v]); } return ring; });
+    pc.grid(rings, false); pc.grid(rings, true);
+  }
   function revolveZ(node, x, y, z0, z1, r) {
     const pc = node.piece();
     const seg = 10; const [u, v] = swatchUV(SW.gear);
@@ -825,6 +836,11 @@ export function buildAircraft(ac) {
       f(...top); f(...bot); f(top[0], top[3], bot[3], bot[0]); f(top[1], top[2], bot[2], bot[1]);
     } else strut(node, mainX, y, axleZ, topZ, Math.max(0.06, wheelR * 0.22));
     if (!isGA && !g.fixedGear && !isProp) doorPlate(node, mainX, y, axleZ + wheelR * 1.2, topZ - 0.1, wheelR * 1.6, side);
+    if (!isGA && !g.fixedGear && !isProp && !ac.detailed) {
+      // side brace from the wing/fuselage down to the lower third of the leg
+      const zb = lerp(axleZ, topZ, 0.42);
+      rod(node, [mainX, y, zb], [mainX - 0.05 * wheelR, y - side * (topZ - zb) * 0.55, topZ - 0.05], Math.max(0.035, wheelR * 0.09));
+    }
     const ww = wheelR * 0.75;
     if (mw === 1) wheel(node, mainX, y, axleZ, wheelR, ww);
     else if (mw === 2) { wheel(node, mainX, y + ww * 0.6, axleZ, wheelR, ww); wheel(node, mainX, y - ww * 0.6, axleZ, wheelR, ww); }
@@ -866,8 +882,20 @@ export function buildAircraft(ac) {
     const nb = profile(xcg - noseX).bot;
     const node = legNode('gearN', [noseX, 0, nb + 0.15], 'nose');
     strut(node, noseX, 0, axleZ, nb + 0.15, Math.max(0.05, nwR * 0.22));
+    if (!isGA && !g.fixedGear && !ac.detailed) {
+      // nose-gear bay doors either side of the leg
+      for (const sd of [1, -1]) doorPlate(node, noseX - nwR * 0.6, sd * nwR * 0.75 - sd * 0.12, nb - 0.02, nb - Math.min(0.9, nwR * 2.4), nwR * 3, sd);
+      // drag brace angled forward-up from the axle to the bay
+      rod(node, [noseX, 0, lerp(axleZ, nb, 0.45)], [noseX + nwR * 1.6, 0, nb + 0.05], Math.max(0.03, nwR * 0.12));
+    }
     if (isGA) wheel(node, noseX, 0, axleZ, nwR, nwR * 0.7);
     else { wheel(node, noseX, nwR * 0.5, axleZ, nwR, nwR * 0.7); wheel(node, noseX, -nwR * 0.5, axleZ, nwR, nwR * 0.7); }
+  }
+  // APU exhaust at the tail-cone tip (jets)
+  if (!isProp && !isGA && !ac.detailed) {
+    const pr = profile(L - 0.02);
+    const r = clamp(Math.min(pr.hw, pr.ht) * 0.7, 0.06, 0.3);
+    revolve(body, [[0.02, r * 1.02], [0.18, r * 0.98], [0.2, r * 0.72], [0.02, 0.01]], X(L - 0.2), 0, pr.cz, (j) => (j < 2 ? SW.exhaust : SW.dark), { seg: 14 });
   }
   // antennas (VHF / TCAS blades on the crown and belly)
   if (!isGA) {
