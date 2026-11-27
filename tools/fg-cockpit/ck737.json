@@ -1,4 +1,0 @@
-{ "exterior": "Models/737-800.ac", "xcg": 16.2039,
-  "keep": "^Models/(cockpit|flightdesk|pedestal|pedals|oh-panel|Instruments/)",
-  "screens": { "pfd": ["pfdScreen"], "nd": ["ndScreenL"], "eicas": ["upperEICASScreen"], "pfd2": ["pfdScreen.001"], "nd2": ["ndScreenR"], "eicas2": ["upperEICASScreen.001"] },
-  "eyeFG": [-17.18, -0.51, 1.28], "pitchDeg": -8 }

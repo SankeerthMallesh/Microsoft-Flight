@@ -1,5 +1,0 @@
-{ "exterior": "Models/Fuselages/A320neo/res/fuselage.ac", "xcg": 15.1466,
-  "keep": "^Models/(FlightDeck/|Instruments/)",
-  "dropNames": "^(hud|HUD)|_on$|_lit$|illuminated|_led$|^lamp_|autoland_light|\\.emit|_flood|glare",
-  "screens": { "pfd": ["pfd1.screen"], "nd": ["ND.screen"], "eicas": ["uecam.screen"], "pfd2": ["pfd2.screen"], "nd2": ["ND_R.screen"], "eicas2": ["lecam.screen"], "isis": ["iesi.screen"] },
-  "eyeFG": [-13.75, -0.45, 2.34], "pitchDeg": -13 }
