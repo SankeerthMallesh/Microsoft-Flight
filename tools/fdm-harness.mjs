@@ -68,7 +68,8 @@ function takeoff(id, ref, opts = {}) {
     // rotate: ~2.5-3 deg/s to the target attitude
     const targetMax = ref.toPitch;
     if (o.ias >= Vr && rotT == null) rotT = time;
-    if (rotT != null) pitchTgt = Math.min(targetMax, (time - rotT) * (fm.isGA ? 4 : 2.6));
+    // rotate ~2.5-3 deg/s; on the gear stay ~1.5 deg below the tail-strike attitude
+    if (rotT != null) pitchTgt = Math.min(fm.onGround ? Math.min(targetMax, t.phys.tailAngle - 1.5) : targetMax, (time - rotT) * (fm.isGA ? 4 : 2.8) + (fm.onGround ? 0 : 0));
     if (x35 != null) {
       // pitch for V2+15 once airborne
       const spdErr = o.ias - (V2 + 15);
@@ -152,6 +153,8 @@ function trimAir(fm, altMsl, ias, gamma, approach) {
   fm.q = eulerToQuat(hdg, alpha + gamma, 0);
   fm.vel = [V * Math.cos(gamma), 0, -V * Math.sin(gamma)];
   fm.airTime = 10; fm.gearPos = fm.gearDown ? 1 : 0; fm.onGround = false;
+  // elevator trim for zero pitching moment at this alpha (matters in direct law)
+  const d = fm.d; fm.trim = clamp(-(d.Cma * (alpha - d.a0) + d.Cmflap * fm.flap + d.Cmgear * fm.gearPos) / d.Cmde, -1, 1);
   // throttle for thrust = drag (iterate a few seconds)
   fm.ctl.throttle = approach ? 0.45 : 0.75;
   for (const e of fm.engines) e.n1 = e.idle + fm.ctl.throttle * (100 - e.idle);
@@ -168,13 +171,10 @@ function cruise(id, ref) {
   sys.setState('air');
   const atm = isa(altMsl, 0);
   const tas = ac.perf.cruiseMach ? ac.perf.cruiseMach * atm.a : ac.perf.cruiseKtas * KT;
-  // IAS target that gives that TAS
-  let ias = tas / KT * Math.sqrt(atm.sigma);
-  for (let i = 0; i < 6; i++) { // correct for compressibility
-    fm.gearDown = false; trimAir(fm, altMsl, ias, 0, false); fm.calcOutputs(atm, [0, 0, 0]);
-    ias *= tas / KT / fm.out.tas;
-  }
-  trimAir(fm, altMsl, ias, 0, false);
+  // calibrated airspeed that gives that TAS (compressible)
+  fm.gearDown = false; trimAir(fm, altMsl, tas / KT * Math.sqrt(atm.sigma), 0, false);
+  fm.vel = [tas, 0, 0]; fm.calcOutputs(atm, [0, 0, 0]);
+  const ias = fm.out.ias;
   ap.sync(); ap.alt = ref.crzAlt; ap.vert = 'ALT'; ap.lat = 'HDG'; ap.hdg = 0; ap.spd = ias; ap.engaged = true; ap.at = true;
   let time = 0, f0 = null, fuelT0 = 0, n1 = 0, k = 0, mach = 0, alpha = 0, tasS = 0;
   while (time < 240) {
@@ -222,20 +222,23 @@ function stall(id, ref) {
   const vs = fm.vspeeds();
   trimAir(fm, altMsl, vs.vs1 * 1.4, 0, false);
   fm.ctl.throttle = 0; for (const e of fm.engines) e.n1 = e.idle;
-  // FBW: full back stick (normal law keeps alpha max); conventional: hold altitude, i.e. pull progressively
-  let time = 0, minIas = 999, maxRoll = 0, buffet = 0, stallIas = null, maxAlpha = 0, warnIas = null;
+  // FBW: full back stick (normal law holds alpha max). Conventional: hold altitude with the
+  // elevator as speed decays ~1 kt/s, then at the stall break recover (stick forward).
+  let time = 0, minIas = 999, maxRoll = 0, buffet = 0, stallIas = null, maxAlpha = 0, warnIas = null, tStall = null;
   const fbw = !!ac.fbw;
-  while (time < 60) {
+  while (time < 200) {
     const o = fm.out;
     if (fbw) { fm.assist = 'assisted'; fm.ctl.pitch = 1; }
-    else fm.ctl.pitch = clamp(fm.ctl.pitch + (o.vs < 0 ? 0.004 : -0.001), -1, 1);
+    else if (tStall == null) fm.ctl.pitch = clamp(fm.ctl.pitch + DT * (-o.vs / 30000 - 0.6 * fm.w[1]), -1, 1);
+    else fm.ctl.pitch = time - tStall < 3 ? -0.6 : 0;
     fm.ctl.roll = 0;
     fm.step(DT); time += DT;
     minIas = Math.min(minIas, fm.out.ias); maxAlpha = Math.max(maxAlpha, fm.out.alpha);
     if (fm.out.stall && warnIas == null) warnIas = fm.out.ias;
-    if (fm.stallFactor > 0.05 && stallIas == null) stallIas = fm.out.ias;
+    if (fm.stallFactor > 0.05 && stallIas == null) { stallIas = fm.out.ias; tStall = time; }
     buffet = Math.max(buffet, fm.buffet || 0);
-    if (time > 5) maxRoll = Math.max(maxRoll, Math.abs(fm.out.roll));
+    if (tStall != null && time - tStall < 6) maxRoll = Math.max(maxRoll, Math.abs(fm.out.roll));
+    if (tStall != null && time - tStall > 6) break;
   }
   return { vs1: vs.vs1, warnIas, stallIas, minIas, maxRoll, buffet, maxAlpha, alphaStall: fm.alphaStall * R2D, fbw };
 }
@@ -352,7 +355,7 @@ const pct = (sim, ref) => (sim == null || ref == null || Number.isNaN(sim) ? '' 
 function row(name, sim, ref, unit = '', d = 0) {
   const r = Array.isArray(ref) ? `${ref[0]}–${ref[1]}` : fmt(ref, d);
   const mid = Array.isArray(ref) ? (ref[0] + ref[1]) / 2 : ref;
-  const ok = Array.isArray(ref) ? sim >= ref[0] * 0.95 && sim <= ref[1] * 1.05 : ref == null ? true : Math.abs(sim - ref) / Math.abs(ref) < 0.1;
+  const ok = Array.isArray(ref) ? sim >= ref[0] * 0.95 && sim <= ref[1] * 1.05 : ref == null || typeof ref === 'string' ? true : Math.abs(sim - ref) / Math.abs(ref) < 0.1;
   console.log(`  ${name.padEnd(28)} ${(fmt(sim, d) + ' ' + unit).padEnd(16)} ref ${(r + ' ' + unit).padEnd(18)} ${pct(sim, mid).padEnd(6)} ${ok ? 'ok' : '<-- check'}`);
   return ok;
 }

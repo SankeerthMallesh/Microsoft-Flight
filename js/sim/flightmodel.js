@@ -356,18 +356,20 @@ export class FlightModel {
       const f = Math.pow(clamp(fN, 0, 1), e.type === 'turbofan' ? 2.0 : 1.3);
       let T;
       if (e.type === 'turbofan') {
-        const lapse = Math.pow(atm.sigma, 0.68) * (1 - 0.62 * M + 0.42 * M * M);
+        // high-bypass lapse: ~0.8 of static at rotation, ~0.2 at FL350 / M0.78 (max cruise)
+        const lapse = Math.pow(atm.sigma, 0.85) * (1 - 0.9 * M + 0.52 * M * M);
         T = e.maxThrust * lapse * (0.035 + 0.965 * f);
         // TSFC rises with Mach; cruise ~0.55 (LEAP/GEnx) .. 0.65 (CFM56) lb/lbf/h
-        e.ff = (Math.abs(T) * 1.12e-5 * (1 + 0.62 * M) + 0.05 * Math.sqrt(e.maxThrust / 120000)) * e.sfc;
+        e.ff = (Math.abs(T) * 1.12e-5 * (1 + 0.62 * M) + 0.045 * Math.sqrt(e.maxThrust / 120000) * (atm.p / 101325)) * e.sfc;
         const egtTarget = 380 + 520 * Math.pow(e.n1 / 100, 2.2) + (atm.T - 288) * 0.9;
         e.egt += (egtTarget - e.egt) * Math.min(1, dt * 0.8);
       } else {
         const lapse = e.type === 'piston' ? Math.pow(atm.sigma, 1.05) : Math.min(1, Math.pow(atm.sigma, 0.7) * 1.25);
         const P = e.maxPower * lapse * (0.06 + 0.94 * f);
-        const Tstatic = e.maxPower * (e.type === 'piston' ? 0.0165 : 0.0135) * lapse * (0.06 + 0.94 * f);
+        const Tstatic = e.maxPower * (e.type === 'piston' ? 0.0192 : 0.0135) * lapse * (0.06 + 0.94 * f);
         T = Math.min(Tstatic, (0.82 * P) / Math.max(V, 1));
-        e.ff = (P * (e.type === 'piston' ? 0.3 : 0.29) / 3.6e6 + 0.004) * e.sfc;
+        // BSFC: piston ~0.245 kg/kWh (best-economy mixture), PW127 ~0.29 kg/kWh
+        e.ff = (P * (e.type === 'piston' ? 0.245 : 0.29) / 3.6e6 + (e.type === 'piston' ? 0.0006 : 0.004)) * e.sfc;
         const egtTarget = 450 + 400 * f + (atm.T - 288) * 0.8;
         e.egt += (egtTarget - e.egt) * Math.min(1, dt * 1.2);
         e.power = P;
@@ -430,7 +432,7 @@ export class FlightModel {
       // (falls with speed on a wet runway: aquaplaning tendency)
       const wet = this.runwayWet;
       const gsKt = vSpeed / KT;
-      const brakeMu = wet ? 0.27 - 0.08 * clamp((gsKt - 60) / 80, 0, 1) : 0.5;
+      const brakeMu = (this.isGA ? 0.62 : 1) * (wet ? 0.27 - 0.08 * clamp((gsKt - 60) / 80, 0, 1) : 0.5);
       let mu = gear ? 0.018 : 0.45;
       if (gear && g.brake) {
         const man = g.name === 'left' ? this.ctl.brakeL : this.ctl.brakeR;

@@ -75,7 +75,9 @@ export class Autopilot {
     const along = d * Math.cos(ang); // + when before threshold
     const xtk = d * Math.sin(ang); // + when left of centreline
     const aimDist = along + r.aim; // distance to touchdown aim point
-    const gsAlt = r.elevM + Math.max(0, aimDist) * Math.tan(3 * D2R) + 15;
+    // glidepath referenced to the main wheels: ~50 ft over the threshold, touching down at the aim point
+    const gearH = clamp(fm.h - fm.groundH - fm.agl, 1, 12);
+    const gsAlt = r.elevM + Math.max(0, aimDist) * Math.tan(3 * D2R) + gearH + 2;
     const alt = fm.h - fm.geoid;
     return { along, xtk, aimDist, gsDev: alt - gsAlt, d };
   }
@@ -179,7 +181,7 @@ export class Autopilot {
       const ra = o.agl;
       const flareH = clamp(Math.abs(o.vs) * 0.075, fm.isGA ? 15 : 40, 70);
       if (ra < flareH && !this.flare) { this.flare = true; this.flareVs = o.vs; this.notify('FLARE'); }
-      if (this.flare) { this.flareVs += (-(90 + ra * 4) - this.flareVs) * Math.min(1, dt * 1.6); vsCmd = this.flareVs; }
+      if (this.flare) { this.flareVs += (-((fm.isGA ? 100 : 170) + ra * 3.5) - this.flareVs) * Math.min(1, dt * 1.6); vsCmd = this.flareVs; }
       if (ra < 25 && this.at && !this.retard) { this.retard = true; this.notify('RETARD'); }
     }
     // flight-path-angle loop: pitch command = current pitch + K * (gamma error) + integral

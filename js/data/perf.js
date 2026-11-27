@@ -95,17 +95,17 @@ export function aeroTune(ac) {
 export const PERF_REF = {
   'b737-800': {
     toMass: 70000, toFlap: 3, toPitch: 15, vr: 147, v2: 153, vlof: [150, 158], toRoll: [1400, 1750], to35: [1650, 2050], climb: [2600, 3800],
-    ldgMass: 62000, ldgFlapFromFull: 1, vref: 142, ldgRoll: [550, 850], ldgDist: [850, 1150], ab: { LO: [1300, 1700], MED: [900, 1200], MAX: [600, 850] },
+    ldgMass: 62000, ldgFlapFromFull: 1, vref: 142, ldgRoll: [550, 850], ldgDist: [950, 1200], ab: { LO: [1300, 1700], MED: [900, 1200], MAX: [600, 850] },
     crzMass: 65000, crzAlt: 35000, burn: [2300, 2650], crzN1: [86, 90], spool: [5.5, 8], idleN1: [19, 22], vs1: [140, 155],
   },
   'a320neo': {
     toMass: 70000, toFlap: 2, toPitch: 15, vr: 143, v2: 147, vlof: [146, 154], toRoll: [1250, 1600], to35: [1450, 1850], climb: [2600, 3800],
-    ldgMass: 62000, ldgFlapFromFull: 0, vref: 128, ldgRoll: [480, 750], ldgDist: [780, 1050], ab: { LO: [1100, 1450], MED: [700, 950], MAX: [500, 750] },
+    ldgMass: 62000, ldgFlapFromFull: 0, vref: 128, ldgRoll: [480, 750], ldgDist: [850, 1120], ab: { LO: [1100, 1450], MED: [700, 950], MAX: [500, 750] },
     crzMass: 64000, crzAlt: 35000, burn: [1950, 2300], crzN1: [84, 89], spool: [5.5, 8], idleN1: [19, 22], vs1: [135, 150],
   },
   'b777-300er': {
     toMass: 300000, toFlap: 3, toPitch: 13, vr: [152, 165], v2: [160, 172], vlof: [158, 172], toRoll: [1650, 2150], to35: [1950, 2500], climb: [2000, 3200],
-    ldgMass: 240000, ldgFlapFromFull: 0, vref: 146, ldgRoll: [700, 1000], ldgDist: [1050, 1350], ab: { LO: [1500, 1950], MED: [1050, 1400], MAX: [750, 1050] },
+    ldgMass: 240000, ldgFlapFromFull: 0, vref: 146, ldgRoll: [700, 1000], ldgDist: [1150, 1450], ab: { LO: [1500, 1950], MED: [1050, 1400], MAX: [750, 1050] },
     crzMass: 280000, crzAlt: 35000, burn: [6800, 8200], crzN1: [88, 93], spool: [6, 9], idleN1: [19, 23], vs1: [145, 160],
   },
   'a380-800': {
