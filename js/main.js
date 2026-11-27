@@ -278,6 +278,9 @@ async function startFlight() {
     const built = await getAircraftGLB(plan.acId, plan.liveryId);
     loading(true, 'Loading aircraft into the world…', 0.15);
     await world.loadAircraft(built.glb, built.physics);
+    loading(true, 'Loading 3D cockpit…', 0.17);
+    const ck = built.detailed && ac.cockpit && settings.cockpit3d !== false ? await world.loadCockpit(ac.cockpit) : await world.loadCockpit(null);
+    $('flightUI').classList.toggle('ck3d', !!ck);
     world.model.show = false;
     world.stopMenuOrbit();
     world.viewer.scene.screenSpaceCameraController.enableInputs = false;
@@ -412,7 +415,8 @@ const VIEWS = ['cockpit', 'chase', 'orbit', 'tower'];
 const VIEW_NAMES = { cockpit: 'Cockpit', chase: 'Chase', orbit: 'Orbit (drag)', tower: 'Fly-by' };
 function setView(v) {
   app.view = v; app.world.cam.mode = v; app.world.cam.lookYaw = 0; app.world.cam.lookPitch = v === 'cockpit' ? -6 * D2R : 0; app.world.cam.zoom = 1; app.world.cam.towerPos = null;
-  app.world.cam.fov = v === 'cockpit' ? 70 : 60;
+  app.world.cam.fov = v === 'cockpit' ? (app.world.ckMeta ? 76 : 70) : 60;
+  if (v === 'cockpit' && app.world.ckMeta) app.world.cam.lookPitch = (app.world.ckMeta.pitchDeg ?? -13) * D2R;
   const ui = $('flightUI'); ui.classList.toggle('view-cockpit', v === 'cockpit');
   $('viewName').textContent = VIEW_NAMES[v];
 }
@@ -436,7 +440,7 @@ const act = {
   mouseYoke: () => { input.mouseYoke = !input.mouseYoke; $('yokeMark').classList.toggle('hidden', !input.mouseYoke); toast(input.mouseYoke ? 'Mouse flying ON — move the pointer to steer (Y to turn off)' : 'Mouse flying OFF', 'good'); },
   map: () => { $('minimap').classList.toggle('hidden-map'); setTimeout(() => app.map?.map?.invalidateSize(), 50); },
   panel: togglePanel, mute: () => { audio.setMuted(!audio.muted); $('btnMute').textContent = audio.muted ? '🔇' : '🔊'; },
-  resetView: () => { app.world.cam.lookYaw = 0; app.world.cam.lookPitch = app.view === 'cockpit' ? -6 * D2R : 0; app.world.cam.zoom = 1; },
+  resetView: () => { app.world.cam.lookYaw = 0; app.world.cam.lookPitch = app.view === 'cockpit' ? (app.world.ckMeta ? (app.world.ckMeta.pitchDeg ?? -13) : -6) * D2R : 0; app.world.cam.zoom = 1; },
   idle: () => { if (app.fm) app.fm.ctl.throttle = 0; }, full: () => { if (app.fm) app.fm.ctl.throttle = 1; },
   help: () => { if (app.flying) { pause(true); show('help'); } },
   pause: () => { if (!app.flying) { if (app.screen && app.screen !== 'menu') show('back'); return; } if (app.crashed) return; pause(!app.paused); },
@@ -460,6 +464,7 @@ function endFlight(toMenu) {
   audio.stopEngines();
   $('flightUI').classList.add('hidden');
   if (app.world.model) app.world.model.show = false;
+  if (app.world.cockpit) app.world.cockpit.show = false;
   app.world.points.removeAll(); app.world.rwyPoints.removeAll();
   if (toMenu) { app.history = []; show('menu', false); const a = getAirport(plan.airport); if (a) app.world.menuOrbit(a.la, a.lo); }
 }
@@ -623,8 +628,33 @@ function instrumentState() {
     warn: fm._tailStruck ? 'TAIL STRIKE' : fm.out.alt > fm.ac.perf.ceiling + 2000 ? 'ABOVE CEILING' : fm.out.ias > vs.vmo + 5 || fm.out.mach > vs.mmo + 0.01 ? 'OVERSPEED' : '',
   };
 }
+// live displays projected onto the 3D cockpit's screens (CSS homography of the canvas onto the screen quad)
+const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND]];
+const CK_PX = 360;
+function homography(q) {
+  // maps unit square (0,0),(1,0),(1,1),(0,1) -> quad q (TL,TR,BR,BL)
+  const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
+  const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2, sx = x0 - x1 + x2 - x3, sy = y0 - y1 + y2 - y3;
+  const den = dx1 * dy2 - dx2 * dy1; if (Math.abs(den) < 1e-9) return null;
+  const g = (sx * dy2 - dx2 * sy) / den, h = (dx1 * sy - sx * dy1) / den;
+  const a = x1 - x0 + g * x1, b = x3 - x0 + h * x3, d = y1 - y0 + g * y1, e = y3 - y0 + h * y3;
+  const S = 1 / CK_PX; // canvas px -> unit square
+  return [a * S, d * S, 0, g * S, b * S, e * S, 0, h * S, 0, 0, 1, 0, x0, y0, 0, 1];
+}
+function drawCockpit3D(s) {
+  const box = $('ck3dScreens');
+  if (!box.children.length) for (const [k] of CK_SCREENS) { const c = document.createElement('canvas'); c.dataset.k = k; c.style.width = c.style.height = CK_PX + 'px'; box.appendChild(c); }
+  const rect = app.world.viewer.canvas.getBoundingClientRect();
+  for (const c of box.children) {
+    const k = c.dataset.k, q = app.world.screenQuad(k), m = q && homography(q.map(([x, y]) => [x + rect.left, y + rect.top]));
+    if (!m || q.every(([x]) => x < 0) || q.every(([x]) => x > rect.width) || q.every(([, y]) => y > rect.height) || q.every(([, y]) => y < 0)) { c.style.display = 'none'; continue; }
+    c.style.display = 'block'; c.style.transform = `matrix3d(${m.join(',')})`;
+    CK_SCREENS.find((e) => e[0] === k)[1](c, s);
+  }
+}
 function drawInstruments() {
   const s = instrumentState();
+  if (app.view === 'cockpit' && app.world.ckMeta) { drawCockpit3D(s); return; }
   if (app.view === 'cockpit') {
     if (app.panel) { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
   } else if (app.panel) drawPFD($('pfdMini'), s);

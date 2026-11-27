@@ -198,6 +198,7 @@ export const AIRCRAFT = [
   {
     id: 'b737-800', maker: 'Boeing', name: '737-800', family: '737 NG', category: 'Narrow-body',
     detailed: { glb: 'models/b737-800.glb', meta: 'models/b737-800.meta.json', credit: '"B737-800 Model" by hakai315 (Sketchfab), CC BY 4.0 — modified' },
+    cockpit: { glb: 'models/b737-800-cockpit.glb', meta: 'models/b737-800-cockpit.meta.json', credit: 'FlightGear 737-800 flight deck (GPL v2)' },
     length: 39.5, span: 35.8, height: 12.5, wingArea: 124.6, mtow: 79010, oew: 41413, fuel: 20900,
     engines: { count: 2, type: 'turbofan', thrust: 121.4, name: 'CFM56-7B27' },
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.785, ceiling: 41000, range: 5436, seats: '162–189' },

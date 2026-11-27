@@ -341,6 +341,42 @@ export class World {
     URL.revokeObjectURL(url);
     return model;
   }
+  // optional 3D cockpit interior (shown only in cockpit view)
+  async loadCockpit(spec) {
+    const Cesium = C();
+    if (this.cockpit) { this.viewer.scene.primitives.remove(this.cockpit); this.cockpit = null; }
+    this.ckMeta = null;
+    if (!spec) return null;
+    try {
+      const base = new URL('../', import.meta.url);
+      const meta = await (await fetch(new URL(spec.meta, base))).json();
+      const model = await Cesium.Model.fromGltfAsync({
+        url: new URL(spec.glb, base).href, upAxis: Cesium.Axis.Z, forwardAxis: Cesium.Axis.X,
+        shadows: Cesium.ShadowMode.DISABLED, backFaceCulling: false,
+      });
+      model.show = false;
+      this.viewer.scene.primitives.add(model);
+      await new Promise((res) => { if (model.ready) res(); else { const r = model.readyEvent.addEventListener(() => { r(); res(); }); } });
+      this.cockpit = model; this.ckMeta = meta;
+      return meta;
+    } catch (e) { console.warn('3D cockpit unavailable', e); return null; }
+  }
+  // screen-space corners (TL, TR, BR, BL) of a 3D cockpit display, or null if off-screen/behind
+  screenQuad(key) {
+    const Cesium = C();
+    const q = this.ckMeta?.screens?.[key]; const f = this.lastFrame;
+    if (!q || !f) return null;
+    const cam = this.viewer.camera, out = [];
+    for (const p of q) {
+      const w = this.modelPoint(f, p);
+      const d = Cesium.Cartesian3.subtract(w, cam.positionWC, new Cesium.Cartesian3());
+      if (Cesium.Cartesian3.dot(d, cam.directionWC) < 0.02) return null;
+      const c = this.viewer.scene.cartesianToCanvasCoordinates(w);
+      if (!c) return null;
+      out.push([c.x, c.y]);
+    }
+    return out;
+  }
 
   // body (x fwd, y right, z down) -> ECEF helpers
   frame(fm) {
@@ -417,6 +453,10 @@ export class World {
       this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
     }
     this.model.show = visible;
+    if (this.cockpit) {
+      this.cockpit.modelMatrix = m; this.cockpit.show = !visible;
+      if (this.sunK != null) { const k = Math.max(0.35, this.sunK); this.cockpit.lightColor = new Cesium.Cartesian3(k * 1.6, k * 1.56, k * 1.5); }
+    }
     this.animateParts(fm);
     // spin fans / props
     fm.engines.forEach((e, i) => {
@@ -504,7 +544,7 @@ export class World {
     cam.frustum.fov = aspect >= 1 ? fovH : 2 * Math.atan(Math.tan(fovH / 2) / aspect);
     if (c.mode === 'cockpit') {
       cam.frustum.near = 0.1;
-      const eye = this.physics.eye;
+      const eye = this.ckMeta ? this.ckMeta.eye : this.physics.eye;
       const pos = this.modelPoint(f, eye);
       const t = performance.now() / 1000, a = c.shakeAmp || 0;
       const shY = a * (Math.sin(t * 37) * 0.6 + Math.sin(t * 23.3) * 0.4), shP = a * (Math.sin(t * 41.7) * 0.6 + Math.sin(t * 17.1) * 0.4);
