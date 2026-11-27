@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { getAircraftGLB } from './model/factory.js';
 
 export class Hangar {
@@ -42,6 +43,7 @@ export class Hangar {
     for (let i = -4; i <= 4; i++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(300, 0.6, 1.4), lightMat); bar.position.set(0, 70, i * 22); shell.add(bar); }
     scene.add(shell);
     this.loader = new GLTFLoader();
+    this.loader.setMeshoptDecoder(MeshoptDecoder);
     this.current = null; this.spinners = [];
     this.running = false;
     this.resize();
