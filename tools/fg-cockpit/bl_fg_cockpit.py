@@ -19,8 +19,9 @@ xcg = cfg['xcg']
 # FG (x aft, y right, z up) -> sim (x fwd, y left, z up), nose aligned
 A = Matrix(((-1, 0, 0, xcg + noseFG), (0, -1, 0, 0), (0, 0, 1, -czFG), (0, 0, 0, 1)))
 keep = re.compile(cfg['keep']); drop = re.compile(cfg.get('dropNames', '^$'))
+dropsn = re.compile(cfg.get('dropSrcNames', '^$'))  # matched against '<src .ac>:<object name>'
 for o in list(objs):
-    if not keep.search(o.get('src', '')) or drop.search(o.name):
+    if not keep.search(o.get('src', '')) or drop.search(o.name) or dropsn.search(o.get('src', '') + ':' + o.name):
         bpy.data.objects.remove(o, do_unlink=True)
 objs = [o for o in bpy.data.objects if o.type == 'MESH']
 # optional: collapse-decimate over-dense small parts (knobs, screws, cords) to keep the web GLB small
@@ -64,6 +65,13 @@ for key, names in cfg['screens'].items():
                 v0, v1 = v0 + (v1 - v0) * cr[2], v0 + (v1 - v0) * cr[3]; u0, u1 = U0, U1
             corner = lambda a, b: list(c + u * a + v * b)
             screens[key] = [corner(u1, v1), corner(u0, v1), corner(u0, v0), corner(u1, v0)]  # TL TR BR BL
+# screen objects become plain dark glass (the live canvas covers them; cropped margins must not show FG page textures)
+if cfg.get('darkScreens'):
+    glass = bpy.data.materials.new('screenGlass'); glass.use_nodes = True
+    gb = glass.node_tree.nodes['Principled BSDF']; gb.inputs['Base Color'].default_value = (0.012, 0.013, 0.015, 1); gb.inputs['Roughness'].default_value = 0.25
+    for names in cfg['screens'].values():
+        for nm in names:
+            if nm in byname: byname[nm].data.materials.clear(); byname[nm].data.materials.append(glass)
 eyeFG = Vector(cfg['eyeFG'])
 eye = list(A @ eyeFG)
 # untextured pure-white faces are placeholders for external FG instrument packs: make them dark glass/bezel
