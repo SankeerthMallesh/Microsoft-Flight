@@ -298,7 +298,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13500, seats: '426' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 6.19, nose: '777', wingX: 0.36, sweep: 29.5, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.9,
-      eng: twinWing(0.31), nacD: 4.4, chevrons: false, vt: { h: 11.4 }, mainWheels: 6, tailCone: '777' },
+      eng: twinWing(0.31), nacD: 4.4, chevrons: false, vt: { h: 11.4 }, mainWheels: 6, tailCone: '777', foldAt: 0.9 },
   },
   {
     id: 'b787-8', maker: 'Boeing', name: '787-8 Dreamliner', family: '787', category: 'Wide-body',

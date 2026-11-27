@@ -190,6 +190,11 @@ function drawDoors(p, lv) {
       c.strokeStyle = lv.doorColor || 'rgba(70,78,90,0.75)'; c.lineWidth = 3;
       const X0 = p.X(x0), X1 = p.X(x1), Y0 = p.Y(d.x, top / p.H0), Y1 = p.Y(d.x, hb / p.H0);
       roundRect(c, Math.min(X0, X1), Y0, Math.abs(X1 - X0), Y1 - Y0, 8); c.stroke();
+      if (d.kind === 'main' && !layout.ac.cargo) {
+        // door viewport window
+        const wy = p.Y(d.x, (top - Math.min(0.55, d.h * 0.3)) / p.H0), w = 0.2 * p.kx, h = 0.27 * p.kv;
+        c.fillStyle = lv.windowColor || '#1d2631'; roundRect(c, p.X(d.x) - w / 2, wy - h / 2, w, h, Math.min(w, h) * 0.45); c.fill();
+      }
     });
   }
   if (layout.ac.cargo) {
@@ -214,8 +219,18 @@ function drawCockpit(p, lv) {
     // A350 "mask" around the cockpit windows
     p.poly([[x0 - 0.15, z0 - 0.04], [x0 + (x1 - x0) * 0.5, z1 + 0.05], [x2 + 0.15, z1 - 0.08], [x2 + 0.2, z0 - 0.06]], '#101317', { local: true });
   }
-  p.poly([[x0, z0], [x0 + (x1 - x0) * 0.55, z1], [x1, z1 - 0.04], [x1, z0 - 0.02]], col, { local: true });
-  p.poly([[x1 + 0.08, z1 - 0.06], [x2, z1 - 0.12], [x2, z0], [x1 + 0.08, z0 - 0.02]], col, { local: true });
+  // windscreen panes per family, in (u along x0..x2, v across z0..z1); gaps between panes read as frames
+  const PANES = {
+    boeing: [[[0, 0], [0.3, 1], [0.42, 0.97], [0.42, -0.03]], [[0.47, 0.93], [0.72, 0.86], [0.72, -0.02], [0.47, -0.03]], [[0.77, 0.82], [0.98, 0.7], [0.98, 0.05], [0.77, 0]]],
+    b777: [[[0, 0], [0.3, 1], [0.42, 0.97], [0.42, -0.03]], [[0.47, 0.93], [0.72, 0.86], [0.72, -0.02], [0.47, -0.03]], [[0.77, 0.82], [0.93, 0.74], [1, 0.5], [0.97, 0.08], [0.77, 0]]],
+    airbus: [[[0, 0], [0.3, 1], [0.4, 0.98], [0.4, 0]], [[0.45, 0.95], [0.72, 0.93], [0.72, 0.02], [0.45, 0]], [[0.77, 0.9], [0.99, 0.5], [0.99, 0.08], [0.77, 0.03]]],
+    wide2: [[[0, 0], [0.32, 1], [0.45, 0.98], [0.45, -0.02]], [[0.5, 0.95], [0.82, 0.86], [0.98, 0.5], [0.95, 0.08], [0.5, -0.02]]],
+    two: [[[0, 0], [0.3, 1], [0.45, 0.97], [0.45, 0]], [[0.5, 0.93], [0.85, 0.78], [0.97, 0.1], [0.5, 0]]],
+  };
+  const fam = { boeing: 'boeing', '757': 'boeing', '767': 'boeing', b747: 'boeing', dc10: 'boeing', '777': 'b777', airbus: 'airbus', a380: 'airbus', '787': 'wide2', a350: 'wide2' }[g.nose] || 'two';
+  for (const pane of PANES[fam]) {
+    p.poly(pane.map(([u, v]) => [lerp(x0, x2, u), lerp(z0, z1, v)]), col, { local: true, stroke: 'rgba(0,0,0,0.22)', lineWidth: 2 });
+  }
 }
 
 // ---------------------------------------------------------------- main paint
@@ -248,6 +263,8 @@ export async function paintLivery(layout, livery, opts = {}) {
     ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 2;
     for (let k = 1; k < 10; k++) { ctx.beginPath(); ctx.moveTo(x0, y0 + (k * h) / 10); ctx.lineTo(x0 + w, y0 + (k * h) / 10); ctx.stroke(); }
     if (lv.wingTips) { ctx.fillStyle = lv.wingTips; ctx.fillRect(x0, y0 + h * 0.96, w, h * 0.04); }
+    // folding-wingtip hinge line (777X), geo.foldAt = fraction of the semi-span
+    if (layout.g.foldAt) { ctx.fillStyle = 'rgba(30,34,40,0.6)'; ctx.fillRect(x0, y0 + h * layout.g.foldAt - 2, w, 4); }
   }
   // nacelle region (2048..3072 x 1024..1536): u around, v along length
   {
