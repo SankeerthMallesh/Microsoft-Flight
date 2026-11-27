@@ -306,6 +306,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b787-8', maker: 'Boeing', name: '787-8 Dreamliner', family: '787', category: 'Wide-body',
+    cockpit: { glb: 'models/b787-9-cockpit.glb', meta: 'models/b787-9-cockpit.meta.json', offset: [-2.7596, 0, 0], credit: 'FlightGear Boeing 787-8 flight deck (GPL v2), adapted for the 787-8' },
     length: 56.72, span: 60.12, height: 16.92, wingArea: 377, mtow: 227930, oew: 119950, fuel: 101000,
     engines: { count: 2, type: 'turbofan', thrust: 280, name: 'GEnx-1B / Trent 1000' },
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 43100, range: 13530, seats: '248' },
@@ -315,6 +316,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b787-9', maker: 'Boeing', name: '787-9 Dreamliner', family: '787', category: 'Wide-body',
+    cockpit: { glb: 'models/b787-9-cockpit.glb', meta: 'models/b787-9-cockpit.meta.json', credit: 'FlightGear Boeing 787-8 flight deck (GPL v2)' },
     length: 62.81, span: 60.12, height: 17.02, wingArea: 377, mtow: 254011, oew: 128850, fuel: 101500,
     engines: { count: 2, type: 'turbofan', thrust: 320, name: 'GEnx-1B / Trent 1000' },
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 43100, range: 14010, seats: '296' },
@@ -324,6 +326,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b787-10', maker: 'Boeing', name: '787-10 Dreamliner', family: '787', category: 'Wide-body',
+    cockpit: { glb: 'models/b787-9-cockpit.glb', meta: 'models/b787-9-cockpit.meta.json', offset: [2.652, 0, 0], credit: 'FlightGear Boeing 787-8 flight deck (GPL v2), adapted for the 787-10' },
     length: 68.28, span: 60.12, height: 17.02, wingArea: 377, mtow: 254011, oew: 135500, fuel: 101500,
     engines: { count: 2, type: 'turbofan', thrust: 340, name: 'GEnx-1B / Trent 1000' },
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 41100, range: 11910, seats: '336' },

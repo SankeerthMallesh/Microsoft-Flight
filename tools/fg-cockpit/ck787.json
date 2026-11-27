@@ -1,0 +1,73 @@
+{
+ "exterior": "Models/787-8.ac",
+ "extNames": "^fuselage\\.001$",
+ "xcg": 26.6259,
+ "groundFG": -3.85,
+ "groundZ": -4.4499,
+ "keep": "^Models/(FlightDeck/(flightdeck|OHpanel)\\.ac|Instruments/(cdu2screen|mag-compass|pfd|pfd2|eicas|mfd-nav)\\.ac)",
+ "dropNames": "[Gg]lass|reflect|_lit$|_on$|halo|^hud|^HUD",
+ "decimateOver": 800,
+ "decimateMin": 0.1,
+ "screens": {
+  "pfd": [
+   "box.027"
+  ],
+  "pfd2": [
+   "box.028"
+  ],
+  "nd": [
+   "+",
+   "box.037",
+   "box.026"
+  ],
+  "eicas": [
+   "box.047"
+  ],
+  "nd2": [
+   "box.063"
+  ],
+  "isis": [
+   "stby-ai"
+  ]
+ },
+ "screenCrop": {
+  "pfd": [
+   0.23,
+   1,
+   0.17,
+   1
+  ],
+  "pfd2": [
+   0,
+   0.77,
+   0.17,
+   1
+  ],
+  "nd": [
+   0.09,
+   0.91,
+   0,
+   1
+  ],
+  "eicas": [
+   0,
+   1,
+   0.3,
+   1
+  ],
+  "nd2": [
+   0,
+   1,
+   0.3,
+   1
+  ]
+ },
+ "eyeFG": [
+  -22.612,
+  -0.603,
+  2.242
+ ],
+ "pitchDeg": -10.3,
+ "dropSrcNames": "^Models/Instruments/(pfd|pfd2|eicas|mfd-nav)\\.ac:(?!box\\.0(26|27|28|37|47|63)$)",
+ "darkScreens": true
+}
