@@ -3,6 +3,7 @@
 import { D2R, R2D, clamp, lerp, qrot, quatToEuler, wrapPi } from './sim/math.js';
 
 import { buildAirportRunways, runwayInfo, offsetLL } from './runways.js';
+import { buildAirport3D, fetchAirportOSM } from './airport3d.js';
 const C = () => window.Cesium;
 
 export class World {
@@ -77,7 +78,7 @@ export class World {
     const Cesium = C(), viewer = this.viewer, scene = viewer.scene;
     if (this.mode === mode) return this.mode;
     // clean previous
-    if (this.tileset) { this.clearRunwaySurfaces(); scene.primitives.remove(this.tileset); this.tileset = null; }
+    if (this.tileset) { this.clearRunwaySurfaces(); this.removeOsmBuildings(); scene.primitives.remove(this.tileset); this.tileset = null; }
     if (this.buildings) { scene.primitives.remove(this.buildings); this.buildings = null; }
     viewer.imageryLayers.removeAll();
     scene.globe.show = true;
@@ -203,32 +204,118 @@ export class World {
     return true;
   }
   // replace the (often lumpy) photogrammetry under an airport's runways with flat textured strips
-  runwayPrims() { const out = []; for (const v of (this.rwySurf || new Map()).values()) out.push(...v.prims); return out; }
+  runwayPrims() {
+    const out = [];
+    for (const v of (this.rwySurf || new Map()).values()) out.push(...v.prims);
+    for (const v of (this.ap3d || new Map()).values()) out.push(...v.prims);
+    return out;
+  }
   flattenAirport(a) {
-    const Cesium = C();
     if (!this.tileset || this.mode !== 'photoreal' || !a?.r?.length) return false;
-    this.rwySurf = this.rwySurf || new Map();
-    if (this.rwySurf.has(a.i)) return true;
+    this.rwySurf = this.rwySurf || new Map(); this.ap3d = this.ap3d || new Map(); this.aptPlane = this.aptPlane || {};
+    if (this.rwySurf.has(a.i)) { this.fetch3D(a); return true; }
     const g = this.aptGeoid?.[a.i]; if (g === undefined) return false;
-    let built;
-    try { built = buildAirportRunways(a, g, (la, lo) => this.sampleTile(la, lo)); } catch (e) { console.warn('runway build failed', e); return false; }
-    for (const p of built.prims) this.viewer.scene.primitives.add(p);
-    this.rwySurf.set(a.i, built);
+    if (!this.buildRunways(a)) return false;
     // keep at most a few airports flattened (departure, destination, nearby)
-    while (this.rwySurf.size > 4) { const [k, v] = this.rwySurf.entries().next().value; for (const p of v.prims) this.viewer.scene.primitives.remove(p); this.rwySurf.delete(k); }
+    while (this.rwySurf.size > 3) this.dropAirport(this.rwySurf.keys().next().value);
     this.applyClipping();
+    this.fetch3D(a);
     return true;
   }
+  // taxiways, aprons and buildings from OpenStreetMap (async; retried while the airport stays nearby)
+  fetch3D(a) {
+    if (this.osmEnabled === false || this.ap3d.has(a.i) || this._fetching?.[a.i]) return;
+    this._fetching = this._fetching || {}; this._fetching[a.i] = true;
+    fetchAirportOSM(a).then((el) => { if (el && this.rwySurf.has(a.i) && !this.ap3d.has(a.i)) this.addAirport3D(a, el); })
+      .catch(() => {}).finally(() => { this._fetching[a.i] = false; });
+  }
+  buildRunways(a) {
+    let built;
+    try { built = buildAirportRunways(a, this.aptGeoid[a.i], (la, lo) => this.sampleTile(la, lo), this.aptPlane[a.i]); } catch (e) { console.warn('runway build failed', e); return false; }
+    const old = this.rwySurf.get(a.i);
+    if (old) for (const p of old.prims) this.viewer.scene.primitives.remove(p);
+    for (const p of built.prims) this.viewer.scene.primitives.add(p);
+    this.rwySurf.set(a.i, built);
+    return true;
+  }
+  addAirport3D(a, elements) {
+    let res;
+    try {
+      res = buildAirport3D(a, this.aptGeoid[a.i], elements, { sampleTile: (la, lo) => this.sampleTile(la, lo), buildings: this.buildingsEnabled !== false });
+    } catch (e) { console.warn('airport 3D build failed', e); return; }
+    this.aptPlane[a.i] = res.plane;
+    this.buildRunways(a); // re-level the runways onto the shared airport plane
+    for (const p of res.prims) this.viewer.scene.primitives.add(p);
+    this.ap3d.set(a.i, res);
+    this.applyClipping();
+    // Google has no real 3D buildings here: add OpenStreetMap 3D buildings for the surrounding city too
+    if (!res.google3D && this.buildingsEnabled !== false) { this.ensureOsmBuildings(); this.alignOsmBuildings(a, res); }
+    else if (res.google3D) this.removeOsmBuildings();
+    this.onAirport3D?.(a, res);
+  }
+  dropAirport(id) {
+    for (const m of [this.rwySurf, this.ap3d]) { const v = m?.get(id); if (v) { for (const p of v.prims) this.viewer.scene.primitives.remove(p); m.delete(id); } }
+    if (this.aptPlane) delete this.aptPlane[id];
+  }
+  async ensureOsmBuildings() {
+    const Cesium = C();
+    if (this.osmBuildings || this._osmLoading || this.mode !== 'photoreal') return;
+    this._osmLoading = true;
+    try {
+      const ts = await Cesium.createOsmBuildingsAsync({
+        style: new Cesium.Cesium3DTileStyle({
+          color: { conditions: [
+            ["${feature['building']} === 'house' || ${feature['building']} === 'residential' || ${feature['building']} === 'apartments'", "color('#e2ddd2')"],
+            ["${feature['building']} === 'commercial' || ${feature['building']} === 'office' || ${feature['building']} === 'retail'", "color('#c9ced3')"],
+            ["${feature['building']} === 'industrial' || ${feature['building']} === 'warehouse'", "color('#cfcac0')"],
+            ['true', "color('#d8d4cb')"],
+          ] },
+        }),
+      });
+      ts.maximumScreenSpaceError = 16;
+      ts.shadows = Cesium.ShadowMode.ENABLED;
+      if (this.osmMatrix) ts.modelMatrix = this.osmMatrix;
+      this.osmBuildings = this.viewer.scene.primitives.add(ts);
+      this.applyClipping();
+    } catch (e) { console.warn('OSM buildings unavailable', e); }
+    this._osmLoading = false;
+  }
+  // OSM buildings stand on Cesium World Terrain; lift/lower them onto Google's ground around this airport
+  async alignOsmBuildings(a, res) {
+    const Cesium = C();
+    try {
+      const lat = a.la * Math.PI / 180, lon = a.lo * Math.PI / 180;
+      const [p] = await Cesium.sampleTerrainMostDetailed(this.viewer.scene.terrainProvider, [new Cesium.Cartographic(lon, lat)]);
+      if (!isFinite(p.height)) return;
+      const off = res.plane(lat, lon) - p.height;
+      if (Math.abs(off) > 150) return;
+      const n = Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(Cesium.Cartesian3.fromRadians(lon, lat, 0), new Cesium.Cartesian3());
+      this.osmMatrix = Cesium.Matrix4.fromTranslation(Cesium.Cartesian3.multiplyByScalar(n, off, new Cesium.Cartesian3()));
+      if (this.osmBuildings) this.osmBuildings.modelMatrix = this.osmMatrix;
+    } catch (e) { /* keep default placement */ }
+  }
+  removeOsmBuildings() {
+    if (this.osmBuildings) { this.viewer.scene.primitives.remove(this.osmBuildings); this.osmBuildings = null; }
+  }
+  airportSurfaceHeight(lat, lon) {
+    for (const v of (this.ap3d || new Map()).values()) { const h = v.surfaceHeight(lat, lon); if (h !== undefined) return h; }
+    return undefined;
+  }
   clearRunwaySurfaces() {
-    for (const v of (this.rwySurf || new Map()).values()) for (const p of v.prims) this.viewer.scene.primitives.remove(p);
-    this.rwySurf = new Map();
+    for (const id of [...(this.rwySurf || new Map()).keys(), ...(this.ap3d || new Map()).keys()]) this.dropAirport(id);
+    this.rwySurf = new Map(); this.ap3d = new Map();
     this.applyClipping();
   }
   applyClipping() {
     const Cesium = C();
     if (!this.tileset) return;
-    const polys = []; for (const v of this.rwySurf.values()) polys.push(...v.clips);
+    const polys = []; for (const m of [this.rwySurf, this.ap3d]) if (m) for (const v of m.values()) polys.push(...v.clips);
     this.tileset.clippingPolygons = polys.length ? new Cesium.ClippingPolygonCollection({ polygons: polys }) : undefined;
+    if (this.osmBuildings) {
+      const boxes = [];
+      for (const v of (this.ap3d || new Map()).values()) if (v.bboxRing) boxes.push(new Cesium.ClippingPolygon({ positions: v.bboxRing }));
+      this.osmBuildings.clippingPolygons = boxes.length ? new Cesium.ClippingPolygonCollection({ polygons: boxes }) : undefined;
+    }
   }
   runwayHeight(lat, lon) {
     const R = 6371008.8, D = Math.PI / 180;
@@ -242,6 +329,8 @@ export class World {
         const dx = (lon - lo1) * cl * R, dy = (lat - la1) * R;
         const along = (dx * ex + dy * ey) / L, cross = (dx * ey - dy * ex) / L;
         if (along > -60 && along < L + 60 && Math.abs(cross) < (r[9] * 0.3048) / 2 + 35) {
+          const pl = this.aptPlane?.[a.i];
+          if (pl) return pl(lat, lon);
           const t = Math.max(0, Math.min(1, along / L));
           return (r[3] + (r[7] - r[3]) * t) * 0.3048 + gd;
         }
@@ -258,6 +347,8 @@ export class World {
   groundFast(lat, lon) {
     const rh = this.runwayHeight(lat, lon);
     if (rh !== undefined) return rh;
+    const sh = this.airportSurfaceHeight(lat, lon);
+    if (sh !== undefined) return sh;
     if (this.mode === 'lite') return 0;
     const Cesium = C();
     const now = performance.now();
@@ -514,7 +605,14 @@ export class World {
       const o = this.ckMeta.offset;
       this.cockpit.modelMatrix = o && (o[0] || o[1] || o[2]) ? Cesium.Matrix4.multiplyByTranslation(m, new Cesium.Cartesian3(o[0], o[1], o[2]), new Cesium.Matrix4()) : m;
       this.cockpit.show = !visible;
-      if (this.sunK != null) { const k = Math.max(0.35, this.sunK); this.cockpit.lightColor = new Cesium.Cartesian3(k * 1.6, k * 1.56, k * 1.5); }
+      // under the glareshield a flight deck is lit mostly by sky light: keep direct sun soft so the
+      // baked ambient occlusion (contact shadows in every recess) carries the shading
+      if (this.sunK != null && this._ckK !== this.sunK) {
+        this._ckK = this.sunK;
+        const k = Math.max(0.3, this.sunK);
+        this.cockpit.lightColor = new Cesium.Cartesian3(k * 0.75, k * 0.73, k * 0.7);
+        this.cockpit.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(Math.max(0.45, k) * 1.0, Math.max(0.3, k) * 0.6);
+      }
     }
     this.animateParts(fm);
     // spin fans / props

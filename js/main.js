@@ -534,7 +534,7 @@ function tick() {
     if (groundTimer <= 0) {
       groundTimer = 0.1;
       let hg = world.groundFast(fm.lat, fm.lon);
-      if (world.tileset && world.runwayHeight(fm.lat, fm.lon) === undefined && (fm.onGround || fm.out.agl < 12)) {
+      if (world.tileset && world.runwayHeight(fm.lat, fm.lon) === undefined && world.airportSurfaceHeight(fm.lat, fm.lon) === undefined && (fm.onGround || fm.out.agl < 12)) {
         tileTimer -= 0.1;
         if (tileTimer <= 0) { tileTimer = 0.3; const ht = world.sampleTile(fm.lat, fm.lon); app.tileH = ht !== undefined && isFinite(ht) && (hg === undefined || Math.abs(ht - hg) < 40) ? ht : undefined; }
         if (app.tileH !== undefined) hg = app.tileH;

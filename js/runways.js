@@ -107,14 +107,17 @@ function paintRunway(info) {
 
 // Build the flat runway strips for one airport. sampleTile(lat, lon) gives the 3D-tile height
 // (or undefined) and is used to blend the shoulders into the surrounding scenery.
-export function buildAirportRunways(ap, geoid, sampleTile) {
+export function buildAirportRunways(ap, geoid, sampleTile, plane = null) {
   const Cesium = C();
   const prims = [], clips = [];
   for (const r of ap.r) {
     const info = runwayInfo(r);
     if (!(info.L > 100)) continue;
     const perp = info.hdg + Math.PI / 2;
-    const hAt = (along) => info.e1 + (info.e2 - info.e1) * Math.max(0, Math.min(1, along / info.L)) + geoid + 0.03;
+    // height along the centreline: database slope, or the airport plane shared with taxiways/aprons
+    const hAt = plane
+      ? (along) => { const [la, lo] = offsetLL(info.la1, info.lo1, info.hdg, along); return plane(la, lo) + 0.03; }
+      : (along) => info.e1 + (info.e2 - info.e1) * Math.max(0, Math.min(1, along / info.L)) + geoid + 0.03;
     const SK = 6; // skirt that slopes from the shoulder down/up into the surrounding tiles (hides clip edges)
     const cols = [-(info.w / 2 + SHOULDER + SK), -(info.w / 2 + SHOULDER), -info.w / 2, 0, info.w / 2, info.w / 2 + SHOULDER, info.w / 2 + SHOULDER + SK];
     const across = info.w + 2 * SHOULDER, total = info.L + 2 * PAD;
