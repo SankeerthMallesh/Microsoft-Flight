@@ -236,6 +236,7 @@ export class World {
     if (old) for (const p of old.prims) this.viewer.scene.primitives.remove(p);
     for (const p of built.prims) this.viewer.scene.primitives.add(p);
     this.rwySurf.set(a.i, built);
+    this.applyNightTint();
     return true;
   }
   addAirport3D(a, elements) {
@@ -247,6 +248,7 @@ export class World {
     this.buildRunways(a); // re-level the runways onto the shared airport plane
     for (const p of res.prims) this.viewer.scene.primitives.add(p);
     this.ap3d.set(a.i, res);
+    this.applyNightTint();
     this.applyClipping();
     // Google has no real 3D buildings here: add OpenStreetMap 3D buildings for the surrounding city too
     if (!res.google3D && this.buildingsEnabled !== false) { this.ensureOsmBuildings(); this.alignOsmBuildings(a, res); }
@@ -276,7 +278,7 @@ export class World {
       ts.shadows = Cesium.ShadowMode.ENABLED;
       if (this.osmMatrix) ts.modelMatrix = this.osmMatrix;
       this.osmBuildings = this.viewer.scene.primitives.add(ts);
-      this.applyClipping();
+      this.applyClipping(); this.applyNightTint();
     } catch (e) { console.warn('OSM buildings unavailable', e); }
     this._osmLoading = false;
   }
@@ -300,6 +302,40 @@ export class World {
   airportSurfaceHeight(lat, lon) {
     for (const v of (this.ap3d || new Map()).values()) { const h = v.surfaceHeight(lat, lon); if (h !== undefined) return h; }
     return undefined;
+  }
+  // flat airport surfaces use unlit-looking image materials: scale them with daylight so paint doesn't glow at night
+  // Google's photogrammetry has daylight baked in, so the whole scene (tiles, OSM buildings, our airport
+  // surfaces) is scaled with the real sun elevation: bright by day, dusk tones, moonlit night.
+  dayFactor() { const k = this.sunK ?? 1; return 0.1 + 0.9 * k; }
+  nightShader() {
+    const Cesium = C();
+    if (!this._nightShader) {
+      this._nightShader = new Cesium.CustomShader({
+        uniforms: { u_day: { type: Cesium.UniformType.FLOAT, value: 1 } },
+        fragmentShaderText: `void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+          // cool, desaturated moonlight at night
+          float d = u_day;
+          vec3 c = material.diffuse;
+          float l = dot(c, vec3(0.299, 0.587, 0.114));
+          vec3 night = mix(vec3(l), c, 0.45) * vec3(0.82, 0.9, 1.15);
+          material.diffuse = mix(night, c, smoothstep(0.1, 0.6, d)) * d;
+          material.emissive *= d;
+        }`,
+      });
+    }
+    return this._nightShader;
+  }
+  applyNightTint() {
+    const Cesium = C();
+    const v = this.dayFactor();
+    const sh = this.nightShader(); sh.setUniform('u_day', v);
+    if (this.tileset && this.tileset.customShader !== sh) this.tileset.customShader = sh;
+    if (this.osmBuildings && this.osmBuildings.customShader !== sh) this.osmBuildings.customShader = sh;
+    for (const e of (this.ap3d || new Map()).values()) if (e.tint && e._tinted !== v) { if (e.tint(v)) e._tinted = v; }
+    for (const m of [this.rwySurf, this.ap3d]) if (m) for (const e of m.values()) for (const mat of e.mats || []) {
+      const b = mat._base || Cesium.Color.WHITE;
+      mat.uniforms.color = new Cesium.Color(b.red * v, b.green * v * 0.98, b.blue * v * 0.96, b.alpha);
+    }
   }
   clearRunwaySurfaces() {
     for (const id of [...(this.rwySurf || new Map()).keys(), ...(this.ap3d || new Map()).keys()]) this.dropAirport(id);
@@ -597,6 +633,7 @@ export class World {
       const t = clamp((sinElev + 0.1) / 0.22, 0, 1);
       const k = 0.12 + 0.88 * t * t * (3 - 2 * t);
       this.sunK = k;
+      this.applyNightTint();
       this.model.lightColor = new Cesium.Cartesian3(k * 2.0, k * 1.95, k * 1.85);
       this.model.imageBasedLighting.imageBasedLightingFactor = new Cesium.Cartesian2(k, k);
     }

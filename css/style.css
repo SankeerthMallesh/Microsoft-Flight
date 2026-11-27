@@ -88,6 +88,8 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 .livery:hover { background: rgba(255, 255, 255, 0.06); }
 .livery.active { border-color: var(--accent); background: rgba(58, 160, 255, 0.15); }
 .livery .chips i { height: 26px; width: 10px; }
+.livery svg.brand { flex: none; width: 92px; height: 49px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); }
+#liveryChips svg.brand { width: 72px; height: 38px; border-radius: 6px; vertical-align: middle; }
 .livery div { display: flex; flex-direction: column; }
 .livery small { color: var(--muted); font-size: 0.72rem; }
 #hSelect { margin-top: auto; }

@@ -161,16 +161,15 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
   const cart = (x, y, dh = 0) => { const [la, lo] = fromXY(x, y); return Cesium.Cartesian3.fromRadians(lo, la, F.planeXY(x, y) + dh); };
   const up = (p) => Cesium.Ellipsoid.WGS84.geodeticSurfaceNormal(p, new Cesium.Cartesian3());
   const tex = textures();
-  const prims = [], clips = [], surfaces = { segs: [], rings: [] };
+  const prims = [], clips = [], mats = [], surfaces = { segs: [], rings: [] };
   // dark ground underlay just below the edges of clipped areas: where lumpy tiles sit above the flat
   // surfaces you would otherwise see through the cut edge
   const under = [];
-  const underColor = Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString('#5f5a4f'));
+
   const addUnder = (ring, dh) => {
     try {
       under.push(new Cesium.GeometryInstance({
-        geometry: new Cesium.PolygonGeometry({ polygonHierarchy: new Cesium.PolygonHierarchy(ring.map(([x, y]) => cart(x, y, dh))), perPositionHeight: true, vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT }),
-        attributes: { color: underColor },
+        geometry: new Cesium.PolygonGeometry({ polygonHierarchy: new Cesium.PolygonHierarchy(ring.map(([x, y]) => cart(x, y, dh))), perPositionHeight: true, vertexFormat: Cesium.MaterialAppearance.MaterialSupport.BASIC.vertexFormat }),
       }));
     } catch (e) { /* ignore */ }
   };
@@ -193,7 +192,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       });
       prims.push(new Cesium.Primitive({
         geometryInstances: new Cesium.GeometryInstance({ geometry }),
-        appearance: new Cesium.MaterialAppearance({ material: Cesium.Material.fromType('Image', { image: tex.apron, repeat: new Cesium.Cartesian2(Math.max(1, ext[0] / 30), Math.max(1, ext[1] / 30)) }), faceForward: true }),
+        appearance: new Cesium.MaterialAppearance({ material: (() => { const m = Cesium.Material.fromType('Image', { image: tex.apron, repeat: new Cesium.Cartesian2(Math.max(1, ext[0] / 30), Math.max(1, ext[1] / 30)) }); mats.push(m); return m; })(), faceForward: true }),
         asynchronous: true, shadows: Cesium.ShadowMode.RECEIVE_ONLY,
       }));
       clips.push(new Cesium.ClippingPolygon({ positions: scaleRing(r, -2.5).map(([x, y]) => cart(x, y)) }));
@@ -231,7 +230,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     });
     prims.push(new Cesium.Primitive({
       geometryInstances: new Cesium.GeometryInstance({ geometry }),
-      appearance: new Cesium.MaterialAppearance({ material: Cesium.Material.fromType('Image', { image: tex.taxi }), faceForward: true }),
+      appearance: new Cesium.MaterialAppearance({ material: (() => { const m = Cesium.Material.fromType('Image', { image: tex.taxi }); mats.push(m); return m; })(), faceForward: true }),
       asynchronous: false, shadows: Cesium.ShadowMode.RECEIVE_ONLY,
     }));
     // clip slightly inside the drawn edge so no lumpy tile shows between
@@ -241,7 +240,11 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     addUnder([...uL, ...uR.slice().reverse()], -0.6);
   }
 
-  if (under.length) prims.push(new Cesium.Primitive({ geometryInstances: under, appearance: new Cesium.PerInstanceColorAppearance({ flat: false, translucent: false }), asynchronous: true, shadows: Cesium.ShadowMode.RECEIVE_ONLY }));
+  if (under.length) {
+    const um = Cesium.Material.fromType('Color', { color: Cesium.Color.fromCssColorString('#5f5a4f') });
+    um._base = Cesium.Color.fromCssColorString('#5f5a4f'); mats.push(um);
+    prims.push(new Cesium.Primitive({ geometryInstances: under, appearance: new Cesium.MaterialAppearance({ material: um, materialSupport: Cesium.MaterialAppearance.MaterialSupport.BASIC, faceForward: true }), asynchronous: true, shadows: Cesium.ShadowMode.RECEIVE_ONLY }));
+  }
 
   // ---- 3D buildings (only where Google's tiles have no real buildings)
   const blds = ways.filter((w) => (w.tags?.building || /^(terminal|hangar|tower)$/.test(w.tags?.aeroway || '')) && ringOk(xyOf(w.geometry)));
@@ -257,7 +260,8 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     }
     google3D = n >= 4 && tall / n > 0.35;
   }
-  const instances = [];
+  const instances = [], bldColors = [];
+  let bldPrim = null;
   let nb = 0;
   if (!google3D && opts.buildings !== false) {
     const pal = ['#d9d6cf', '#cfcac0', '#e3e0d8', '#bfbab0', '#d2cdc4', '#c8c9cb', '#e8e4da', '#b9b4aa'];
@@ -278,7 +282,10 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       const ring = (sc = 1, dz = 0) => r.map(([x, y]) => { const [la, lo] = fromXY(cx + (x - cx) * sc, cy + (y - cy) * sc); return Cesium.Cartesian3.fromRadians(lo, la, base + dz); });
       const add = (positions, hb, ht, col) => {
         try {
+          const id = 'bld' + ap.i + '_' + instances.length;
+          bldColors.push([id, Cesium.Color.fromCssColorString(col)]);
           instances.push(new Cesium.GeometryInstance({
+            id,
             geometry: new Cesium.PolygonGeometry({ polygonHierarchy: new Cesium.PolygonHierarchy(positions), height: hb, extrudedHeight: ht, vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT }),
             attributes: { color: Cesium.ColorGeometryInstanceAttribute.fromColor(Cesium.Color.fromCssColorString(col)) },
           }));
@@ -296,7 +303,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       }
       nb++;
     }
-    if (instances.length) prims.push(new Cesium.Primitive({
+    if (instances.length) prims.push(bldPrim = new Cesium.Primitive({
       geometryInstances: instances, appearance: new Cesium.PerInstanceColorAppearance({ translucent: false, closed: true }),
       asynchronous: true, shadows: Cesium.ShadowMode.ENABLED,
     }));
@@ -311,5 +318,11 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
   };
   const [bs, bw, bn, be] = airportBBox(ap);
   const bboxRing = [[bs, bw], [bs, be], [bn, be], [bn, bw]].map(([la, lo]) => Cesium.Cartesian3.fromDegrees(lo, la, F.plane(la * D2R, lo * D2R)));
-  return { prims, clips, surfaceHeight, google3D, bboxRing, buildings: nb, taxiways: k, aprons: surfaces.rings.length, plane: F.plane };
+  // daylight scaling for the extruded buildings (per-instance colours)
+  const tint = (v) => {
+    if (!bldPrim || !bldPrim.ready) return false;
+    for (const [id, c] of bldColors) { const at = bldPrim.getGeometryInstanceAttributes(id); if (at) at.color = Cesium.ColorGeometryInstanceAttribute.toValue(new Cesium.Color(c.red * v, c.green * v, c.blue * v * 1.04, 1), at.color); }
+    return true;
+  };
+  return { prims, clips, mats, tint, surfaceHeight, google3D, bboxRing, buildings: nb, taxiways: k, aprons: surfaces.rings.length, plane: F.plane };
 }

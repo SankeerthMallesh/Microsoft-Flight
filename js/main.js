@@ -1,4 +1,5 @@
 // OpenSkies Flight Simulator — application controller.
+import { brandSVG } from './brands.js';
 import { AIRCRAFT, MAKERS, getAircraft, deriveAero } from './data/aircraft.js';
 import { LIVERIES, liveriesFor, getLivery } from './data/liveries.js';
 import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear, allAirports } from './data/airports.js';
@@ -86,7 +87,7 @@ function refreshSetup() {
   const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId);
   $('acName').textContent = `${ac.maker} ${ac.name}`;
   $('liveryName').textContent = `${lv.name} — ${lv.subtitle || ''}`;
-  $('liveryChips').innerHTML = chipsHTML(lv);
+  $('liveryChips').innerHTML = brandSVG(lv);
   const ap = getAirport(plan.airport);
   if (ap) {
     $('airportPicked').textContent = `${ap.i}${ap.a ? ' / ' + ap.a : ''} — ${ap.n}, ${ap.c} (${ap.k}) · elev ${ap.e} ft`;
@@ -210,7 +211,7 @@ function selectHangarAc(acId, liveryId) {
 function renderLiveries() {
   const acId = hangarSel.acId;
   const list = $('allLiveries').checked ? LIVERIES : liveriesFor(acId);
-  $('hLiveries').innerHTML = list.map((l) => `<div class="livery ${l.id === hangarSel.liveryId ? 'active' : ''}" data-lv="${l.id}"><span class="chips">${chipsHTML(l)}</span><div><b>${l.name}</b><small>${l.subtitle || ''}${l.fleet !== '*' && !l.fleet.includes(acId) ? ' · not in real fleet' : ''}</small></div></div>`).join('');
+  $('hLiveries').innerHTML = list.map((l) => `<div class="livery ${l.id === hangarSel.liveryId ? 'active' : ''}" data-lv="${l.id}">${brandSVG(l)}<div><b>${l.name}</b><small>${l.subtitle || ''}${l.fleet !== '*' && !l.fleet.includes(acId) ? ' · not in real fleet' : ''}</small></div></div>`).join('');
   $('hLiveries').querySelectorAll('.livery').forEach((el) => el.addEventListener('click', () => { hangarSel.liveryId = el.dataset.lv; renderLiveries(); showHangarModel(); }));
 }
 async function showHangarModel() {

@@ -64,7 +64,7 @@ function paintRunway(info) {
     const yA = end ? Y(info.L + 8 + k * 12) : Y(-8 - k * 12), dy = (end ? -1 : 1) * 10 * pxA;
     g.beginPath(); g.moveTo(X(-info.w / 2 + 2), yA + dy); g.lineTo(X(0), yA); g.lineTo(X(info.w / 2 - 2), yA + dy); g.stroke();
   }
-  const white = 'rgba(236,236,230,0.92)';
+  const white = 'rgba(224,224,216,0.86)';
   g.fillStyle = white;
   const rectM = (x0, y0, wm, lm) => { const a = Y(y0), b = Y(y0 + lm); g.fillRect(X(x0), Math.min(a, b), wm * pxX, Math.max(2, Math.abs(a - b))); };
   // edge stripes and end bars
@@ -109,7 +109,7 @@ function paintRunway(info) {
 // (or undefined) and is used to blend the shoulders into the surrounding scenery.
 export function buildAirportRunways(ap, geoid, sampleTile, plane = null) {
   const Cesium = C();
-  const prims = [], clips = [];
+  const prims = [], clips = [], mats = [];
   for (const r of ap.r) {
     const info = runwayInfo(r);
     if (!(info.L > 100)) continue;
@@ -166,6 +166,7 @@ export function buildAirportRunways(ap, geoid, sampleTile, plane = null) {
       boundingSphere: Cesium.BoundingSphere.fromVertices(pos),
     });
     const material = Cesium.Material.fromType('Image', { image: paintRunway(info) });
+    mats.push(material);
     prims.push(new Cesium.Primitive({
       geometryInstances: new Cesium.GeometryInstance({ geometry }),
       appearance: new Cesium.MaterialAppearance({ material, faceForward: true, closed: false, translucent: false }),
@@ -179,5 +180,5 @@ export function buildAirportRunways(ap, geoid, sampleTile, plane = null) {
     });
     clips.push(new Cesium.ClippingPolygon({ positions: ring }));
   }
-  return { prims, clips };
+  return { prims, clips, mats };
 }
