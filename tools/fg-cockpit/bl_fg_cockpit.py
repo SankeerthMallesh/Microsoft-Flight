@@ -6,12 +6,14 @@ blend, out, cfgp = argv[0], argv[1], argv[2]
 cfg = json.load(open(cfgp))
 bpy.ops.wm.open_mainfile(filepath=blend)
 objs = [o for o in bpy.data.objects if o.type == 'MESH']
-ext = [o for o in objs if o.get('src') == cfg['exterior']]
+ext = [o for o in objs if o.get('src') == cfg['exterior'] and re.search(cfg.get('extNames', ''), o.name)]
 W = lambda o: [o.matrix_world @ v.co for v in o.data.vertices]
 xs = [p.x for o in ext for p in W(o)]
 noseFG = min(xs); L = max(xs) - noseFG
 zall = [p.z for o in ext for p in W(o)]
 czFG = (min(zall) + max(zall)) / 2
+# optional: put FlightGear's ground plane on the OpenSkies ground plane so the eye height above the wheels is real
+if 'groundFG' in cfg and 'groundZ' in cfg: czFG = cfg['groundFG'] - cfg['groundZ']
 print('FG nose', noseFG, 'len', L, 'centre z', czFG)
 xcg = cfg['xcg']
 # FG (x aft, y right, z up) -> sim (x fwd, y left, z up), nose aligned
@@ -21,24 +23,45 @@ for o in list(objs):
     if not keep.search(o.get('src', '')) or drop.search(o.name):
         bpy.data.objects.remove(o, do_unlink=True)
 objs = [o for o in bpy.data.objects if o.type == 'MESH']
+# optional: collapse-decimate over-dense small parts (knobs, screws, cords) to keep the web GLB small
+dec = cfg.get('decimateOver')
+if dec:
+    nd = 0
+    for o in objs:
+        n = len(o.data.polygons)
+        if n > dec and not any(o.name in v for v in cfg['screens'].values()):
+            if o.data.users > 1: o.data = o.data.copy()
+            md = o.modifiers.new('dec', 'DECIMATE'); md.ratio = max(cfg.get('decimateMin', 0.1), dec / n)
+            bpy.context.view_layer.objects.active = o
+            with bpy.context.temp_override(object=o, active_object=o): bpy.ops.object.modifier_apply(modifier='dec')
+            nd += n - len(o.data.polygons)
+    print('decimated faces', nd)
 for o in objs:
     o.data.transform(o.matrix_world); o.matrix_world = Matrix.Identity(4)
     o.data.transform(A); o.data.update()
     if A.determinant() < 0: o.data.flip_normals()
 # screens: oriented rectangle corners TL, TR, BR, BL as seen from the pilot
+# a screen is one object, or the union of several ("+" first: e.g. a display split into two halves);
+# optional screenCrop {key: [u0, u1, v0, v1]} keeps a sub-rectangle (fractions, left->right, bottom->top)
 screens = {}
-for o in objs:
-    for key, names in cfg['screens'].items():
-        if o.name in names and key not in screens:
-            pts = [v.co.copy() for v in o.data.vertices]
+byname = {o.name: o for o in objs}
+for key, names in cfg['screens'].items():
+    sel = [byname[n] for n in names[1:] if n in byname] if names[0] == '+' else [byname[n] for n in names if n in byname][:1]
+    if not sel: print('screen missing', key, names); continue
+    if True:
+            pts = [v.co.copy() for o in sel for v in o.data.vertices]
             c = sum(pts, Vector()) / len(pts)
-            n = sum((p.normal for p in o.data.polygons), Vector()).normalized()
+            n = sum((p.normal * p.area for o in sel for p in o.data.polygons), Vector()).normalized()
             if n.x < 0: n = -n  # face the pilot (aft = -x)
             u = Vector((0, 1, 0)); u = (u - n * u.dot(n)).normalized()  # 'left' in the screen plane
             v = n.cross(u).normalized()
             if v.z < 0: v = -v
             us = [(p - c).dot(u) for p in pts]; vs = [(p - c).dot(v) for p in pts]
             u0, u1, v0, v1 = min(us), max(us), min(vs), max(vs)
+            cr = cfg.get('screenCrop', {}).get(key)
+            if cr:  # u runs to the pilot's left, so 'left' fraction 0 is u1
+                U0, U1 = u1 - (u1 - u0) * cr[1], u1 - (u1 - u0) * cr[0]
+                v0, v1 = v0 + (v1 - v0) * cr[2], v0 + (v1 - v0) * cr[3]; u0, u1 = U0, U1
             corner = lambda a, b: list(c + u * a + v * b)
             screens[key] = [corner(u1, v1), corner(u0, v1), corner(u0, v0), corner(u1, v0)]  # TL TR BR BL
 eyeFG = Vector(cfg['eyeFG'])

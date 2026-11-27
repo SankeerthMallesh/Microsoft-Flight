@@ -29,3 +29,10 @@ repositioned to the MAX fuselage and with larger display units.
 
 Converted the same way as the 737 flight deck (glTF, aligned to the A320neo model, baked ambient occlusion,
 web-optimised textures). OpenSkies draws the live PFD, ND, ECAM and standby displays onto its screens.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `b777-300er-cockpit.glb` | Boeing 777 Series for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, CDUs, radios, standby instruments), from the official FlightGear aircraft download mirror | Syd Adams (3D models), Justin Smithies, Karla, Thorsten Brehm, Joshua Davidson, Isaak Dieleman, Sidi Liang, Yongfan Li, Valkmjolnir, Lars Van Hattum and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way (glTF, aligned to the 777 model with FlightGear's real eye height above the wheels, over-dense knobs and screws
+decimated, baked ambient occlusion, web-optimised). The 777-200ER, 777F and 777-9 reuse this flight deck, repositioned to their noses.
