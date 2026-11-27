@@ -219,9 +219,11 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 #flightUI.panel-off.show-mini .hud-mini { display: block; }
 
 /* loading screen: aircraft facts */
-.fact-card { margin-top: 22px; max-width: 520px; text-align: left; background: rgba(12, 16, 22, 0.72); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 3px solid var(--accent); border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(6px); transition: opacity 0.45s ease, transform 0.45s ease; }
+.fact-card { margin-top: 22px; max-width: 560px; overflow: hidden; text-align: left; background: rgba(12, 16, 22, 0.72); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 3px solid var(--accent); border-radius: 12px; padding: 14px 18px; backdrop-filter: blur(6px); transition: opacity 0.45s ease, transform 0.45s ease; }
 .fact-card.fade { opacity: 0; transform: translateY(6px); }
 .fact-card:empty, .fact-card.off { display: none; }
 .fact-label { display: block; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 6px; }
 #factTitle { display: block; font-size: 1.02rem; margin-bottom: 4px; }
 #factText { margin: 0; color: #d6dde6; line-height: 1.5; font-size: 0.93rem; }
+#factImg { display: block; width: calc(100% + 36px); margin: -14px -18px 12px; aspect-ratio: 16 / 9; object-fit: cover; background: #1b2028; }
+#factImg[src=""], #factImg:not([src]) { display: none; }

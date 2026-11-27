@@ -213,8 +213,9 @@ export const LIVERIES = [
     fuselage(p, l) {
       p.band(-0.18, -1.6, '#ffffff');
       p.band(-0.18, -0.25, '#003082');
-      p.text('KLM', titleX(l, 0.28), TH + 0.03, titleSize(l, 0.42), '#ffffff', { font: FONTS.sans, weight: 800, spacing: 0.05 });
-      p.text('Royal Dutch Airlines', titleX(l, 0.5), TH, titleSize(l, 0.16), '#ffffff', { font: FONTS.sans, weight: 600 });
+      const kf = p.side === 'L' ? [0.28, 0.5] : [0.5, 0.28]; // keep "KLM Royal Dutch Airlines" order on both sides
+      p.text('KLM', titleX(l, kf[0]), TH + 0.03, titleSize(l, 0.42), '#ffffff', { font: FONTS.sans, weight: 800, spacing: 0.05 });
+      p.text('Royal Dutch Airlines', titleX(l, kf[1]), TH, titleSize(l, 0.16), '#ffffff', { font: FONTS.sans, weight: 600 });
       p.draw(titleX(l, 0.28), TH + 0.62, (c) => { const s = l.H0 * 0.12; for (let k = -2; k <= 2; k++) { c.beginPath(); c.arc(k * s * 0.8, Math.abs(k) === 2 ? 0 : s * 0.4 * (k === 0 ? 1.4 : 1), s * 0.25, 0, 7); c.fillStyle = '#ffffff'; c.fill(); } });
     },
     fin(f) {
@@ -436,9 +437,10 @@ export const LIVERIES = [
     fuselage(p, l) {
       const x = titleX(l, 0.38), sz = titleSize(l, 0.62);
       p.band(3, 0.62, '#4D148C', { x0: 0, x1: l.L });
-      p.text('Fed', x - sz * 1.35, 0.15, sz, '#4D148C', { font: FONTS.sans, weight: 900 });
-      p.text('Ex', x + sz * 1.0, 0.15, sz, '#FF6600', { font: FONTS.sans, weight: 900 });
-      p.text('Express', x + sz * 2.55, -0.25, sz * 0.35, '#FF6600', { font: FONTS.sans, weight: 700 });
+      const sd = p.side === 'L' ? 1 : -1; // keep the word order reading "FedEx" on both sides
+      p.text('Fed', x - sd * sz * 1.35, 0.15, sz, '#4D148C', { font: FONTS.sans, weight: 900 });
+      p.text('Ex', x + sd * sz * 1.0, 0.15, sz, '#FF6600', { font: FONTS.sans, weight: 900 });
+      p.text('Express', x + sd * sz * 2.55, -0.25, sz * 0.35, '#FF6600', { font: FONTS.sans, weight: 700 });
     },
     fin(f) { f.fill('#4D148C'); f.text('FedEx', 0.5, 0.45, f.h * 0.2, '#ffffff', { weight: 900, maxW: f.midChord * 1.3 }); },
   },
@@ -448,8 +450,9 @@ export const LIVERIES = [
     base: '#ffffff', belly: '#4a2c1e', engine: '#351C15', pylon: '#ffffff', finBase: '#351C15', wingletOut: '#351C15', wingletIn: '#FFB500', stab: '#351C15',
     fuselage(p, l) {
       p.band(-0.25, -0.62, '#351C15');
-      p.text('UPS', titleX(l, 0.3), TH - 0.08, titleSize(l, 0.45), '#351C15', { font: FONTS.sans, weight: 900, spacing: 0.04 });
-      p.text('Worldwide Services', titleX(l, 0.58), TH - 0.08, titleSize(l, 0.2), '#351C15', { font: FONTS.sans, weight: 700 });
+      const uf = p.side === 'L' ? [0.3, 0.58] : [0.58, 0.3];
+      p.text('UPS', titleX(l, uf[0]), TH - 0.08, titleSize(l, 0.45), '#351C15', { font: FONTS.sans, weight: 900, spacing: 0.04 });
+      p.text('Worldwide Services', titleX(l, uf[1]), TH - 0.08, titleSize(l, 0.2), '#351C15', { font: FONTS.sans, weight: 700 });
       p.band(3, (x) => 0.75 - 1.5 * ((x - l.tailStart) / l.Lt), '#351C15', { x0: l.tailStart + l.Lt * 0.1 });
     },
     fin(f) {

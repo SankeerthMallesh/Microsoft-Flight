@@ -1,5 +1,6 @@
 // OpenSkies Flight Simulator — application controller.
 import { FACTS, GENERAL_FACTS } from './data/facts.js';
+import { music } from './music.js';
 import { brandSVG } from './brands.js';
 import { AIRCRAFT, MAKERS, getAircraft, deriveAero } from './data/aircraft.js';
 import { LIVERIES, liveriesFor, getLivery } from './data/liveries.js';
@@ -21,7 +22,11 @@ const store = {
 };
 
 // ------------------------------------------------------------------ state
-const settings = Object.assign({ ionToken: '', scenery: 'photoreal', quality: 'medium', shadows: false, assist: 'assisted', invertPitch: false, volume: 0.7 }, store.get('settings', {}));
+const settings = Object.assign({ ionToken: '', scenery: 'photoreal', quality: 'medium', shadows: false, assist: 'assisted', invertPitch: false, volume: 0.7, music: true }, store.get('settings', {}));
+// cinematic menu music: browsers only allow audio after a user gesture, so start on the first click/key
+music.enabled = settings.music !== false; music.volume = settings.volume ?? 0.7;
+const startMusicOnGesture = () => { if (!app.flying) music.play(); window.removeEventListener('pointerdown', startMusicOnGesture); window.removeEventListener('keydown', startMusicOnGesture); };
+window.addEventListener('pointerdown', startMusicOnGesture); window.addEventListener('keydown', startMusicOnGesture);
 // A token in config.js (written by the setup script) is used when none was saved in Settings.
 const fileToken = (window.OPENSKIES_CONFIG && String(window.OPENSKIES_CONFIG.ionToken || '').trim()) || '';
 if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
@@ -69,7 +74,10 @@ function nextFact() {
   if (kind === 'ac') { const a = getAircraft(v); title = a ? `${a.maker} ${a.name}` : v; text = FACTS[v]; } else { title = 'Flying tip'; text = v; }
   const card = $('factCard');
   card.classList.add('fade');
-  setTimeout(() => { $('factTitle').textContent = title; $('factText').textContent = text; card.classList.remove('fade'); }, factTimer ? 450 : 0);
+  const img = kind === 'ac' ? `images/aircraft/${v}.jpg` : (FACTS[plan.acId] ? `images/aircraft/${plan.acId}.jpg` : '');
+  const apply = () => { $('factTitle').textContent = title; $('factText').textContent = text; $('factImg').src = img; card.classList.remove('fade'); };
+  // preload the picture so the card swaps cleanly
+  if (img) { const pre = new Image(); pre.onload = pre.onerror = () => setTimeout(apply, factTimer ? 450 : 0); pre.src = img; } else setTimeout(apply, factTimer ? 450 : 0);
 }
 function startFacts() {
   if (factTimer) return;
@@ -92,10 +100,11 @@ $('helpTable').innerHTML = KEY_HELP.map(([a, k]) => `<tr><td>${a}</td><td>${k}</
 function loadSettingsForm() {
   $('tokenInput').value = settings.ionToken; $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
   $('shadowsChk').checked = settings.shadows; $('assistSel').value = settings.assist; $('invertChk').checked = settings.invertPitch; $('volSel').value = settings.volume;
+  $('musicChk').checked = settings.music !== false;
 }
 $('saveSettings').onclick = () => {
   settings.ionToken = $('tokenInput').value.trim(); settings.scenery = $('scenerySel').value; settings.quality = $('qualitySel').value;
-  settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value;
+  settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value; settings.music = $('musicChk').checked;
   store.set('settings', settings); location.reload();
 };
 
@@ -422,6 +431,7 @@ async function startFlight() {
     if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
     audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
+    music.stop(4);
     if (app.map) { app.map.reset(fm, plan.start === 'cruise' ? 8 : 11); app.map.setDest(app.destAirport); }
     input.enabled = true;
     $('flightUI').classList.remove('hidden');
@@ -495,6 +505,7 @@ function endFlight(toMenu) {
   if (app.world.model) app.world.model.show = false;
   if (app.world.cockpit) app.world.cockpit.show = false;
   app.world.points.removeAll(); app.world.rwyPoints.removeAll();
+  if (music.ctx) music.play();
   if (toMenu) { app.history = []; show('menu', false); const a = getAirport(plan.airport); if (a) app.world.menuOrbit(a.la, a.lo); }
 }
 
