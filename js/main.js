@@ -313,7 +313,7 @@ async function startFlight() {
     loading(true, 'Loading aircraft into the world…', 0.15);
     await world.loadAircraft(built.glb, built.physics);
     loading(true, 'Loading 3D cockpit…', 0.17);
-    const ck = built.detailed && ac.cockpit && settings.cockpit3d !== false ? await world.loadCockpit(ac.cockpit) : await world.loadCockpit(null);
+    const ck = ac.cockpit && settings.cockpit3d !== false ? await world.loadCockpit(ac.cockpit) : await world.loadCockpit(null);
     $('flightUI').classList.toggle('ck3d', !!ck);
     world.model.show = false;
     world.stopMenuOrbit();
