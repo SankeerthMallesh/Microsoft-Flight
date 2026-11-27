@@ -268,7 +268,9 @@ export function drawEICAS(canvas, s) {
   const fm = s.fm;
   const n = fm.engines.length;
   const prop = fm.engines[0].type !== 'turbofan';
-  const dialR = Math.max(10, Math.min(w / (n * 2.5), h * 0.12, (h * 0.74 - 62 - h * 0.17) / (prop ? 4.9 : 4.4)));
+  // size the dials to the space above the fuel/gear/flaps block (N1 row, EGT row, FF row)
+  const ly = h * 0.78;
+  const dialR = Math.max(10, Math.min(w / (n * 2.7), h * 0.16, (ly - 40 - 18) / (prop ? 6.1 : 5.7)));
   const dial = (x, y, v, max, label, red, val, rev) => {
     const a0 = Math.PI * 0.75, a1 = Math.PI * 2.0;
     ctx.strokeStyle = COL.white; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, dialR, a0, a1); ctx.stroke();
@@ -280,7 +282,7 @@ export function drawEICAS(canvas, s) {
     txt(ctx, val, x + 2 + dialR * 1.0, y - dialR * 0.55 + 10, 13, COL.white, 'right', 700);
     if (rev) txt(ctx, 'REV', x, y - dialR - 10, 12, COL.green, 'center', 700);
   };
-  const top = h * 0.17;
+  const top = dialR + 18;
   fm.engines.forEach((e, i) => {
     const x = (w / (n + 1)) * (i + 1) - dialR * 0.3;
     if (prop) {
@@ -302,7 +304,6 @@ export function drawEICAS(canvas, s) {
   if (prop) txt(ctx, 'NP %', w * 0.04, top + dialR * 4.0, 10, COL.cyan, 'left');
   txt(ctx, 'FF KG/H', w * 0.04, top + dialR * (prop ? 4.6 : 4.25), 10, COL.cyan, 'left');
   // lower: fuel, gear, flaps
-  const ly = h * 0.74;
   txt(ctx, 'FUEL', w * 0.12, ly - 26, 12, COL.cyan);
   txt(ctx, Math.round(fm.fuel) + ' KG', w * 0.12, ly - 8, 15, fm.fuel < fm.ac.fuel * 0.08 ? COL.amber : COL.white, 'center', 700);
   txt(ctx, 'GW ' + (fm.mass / 1000).toFixed(1) + ' T', w * 0.12, ly + 12, 12, COL.white);
