@@ -8,6 +8,7 @@ import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear, all
 import { MiniMap, gcPoints } from './minimap.js';
 import { getAircraftGLB } from './model/factory.js';
 import { World } from './world.js';
+import { Traffic } from './traffic.js';
 import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
@@ -101,10 +102,12 @@ function loadSettingsForm() {
   $('tokenInput').value = settings.ionToken; $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
   $('shadowsChk').checked = settings.shadows; $('assistSel').value = settings.assist; $('invertChk').checked = settings.invertPitch; $('volSel').value = settings.volume;
   $('musicChk').checked = settings.music !== false;
+  $('trafficChk').checked = settings.traffic !== false; $('trafficLblChk').checked = settings.trafficLabels !== false;
 }
 $('saveSettings').onclick = () => {
   settings.ionToken = $('tokenInput').value.trim(); settings.scenery = $('scenerySel').value; settings.quality = $('qualitySel').value;
   settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value; settings.music = $('musicChk').checked;
+  settings.traffic = $('trafficChk').checked; settings.trafficLabels = $('trafficLblChk').checked;
   store.set('settings', settings); location.reload();
 };
 
@@ -431,6 +434,7 @@ async function startFlight() {
     if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
     audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
+    if (app.traffic) app.traffic.start({ ap, rwy, geoid }); // live / AI air traffic
     music.stop(4);
     if (app.map) { app.map.reset(fm, plan.start === 'cruise' ? 8 : 11); app.map.setDest(app.destAirport); }
     input.enabled = true;
@@ -501,6 +505,7 @@ $('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('r
 function endFlight(toMenu) {
   app.flying = false; input.enabled = false; app.paused = false;
   audio.stopEngines();
+  if (app.traffic) app.traffic.stop();
   $('flightUI').classList.add('hidden');
   if (app.world.model) app.world.model.show = false;
   if (app.world.cockpit) app.world.cockpit.show = false;
@@ -603,6 +608,7 @@ function tick() {
     sh.shakeAmp = app.paused ? 0 : rumble + turb + sh.jolt;
   }
   world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
+  if (app.traffic) app.traffic.update(fm, dt);
   world.updateCamera(fm, dt);
   world.updatePapi(fm);
   cloudTimer -= dt; if (cloudTimer <= 0) { cloudTimer = 1; world.updateClouds(fm.lat, fm.lon, fm.h); }
@@ -631,6 +637,7 @@ function tick() {
       app.routeCache = { t: now, pts, line };
     }
     app.map.update(fm, app.routeCache.line);
+    if (app.traffic && app.map.setTraffic) app.map.setTraffic(app.traffic.active ? app.traffic.list() : null);
   }
   // speed trend (kt per second, smoothed)
   const o = fm.out;
@@ -671,6 +678,7 @@ function instrumentState() {
     trend, fma, ils: ils && ils.along > -200 && ils.d < 30 * NM && (ap.lat === 'LOC' || ap.appArmed) ? ils : null,
     routePts: app.routeCache?.pts || null,
     lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.dest ? app.dest.rwy : app.rwy, dist: app.dest ? ap.navInfo()?.togo : ils ? ils.d : null, fm,
+    traffic: app.traffic?.active ? app.traffic.list() : null,
     warn: fm._tailStruck ? 'TAIL STRIKE' : fm.out.alt > fm.ac.perf.ceiling + 2000 ? 'ABOVE CEILING' : fm.out.ias > vs.vmo + 5 || fm.out.mach > vs.mmo + 0.01 ? 'OVERSPEED' : '',
   };
 }
@@ -768,6 +776,9 @@ async function boot() {
     app.world = world;
     input.attachMouse(world.viewer.canvas);
     world.viewer.scene.preUpdate.addEventListener(tick);
+    app.traffic = new Traffic(world, { enabled: settings.traffic !== false, labels: settings.trafficLabels !== false, proxy: settings.trafficProxy });
+    app.traffic.onStatus = (txt, st) => { if (app.flying) toast(st === 'live' ? `Live traffic: ${txt.replace('live · ', '')}` : st === 'ai' ? 'Live traffic unavailable — showing AI traffic' : txt, st === 'live' ? 'good' : 'warn'); };
+    world.excludeExtra = () => app.traffic.primitives();
     loading(true, 'Loading airports…', 0.3);
     await loadAirports();
     try { app.map = new MiniMap($('minimap'), { airports: allAirports, onSetDest: (a, ident) => setDestination(a, ident) }); } catch (e) { console.warn('map failed', e); }
