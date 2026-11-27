@@ -5,6 +5,7 @@ import { D2R, R2D, clamp, lerp, qrot, quatToEuler, wrapPi } from './sim/math.js'
 import { buildAirportRunways, runwayInfo, offsetLL } from './runways.js';
 import { buildAirport3D, fetchAirportOSM } from './airport3d.js';
 import { AirportLights } from './airportlights.js';
+import { AirportGates } from './airportgates.js';
 const LITE_H = 0.3; // lite scenery: flat airport surfaces sit just above the ellipsoid globe
 const C = () => window.Cesium;
 
@@ -279,6 +280,7 @@ export class World {
     this.ap3d.set(a.i, res);
     this.buildRunways(a); // re-level the runways (and their lights) onto the shared airport plane
     try { this.apLights.get(a.i)?.buildNet(res.detail, res.frame); } catch (e) { console.warn('taxiway lights failed', e); }
+    try { res.gates = new AirportGates(C(), this.viewer.scene, a, res.detail, res.frame, { quality: this.quality }); res.gates.populate(); } catch (e) { console.warn('gates failed', e); }
     this.applyNightTint();
     this.applyClipping();
     // Google has no real 3D buildings here: add OpenStreetMap 3D buildings for the surrounding city too
@@ -287,9 +289,15 @@ export class World {
     this.onAirport3D?.(a, res);
   }
   dropAirport(id) {
-    for (const m of [this.rwySurf, this.ap3d]) { const v = m?.get(id); if (v) { for (const p of v.prims) this.viewer.scene.primitives.remove(p); m.delete(id); } }
+    for (const m of [this.rwySurf, this.ap3d]) { const v = m?.get(id); if (v) { for (const p of v.prims) this.viewer.scene.primitives.remove(p); v.gates?.destroy(); m.delete(id); } }
     if (this.aptPlane) delete this.aptPlane[id];
     const L = this.apLights?.get(id); if (L) { L.destroy(); this.apLights.delete(id); }
+  }
+  // a free gate stand for "Start at gate" (waits for the OpenStreetMap airport data)
+  async pickGate(a, span, maxMs = 25000) {
+    const t0 = performance.now();
+    while (!this.ap3d?.has(a.i) && performance.now() - t0 < maxMs) await new Promise((r) => setTimeout(r, 250));
+    return this.ap3d?.get(a.i)?.gates?.pick(span) || null;
   }
   // full airport lighting (runways, approach, PAPI; taxiways once OpenStreetMap data arrives)
   ensureLights(a, rebuild = false) {
@@ -380,6 +388,7 @@ export class World {
     if (this.osmBuildings && this.osmBuildings.customShader !== sh) this.osmBuildings.customShader = sh;
     for (const e of (this.ap3d || new Map()).values()) if (e.tint && e._tinted !== v) { if (e.tint(v)) e._tinted = v; }
     for (const L of (this.apLights || new Map()).values()) L.setDay(this.sunK ?? 1, this.weather);
+    for (const e of (this.ap3d || new Map()).values()) e.gates?.tint(this.sunK ?? 1);
     for (const m of [this.rwySurf, this.ap3d]) if (m) for (const e of m.values()) for (const mat of e.mats || []) {
       const b = mat._base || Cesium.Color.WHITE;
       mat.uniforms.color = new Cesium.Color(b.red * v, b.green * v * 0.98, b.blue * v * 0.96, b.alpha);
