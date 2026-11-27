@@ -50,3 +50,9 @@ PFD, ND, EICAS and standby displays. The 787-8 and 787-10 reuse this flight deck
 
 Converted the same way; FlightGear's own PFD/EWD needle objects were removed so OpenSkies' live displays sit on the portrait
 display units, and a missing lower-display face was capped.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `b747-8i-cockpit.glb` | Boeing 747-8i for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, cockpit shell), from the official FlightGear aircraft download mirror | John Williams; original cockpit by Gijs de Rooy (with Ivan Ngeow, Jentron, Syd Adams, Torsten Dreyer, Markus Bulik); Grupo FGBr (Aurino das Neves, Isaias Prestes, Rick Britto, Wagner Silva) | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way. The 747-8F and 747-400 reuse this flight deck, repositioned to their noses.

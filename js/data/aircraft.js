@@ -231,6 +231,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-400', maker: 'Boeing', name: '747-400', family: '747', category: 'Wide-body',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', offset: [-2.7241, 0, 0], credit: 'FlightGear Boeing 747-8 flight deck (GPL v2), used for the 747-400 (same six-display layout)' },
     length: 70.6, span: 64.4, height: 19.4, wingArea: 525, mtow: 396900, oew: 178756, fuel: 174000,
     engines: { count: 4, type: 'turbofan', thrust: 252, name: 'P&W PW4056 / GE CF6-80C2 / RB211' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.85, ceiling: 45100, range: 13450, seats: '416–524' },
@@ -240,6 +241,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-8i', maker: 'Boeing', name: '747-8 Intercontinental', family: '747', category: 'Wide-body',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', credit: 'FlightGear Boeing 747-8 flight deck (GPL v2)' },
     length: 76.3, span: 68.4, height: 19.4, wingArea: 554, mtow: 447700, oew: 220128, fuel: 194000,
     engines: { count: 4, type: 'turbofan', thrust: 296, name: 'GE GEnx-2B67' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.855, ceiling: 43100, range: 14320, seats: '410–467' },
@@ -505,6 +507,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-8f', maker: 'Boeing', name: '747-8 Freighter', family: '747', category: 'Cargo',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', offset: [-0.0165, 0, 0.5], credit: 'FlightGear Boeing 747-8 flight deck (GPL v2), adapted for the 747-8F' },
     length: 76.25, span: 68.4, height: 19.35, wingArea: 554, mtow: 447700, oew: 197131, fuel: 181600,
     engines: { count: 4, type: 'turbofan', thrust: 296, name: 'GE GEnx-2B67' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.845, ceiling: 43100, range: 8130, seats: 'Cargo 137.7 t' },

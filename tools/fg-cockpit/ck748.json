@@ -1,0 +1,40 @@
+{
+ "exterior": "Models/747-8i.ac",
+ "extNames": "^(fuselage_1|nosecone)$",
+ "xcg": 30.3913,
+ "groundFG": -4.94,
+ "groundZ": -5.7,
+ "keep": "^Models/Cockpit/((forward|glareshield|overhead|pedestal|yokes|seats|wipers|knob)\\.ac|Instruments/)",
+ "dropSrcNames": "(PFD/PFD3d\\.ac:(?!Power\\.off)|EICAS/eicas_eng\\.ac:(?!background)|EICAS/(eicas_elec|eicas_gear|eicas_fuel|flap-gear)\\.ac:)",
+ "dropNames": "_lit$|_on$|halo|^hud|^HUD|[Ll]ight[Cc]one",
+ "decimateOver": 1500,
+ "decimateMin": 0.15,
+ "darkScreens": true,
+ "screens": {
+  "pfd": [
+   "Power.off"
+  ],
+  "nd": [
+   "ND.screenL"
+  ],
+  "eicas": [
+   "background"
+  ],
+  "pfd2": [
+   "Power.off.001"
+  ],
+  "nd2": [
+   "ND.screenR"
+  ],
+  "eicas2": [
+   "background.001"
+  ]
+ },
+ "eyeFG": [
+  -28.0,
+  -0.437,
+  3.91
+ ],
+ "pitchDeg": -12,
+ "keepNames": "^(cockpitshell_0_1|cockpitdoor$|[LR]Hwiper)"
+}
