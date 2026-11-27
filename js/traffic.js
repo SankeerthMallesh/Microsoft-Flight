@@ -251,6 +251,7 @@ export class Traffic {
   update(fm, dt) {
     if (!this.active) return;
     const t0 = performance.now(), t = nowS();
+    if (dt > 0) this.fps = this.fps ? this.fps + (1 / dt - this.fps) * 0.05 : 1 / dt;
     if (t >= this.nextFetch) { this.nextFetch = t + 15; this.poll(fm).then((s) => { this.nextFetch = nowS() + (s || 15); }); }
     if (this.ai) this.ai.update(fm, dt, this.status === 'ai');
     const Cesium = window.Cesium;
@@ -293,7 +294,7 @@ export class Traffic {
     const sc = this._sc || (this._sc = { pos: new Cesium.Cartesian3(), X: [0, 0, 0], Y: [0, 0, 0], Z: [0, 0, 0] });
     for (let i = 0; i < arr.length; i++) {
       const tg = arr[i], p = tg.r;
-      const wantModel = !tg.heli && i < MAX_MODELS && p.dist < MODEL_RANGE;
+      const wantModel = !tg.heli && i < this.modelCap() && p.dist < MODEL_RANGE;
       if (wantModel) { tg.farT = 0; this.ensureModel(tg); } else if (tg.model && (tg.farT += dt) > 20) { this.dropModel(tg); }
       // frame
       Cesium.Cartesian3.fromRadians(p.lon, p.lat, p.h, undefined, sc.pos);
@@ -303,7 +304,7 @@ export class Traffic {
       const ned = (v, out) => { const r = qrot(q, v); out[0] = N[0] * r[0] + E[0] * r[1] - U[0] * r[2]; out[1] = N[1] * r[0] + E[1] * r[1] - U[1] * r[2]; out[2] = N[2] * r[0] + E[2] * r[1] - U[2] * r[2]; return out; };
       const X = ned([1, 0, 0], sc.X), Y = ned([0, -1, 0], sc.Y), Z = ned([0, 0, -1], sc.Z);
       const P = sc.pos;
-      const mp = (v) => new Cesium.Cartesian3(P.x + X[0] * v[0] + Y[0] * v[1] + Z[0] * v[2], P.y + X[1] * v[0] + Y[1] * v[1] + Z[1] * v[2], P.z + X[2] * v[0] + Y[2] * v[1] + Z[2] * v[2]);
+      const mp = (v, out = this._lp || (this._lp = new Cesium.Cartesian3())) => Cesium.Cartesian3.fromElements(P.x + X[0] * v[0] + Y[0] * v[1] + Z[0] * v[2], P.y + X[1] * v[0] + Y[1] * v[1] + Z[1] * v[2], P.z + X[2] * v[0] + Y[2] * v[1] + Z[2] * v[2], out); // point/label setters copy, so one scratch is enough
       const gearDown = p.ground || (p.agl < 2200 && p.vs < -1) || (p.agl < 600) || (p.agl < 1500 && Math.abs(p.vs) < 2 && p.gs < 95);
       if (tg.model && tg.model.ready) {
         // own matrix per aircraft: Model keeps a reference to what it is given
@@ -353,6 +354,20 @@ export class Traffic {
     }
     this.stats.models = models; this.stats.lights = lights;
     this.stats.updMs = this.stats.updMs * 0.95 + (performance.now() - t0) * 0.05;
+  }
+
+  // model budget: by graphics quality, trimmed while the frame rate is low (lights stay)
+  modelCap() {
+    const base = { low: 12, medium: 24, high: MAX_MODELS }[this.world.quality] ?? 24;
+    const fps = this.fps || 60;
+    const t = nowS();
+    if (!this._capT || t - this._capT > 3) {
+      this._capT = t;
+      this._cap = this._cap ?? base;
+      if (fps < 24) this._cap = Math.max(6, this._cap - 4); else if (fps > 40) this._cap = Math.min(base, this._cap + 2);
+      this._cap = Math.min(this._cap, base);
+    }
+    return this._cap;
   }
 
   makeLights() {
