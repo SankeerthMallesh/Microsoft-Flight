@@ -115,6 +115,7 @@ export const AIRCRAFT = [
   {
     id: 'a320neo', maker: 'Airbus', name: 'A320neo', family: 'A320', category: 'Narrow-body',
     detailed: { glb: 'models/a320neo.glb', meta: 'models/a320neo.meta.json', credit: '"Airbus A320-200 V2" by Dlourine (Sketchfab), CC BY 4.0 — modified' },
+    cockpit: { glb: 'models/a320neo-cockpit.glb', meta: 'models/a320neo-cockpit.meta.json', credit: 'FlightGear A320-family flight deck (GPL v2)' },
     length: 37.57, span: 35.8, height: 11.76, wingArea: 122.6, mtow: 79000, oew: 44300, fuel: 21400,
     engines: { count: 2, type: 'turbofan', thrust: 120.6, name: 'CFM LEAP-1A / PW1100G' },
     perf: { mmo: 0.82, vmo: 350, cruiseMach: 0.78, ceiling: 39800, range: 6300, seats: '150–194' },

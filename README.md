@@ -109,6 +109,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 ## Credits and legal
 
 - The detailed Boeing 737-800 model is "B737-800 Model" by hakai315 on Sketchfab, licensed CC BY 4.0 and modified for this sim. See [models/CREDITS.md](models/CREDITS.md).
+- The 3D A320neo flight deck comes from the [FlightGear](https://www.flightgear.org/) A320-family (Josh Davidson, Jonathan Redpath, merspieler, Matthew Maring, Thorsten Herrmann, Semir Gebran), GPL v2.
 - The 3D 737-800 flight deck comes from the [FlightGear](https://www.flightgear.org/) Boeing 737-800 (Innis Cunningham, Syd Adams, David Culp, Michael Soitanen and contributors), licensed GNU GPL v2 or later and converted for this sim.
 
 ### License
@@ -116,6 +117,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 Because it includes GPL-licensed FlightGear content, OpenSkies is distributed under the **GNU General Public License, version 2 or (at your option) any later version**. See [LICENSE](LICENSE). The Sketchfab models in `models/` keep their own CC BY 4.0 licenses (see [models/CREDITS.md](models/CREDITS.md)).
 
 - [CesiumJS](https://cesium.com) (Apache 2.0) and [three.js](https://threejs.org) (MIT) load from the jsDelivr CDN.
+- Taxiways, aprons and airport/city buildings come from [OpenStreetMap](https://www.openstreetmap.org/copyright) (© OpenStreetMap contributors, ODbL), fetched via the Overpass API; global 3D buildings use Cesium OSM Buildings.
 - Airport and runway data comes from [OurAirports](https://ourairports.com/data/) (public domain).
 - Aircraft specifications are taken from manufacturers' public data.
 - This is an independent hobby project. It isn't affiliated with Microsoft, any aircraft manufacturer or any airline. Airline names, logos and liveries are trademarks of their owners. They're recreated here only for personal, non-commercial simulation.

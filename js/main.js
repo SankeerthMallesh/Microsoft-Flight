@@ -639,7 +639,7 @@ function instrumentState() {
   };
 }
 // live displays projected onto the 3D cockpit's screens (CSS homography of the canvas onto the screen quad)
-const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND]];
+const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND], ['isis', drawPFD]];
 const CK_PX = 360;
 function homography(q) {
   // maps unit square (0,0),(1,0),(1,1),(0,1) -> quad q (TL,TR,BR,BL)

@@ -22,3 +22,10 @@ darkened untextured placeholder faces, baked ambient-occlusion contact shadows (
 compressed it with meshoptimizer. The live PFD, ND and EICAS are drawn by OpenSkies
 and projected onto the model's display screens. The 737 MAX 8 reuses this flight deck,
 repositioned to the MAX fuselage and with larger display units.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `a320neo-cockpit.glb` | Airbus A320-family for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, pedestal, MCDUs, radios and display units), from the official FlightGear aircraft download mirror | Josh Davidson (Octal450), Jonathan Redpath, merspieler, Matthew Maring, Thorsten Herrmann, Semir Gebran (3D and textures) | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way as the 737 flight deck (glTF, aligned to the A320neo model, baked ambient occlusion,
+web-optimised textures). OpenSkies draws the live PFD, ND, ECAM and standby displays onto its screens.
