@@ -26,16 +26,19 @@
 
   <!-- ============================== MAIN MENU -->
   <section id="menu" class="screen">
-    <div class="menu-card">
+    <div class="menu-top">
       <div class="brand"><span class="logo">✈</span><div><h1>OpenSkies</h1><p>Flight Simulator</p></div></div>
-      <nav class="menu-buttons">
-        <button class="btn primary" data-go="setup">Free Flight</button>
-        <button class="btn" data-go="hangar">Hangar</button>
-        <button class="btn" data-go="settings">Settings</button>
-        <button class="btn" data-go="help">Controls</button>
-      </nav>
+      <div class="menu-ready" id="menuReady"></div>
+    </div>
+    <nav class="menu-tiles">
+      <button class="tile tile-main" data-go="setup" id="tileFly"><span class="tile-bg" id="tileFlyBg"></span><span class="tile-k">Fly</span><b>Free Flight</b><small>Any airport, any aircraft, live route</small></button>
+      <button class="tile" data-go="hangar" id="tileHangar"><span class="tile-bg" id="tileHangarBg"></span><span class="tile-k">Aircraft</span><b>Hangar</b><small>53 aircraft · real liveries</small></button>
+      <button class="tile tile-plain" data-go="settings"><span class="tile-ic">⚙</span><span class="tile-k">Options</span><b>Settings</b><small>Graphics, scenery, sound</small></button>
+      <button class="tile tile-plain" data-go="help"><span class="tile-ic">⌨</span><span class="tile-k">Learn</span><b>Controls</b><small>Keys, autopilot, tips</small></button>
+    </nav>
+    <div class="menu-foot">
       <p class="menu-note" id="tokenNote"></p>
-      <p class="fine">Free &amp; open: CesiumJS · three.js · OurAirports. Airline names and liveries are trademarks of their owners and are recreated here for personal, non-commercial simulation.</p>
+      <p class="fine">Free &amp; open: CesiumJS · three.js · OpenStreetMap · OurAirports · FlightGear. Airline names and liveries are trademarks of their owners and are recreated here for personal, non-commercial simulation.</p>
     </div>
   </section>
 

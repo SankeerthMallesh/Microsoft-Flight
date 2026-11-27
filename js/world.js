@@ -89,15 +89,18 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const sse = { high: 7, medium: 12, low: 20 }[this.settings.quality] ?? 12;
+        const sse = { high: 4, medium: 8, low: 14 }[this.settings.quality] ?? 8;
         this.baseSSE = sse;
         const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
           maximumScreenSpaceError: sse,
-          cacheBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
-          maximumCacheOverflowBytes: ({ high: 256, medium: 192, low: 128 }[this.settings.quality] ?? 192) * 1024 * 1024,
+          cacheBytes: ({ high: 1024, medium: 768, low: 512 }[this.settings.quality] ?? 768) * 1024 * 1024,
+          maximumCacheOverflowBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
           preloadFlightDestinations: true, foveatedScreenSpaceError: true,
+          // a flight sim's camera never stops: Cesium's default skips detailed tiles while the camera moves,
+          // which left the ground permanently blurry. Always request them.
+          cullRequestsWhileMoving: false,
           // lower detail toward the horizon (big saving at low altitude, barely visible)
-          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 2.0e-4, dynamicScreenSpaceErrorFactor: 24, dynamicScreenSpaceErrorHeightFalloff: 0.25,
+          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 1.0e-4, dynamicScreenSpaceErrorFactor: 6, dynamicScreenSpaceErrorHeightFalloff: 0.25,
         });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
@@ -167,7 +170,7 @@ export class World {
     const mid = Math.max(this.rprMin, Math.min(this.rprTarget, 1.15));
     if (fps < 28) {
       if (this.rpr > mid + 0.01) setR(this.rpr - 0.1);
-      else if (ts && ts.maximumScreenSpaceError < base * 1.6) ts.maximumScreenSpaceError = Math.min(base * 1.6, ts.maximumScreenSpaceError + 2);
+      else if (ts && ts.maximumScreenSpaceError < base * 1.35) ts.maximumScreenSpaceError = Math.min(base * 1.35, ts.maximumScreenSpaceError + 1);
       else setR(this.rpr - 0.05);
     } else if (fps > 50) {
       if (this.rpr < mid - 0.01) setR(this.rpr + 0.05);

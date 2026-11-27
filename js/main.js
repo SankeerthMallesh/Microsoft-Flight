@@ -47,7 +47,18 @@ function show(name, push = true) {
   if (name === 'hangar') openHangar(); else if (app.hangar) app.hangar.stop();
   if (name === 'setup') refreshSetup();
   if (name === 'settings') loadSettingsForm();
+  if (name === 'menu') refreshMenu();
   $('cesium').style.visibility = name === 'hangar' ? 'hidden' : 'visible';
+}
+// main menu: picture tiles + "ready to fly" summary of the current plan
+function refreshMenu() {
+  try {
+    const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId), ap = getAirport(plan.airport);
+    $('tileFlyBg').style.backgroundImage = `url("images/aircraft/${plan.acId}.jpg")`;
+    const alt = ['a380-800', 'b747-8i', 'b787-9', 'a350-900', 'b777-300er'].find((id) => id !== plan.acId);
+    $('tileHangarBg').style.backgroundImage = `url("images/aircraft/${alt}.jpg")`;
+    $('menuReady').innerHTML = `<span>Ready to fly</span><b>${ac.maker} ${ac.name}</b> · ${lv.name}<br>${ap ? ap.i + ' · ' + ap.n : ''}`;
+  } catch (e) { /* data not loaded yet */ }
 }
 document.addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
