@@ -21,6 +21,31 @@ export function swatchRect(i) {
 }
 
 const D2R = Math.PI / 180;
+// Turbofan nacelle families. outer: [length fraction, radius / nacelle D] from the inlet lip aft;
+// core: core cowl behind the fan nozzle; plug: exhaust plug. lenK: nacelle length / D.
+const NACELLES = {
+  // CF6 / PW4000 / CFM56 era: separate-flow, short fan cowl, prominent core
+  classic: { lenK: 1.8, outer: [[0, 0.42], [0.02, 0.47], [0.08, 0.5], [0.35, 0.5], [0.7, 0.45], [0.9, 0.38], [1, 0.33]],
+    core: [[0.98, 0.31], [1.2, 0.26]], plug: [[1.2, 0.2], [1.4, 0.08], [1.45, 0.01]] },
+  // CFM LEAP: slim, long inlet, narrow fan nozzle, short core
+  leap: { lenK: 1.9, outer: [[0, 0.43], [0.02, 0.48], [0.07, 0.5], [0.42, 0.5], [0.74, 0.46], [0.93, 0.39], [1, 0.355]],
+    core: [[0.98, 0.29], [1.15, 0.245]], plug: [[1.15, 0.19], [1.34, 0.07], [1.4, 0.01]] },
+  // P&W geared turbofan: big fan in a short, fat nacelle; wide nozzle and a small core
+  gtf: { lenK: 1.5, outer: [[0, 0.44], [0.02, 0.485], [0.07, 0.5], [0.48, 0.5], [0.78, 0.475], [0.94, 0.43], [1, 0.4]],
+    core: [[0.98, 0.25], [1.1, 0.215]], plug: [[1.1, 0.16], [1.27, 0.06], [1.31, 0.01]] },
+  // GEnx: smooth composite nacelle (chevrons on 787/747-8)
+  genx: { lenK: 1.75, outer: [[0, 0.43], [0.02, 0.48], [0.08, 0.5], [0.42, 0.5], [0.74, 0.455], [0.93, 0.385], [1, 0.35]],
+    core: [[0.98, 0.3], [1.2, 0.24]], plug: [[1.2, 0.17], [1.42, 0.06], [1.48, 0.01]] },
+  // GE90 / GE9X: huge round fan cowl, wide core nozzle
+  ge90: { lenK: 1.65, outer: [[0, 0.44], [0.02, 0.485], [0.08, 0.5], [0.5, 0.5], [0.8, 0.465], [0.95, 0.41], [1, 0.38]],
+    core: [[0.98, 0.31], [1.2, 0.26]], plug: [[1.2, 0.19], [1.4, 0.08], [1.45, 0.01]] },
+  // Trent XWB / 7000 / 1000 / 900: long fan cowl, long tapering plug
+  trent: { lenK: 1.8, outer: [[0, 0.43], [0.02, 0.48], [0.08, 0.5], [0.44, 0.5], [0.76, 0.46], [0.94, 0.39], [1, 0.36]],
+    core: [[0.98, 0.29], [1.16, 0.24]], plug: [[1.16, 0.18], [1.42, 0.06], [1.48, 0.01]] },
+  // long-cowl mixed-flow (Trent 700/500, RB211-535, BR700, Passport, SaM146, FJ44): one nozzle, stub plug
+  longcowl: { lenK: 2.2, outer: [[0, 0.42], [0.02, 0.47], [0.08, 0.5], [0.5, 0.5], [0.8, 0.445], [0.95, 0.36], [1, 0.31]],
+    core: null, plug: [[0.96, 0.22], [1.04, 0.14], [1.1, 0.02]] },
+};
 // outward cant (deg) of each wingtip-device style
 const TIP_CANT = { canted: 32, sharklet: 12, blended: 14, split: 10, curved: 16, fence: 0, md11: 8, 'winglet-small': 10 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -524,6 +549,13 @@ export function buildAircraft(ac) {
   // ------------------------------------------------------------ engines
   const engines = []; // {x,y,z, D, len, type, node}
   const D = g.nacD || 2;
+  // nacelle family from the engine type (geo.nacStyle overrides); detailed GLB types keep the legacy shape
+  const engName = ac.engines.name || '';
+  const nacStyle = ac.detailed ? 'legacy' : g.nacStyle || (
+    /PW1[159]00G/.test(engName) ? 'gtf' : /LEAP/.test(engName) ? 'leap' : /GEnx/.test(engName) ? 'genx' : /GE90|GE9X/.test(engName) ? 'ge90'
+      : /Trent (XWB|7000|1000|900)/.test(engName) ? 'trent' : /Trent (700|5)|RB211-535|BR7|Passport|SaM146|FJ44/.test(engName) ? 'longcowl' : 'classic');
+  const chevrons = !!g.chevrons && !ac.detailed;
+  const nacLen = (Dn) => Dn * (NACELLES[nacStyle]?.lenK || (Dn > 3 ? 1.75 : 1.95));
   function revolve(node, prof, cx, cy, cz, swOrRegion, opts = {}) {
     // prof: [[dx, r], ...] from front to back; revolves around x axis
     const pc = node.piece();
@@ -534,12 +566,15 @@ export function buildAircraft(ac) {
       const ring = [];
       for (let k = 0; k <= seg; k++) {
         const a = (k / seg) * Math.PI * 2;
-        let yy = Math.cos(a) * r, zz = Math.sin(a) * r;
+        let rr = r, ddx = dx;
+        // serrated ("chevron") nozzle: alternate vertices of the last ring reach aft and tuck in
+        if (opts.chevron && j === total && k % 2 === 0) { ddx += opts.chevron; rr *= 0.95; }
+        let yy = Math.cos(a) * rr, zz = Math.sin(a) * rr;
         if (opts.flatBottom && zz < 0) zz *= opts.flatBottom;
         let u, v;
         if (swOrRegion === 'nacelle') { u = 0.5 + 0.25 * (k / seg); v = 0.5 + 0.25 * (j / total); }
         else [u, v] = swatchUV(typeof swOrRegion === 'function' ? swOrRegion(j, k) : swOrRegion);
-        ring.push([cx - dx, cy + yy, cz + zz, u, v]);
+        ring.push([cx - ddx, cy + yy, cz + zz, u, v]);
       }
       rings.push(ring);
     });
@@ -558,16 +593,29 @@ export function buildAircraft(ac) {
     f(0, 1, 2, 3); f(5, 4, 7, 6); f(4, 0, 3, 7); f(1, 5, 6, 2); f(3, 2, 6, 7); f(4, 5, 1, 0);
   }
   function turbofan(xn0, y, zc, Dn, idx) {
-    const len = Dn * (Dn > 3 ? 1.75 : 1.95);
+    const len = nacLen(Dn);
     const cx = X(xn0);
-    const prof = [
-      [0, 0.42 * Dn], [0.02 * len, 0.47 * Dn], [0.08 * len, 0.5 * Dn], [0.35 * len, 0.5 * Dn], [0.7 * len, 0.45 * Dn], [0.9 * len, 0.38 * Dn], [len, 0.33 * Dn],
-    ];
-    revolve(body, prof, cx, y, zc, 'nacelle', { flatBottom: g.flatNacelle ? 0.85 : 1 });
-    // intake inner wall
-    revolve(body, [[0.1 * len, 0.42 * Dn], [0, 0.42 * Dn]], cx, y, zc, SW.intake);
-    // core / exhaust
-    revolve(body, [[len - 0.02, 0.31 * Dn], [len + 0.18 * len, 0.27 * Dn], [len + 0.2 * len, 0.2 * Dn], [len + 0.4 * len, 0.08 * Dn], [len + 0.45 * len, 0.01]], cx, y, zc, (j) => (j < 2 ? SW.exhaust : SW.metal));
+    const N = NACELLES[nacStyle];
+    if (!N) {
+      // legacy generic nacelle (also kept for detailed GLB types so their physics stay identical)
+      const prof = [
+        [0, 0.42 * Dn], [0.02 * len, 0.47 * Dn], [0.08 * len, 0.5 * Dn], [0.35 * len, 0.5 * Dn], [0.7 * len, 0.45 * Dn], [0.9 * len, 0.38 * Dn], [len, 0.33 * Dn],
+      ];
+      revolve(body, prof, cx, y, zc, 'nacelle', { flatBottom: g.flatNacelle ? 0.85 : 1 });
+      revolve(body, [[0.1 * len, 0.42 * Dn], [0, 0.42 * Dn]], cx, y, zc, SW.intake);
+      revolve(body, [[len - 0.02, 0.31 * Dn], [len + 0.18 * len, 0.27 * Dn], [len + 0.2 * len, 0.2 * Dn], [len + 0.4 * len, 0.08 * Dn], [len + 0.45 * len, 0.01]], cx, y, zc, (j) => (j < 2 ? SW.exhaust : SW.metal));
+    } else {
+      const sc = (pts) => pts.map(([f, r]) => [f * len, r * Dn]);
+      const chev = chevrons ? 0.035 * len : 0;
+      revolve(body, sc(N.outer), cx, y, zc, 'nacelle', { flatBottom: g.flatNacelle ? 0.85 : 1, seg: chevrons ? 36 : 28, chevron: chev });
+      // fan-nozzle inner wall (dark), so the bypass duct reads as a ring around the core
+      const last = N.outer[N.outer.length - 1];
+      revolve(body, [[last[0] * len - 0.03, last[1] * Dn * 0.985], [last[0] * len - 0.25 * Dn, last[1] * Dn * 0.97]], cx, y, zc, SW.exhaust);
+      revolve(body, [[0.1 * len, N.outer[0][1] * Dn], [0, N.outer[0][1] * Dn]], cx, y, zc, SW.intake);
+      // core cowl (light metal) then the exhaust plug
+      if (N.core) revolve(body, sc(N.core), cx, y, zc, (j) => (j === 0 ? SW.exhaust : SW.metal), { seg: chevrons ? 24 : 20, chevron: chevrons ? 0.025 * len : 0 });
+      revolve(body, sc(N.plug), cx, y, zc, (j) => (j === 0 ? SW.exhaust : SW.metal), { seg: 18 });
+    }
     // fan + spinner node (rotates)
     const fan = new NodeMesh('fan' + idx, [cx - 0.12 * len, y, zc]);
     const disc = fan.piece(false);
@@ -576,14 +624,15 @@ export function buildAircraft(ac) {
     const c0 = disc.v(0, 0, 0, fu, fv);
     for (let k = 0; k < nb; k++) {
       const a0 = (k / nb) * Math.PI * 2, a1 = a0 + (Math.PI * 2) / nb * 0.55;
-      const r = 0.415 * Dn;
+      const r = (NACELLES[nacStyle] ? NACELLES[nacStyle].outer[0][1] - 0.005 : 0.415) * Dn;
       const p1 = disc.v(-0.02, Math.cos(a0) * r, Math.sin(a0) * r, fu, fv);
       const p2 = disc.v(0.03, Math.cos(a1) * r, Math.sin(a1) * r, fu, fv);
       disc.tri(c0, p1, p2); disc.tri(c0, p2, p1);
     }
     const back = fan.piece(false); const [iu, iv] = swatchUV(SW.intake);
     const bc = back.v(-0.06, 0, 0, iu, iv); const ringIds = [];
-    for (let k = 0; k <= 24; k++) { const a = (k / 24) * Math.PI * 2; ringIds.push(back.v(-0.06, Math.cos(a) * 0.42 * Dn, Math.sin(a) * 0.42 * Dn, iu, iv)); }
+    const rb = (NACELLES[nacStyle] ? NACELLES[nacStyle].outer[0][1] : 0.42) * Dn;
+    for (let k = 0; k <= 24; k++) { const a = (k / 24) * Math.PI * 2; ringIds.push(back.v(-0.06, Math.cos(a) * rb, Math.sin(a) * rb, iu, iv)); }
     for (let k = 0; k < 24; k++) back.tri(bc, ringIds[k + 1], ringIds[k]);
     revolve(fan, [[-0.25 * Dn, 0.005], [-0.18 * Dn, 0.06 * Dn], [-0.06 * Dn, 0.12 * Dn], [0.02, 0.13 * Dn]], 0, 0, 0, SW.spinner, { seg: 16 });
     // spinner swirl mark
@@ -638,7 +687,7 @@ export function buildAircraft(ac) {
       for (const side of [1, -1]) {
         const y = e.y * s;
         const sec = wingSection(y);
-        const len = D * (D > 3 ? 1.75 : 1.95);
+        const len = nacLen(D);
         const xn0 = sec.xl - len * (D > 3 ? 0.62 : 0.55);
         const zc = sec.z - (g.flatNacelle ? 0.42 : 0.5) * D - 0.06 * sec.c * sec.tc;
         turbofan(xn0, side * y, zc, D, ei++);
