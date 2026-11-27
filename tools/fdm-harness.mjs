@@ -287,12 +287,16 @@ function autoland(id, ref) {
       const nm = nav.togo / NM;
       const fmax = fm.flapLevels.length - 1;
       const want = nm < 6 ? fmax : nm < 9 ? Math.max(fm.flapIndex, fmax - 1) : nm < 14 ? Math.max(fm.flapIndex, Math.min(fmax - 2, 2)) : nm < 20 ? Math.max(fm.flapIndex, 1) : fm.flapIndex;
-      if (want > fm.flapIndex && o.ias < fm.vspeeds().flapMax + 10) fm.setFlapIndex(fm.flapIndex + 1);
       if (nm < 9 && !fm.gearDown) fm.gearDown = true;
-      if (nm < 12 && !fm.isGA) { fm.spoilersArmed = true; sys.autobrake = 'MED'; }
+      if (nm < 12 && !fm.isGA && !fm.spoilersArmed) { fm.spoilersArmed = true; sys.setAutobrake('MED'); }
+      // pilot uses the speedbrake when the aircraft is fast on the descent ("DRAG REQUIRED")
+      if (!fm.isGA) fm.spoilerHandle = ap.spdAuto && o.ias > ap.spdAuto + 12 && o.vs < -300 && o.agl > 1200 ? 0.6 : 0;
+      if (want > fm.flapIndex && o.ias < fm.vspeeds().flapMax + 10 && time - (t.lastFlap || 0) > 4) { t.lastFlap = time; fm.setFlapIndex(fm.flapIndex + 1); }
     }
     ap.update(DT); fm.step(DT); time += DT;
+    if (process.env.TRACE && (Math.round(time * 60) % (60 * 10) === 0 || (o.agl < 60 && Math.round(time * 60) % 15 === 0))) console.log(`  t${time.toFixed(0)} togo ${(nav ? nav.togo / NM : 0).toFixed(1)} alt ${o.alt.toFixed(0)} agl ${o.agl.toFixed(0)} ias ${o.ias.toFixed(0)} vs ${o.vs.toFixed(0)} pitch ${o.pitch.toFixed(1)} roll ${o.roll.toFixed(1)} flap ${fm.flapLabel} thr ${fm.ctl.throttle.toFixed(2)} ${ap.lat}/${ap.vert} gsDev ${ap.ilsData ? ap.ilsData.gsDev.toFixed(0) : '-'}`);
     for (const e of fm.events.splice(0)) if (e.type === 'touchdown') td = { fpm: e.fpm, x: along(fm), ias: fm.out.ias, xte: distance(LAT0, LON0, LAT0, fm.lon) };
+    if (process.env.TRACE && o.agl < 4) console.log(`   ${time.toFixed(2)} agl ${o.agl.toFixed(1)} pitch ${o.pitch.toFixed(1)} q ${(fm.w[1] * R2D).toFixed(1)} wow ${fm.wow} gs ${o.gs.toFixed(0)} comp ${fm.gear.map((g) => g.comp.toFixed(2))} de ${fm.surf.de.toFixed(2)} law ${fm.law}`);
     if (td && fm.onGround) {
       fm.ctl.throttle = 0;
       if (fm.isGA) fm.ctl.brakeL = fm.ctl.brakeR = 0.7;

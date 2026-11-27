@@ -122,7 +122,8 @@ export class FlightModel {
     const fRate = dt / (this.isGA ? 4 : 9) * this.hyd.flaps;
     this.flap += clamp(fl.flap - this.flap, -fRate, fRate);
     this.slat += clamp(fl.slat - this.slat, -fRate * 2, fRate * 2);
-    if (!ac.geo.fixedGear) {
+    if (ac.geo.fixedGear) { this.gearPos = 1; this.gearDown = true; } // fixed gear is always down
+    else {
       // normal: hydraulic, 5-8 s; alternate (gravity / free-fall) extension ~15 s, down only
       let gRate = this.hyd.gear ? 1 / (this.isGA ? 5 : 8) : 0;
       if (this.gearAltExt && this.gearDown) gRate = 1 / 15;
@@ -270,7 +271,7 @@ export class FlightModel {
       const thMax = (this.isGA ? 12 : 6) * D2R;
       let thDot;
       if (apCmd && Math.abs(c.pitch) < 0.4) {
-        thDot = clamp(1.2 * (apCmd.pitch - euler.pitch), -2.5 * D2R, 2.5 * D2R);
+        thDot = clamp(1.2 * (apCmd.pitch - euler.pitch), -2.5 * D2R, (this.isGA ? 5 : 2.5) * D2R);
         this.fbwRef.pitch = euler.pitch;
       } else if (Math.abs(c.pitch) > 0.02) {
         thDot = c.pitch * thMax; this.fbwRef.pitch = euler.pitch;

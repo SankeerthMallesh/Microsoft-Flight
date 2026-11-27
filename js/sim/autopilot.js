@@ -137,7 +137,8 @@ export class Autopilot {
       rollCmd = clamp(err * 1.4, -25, 25);
     } else if (this.lat === 'LOC' && ils) {
       const crsDeg = this.runway.heading * R2D;
-      const intercept = clamp(Math.atan2(ils.xtk, Math.max(300, ils.along * 0.08)) * R2D * 2.2, -30, 30);
+      // intercept angle from cross-track error; the capture gets gentler with speed (bigger turn radius)
+      const intercept = clamp(Math.atan2(ils.xtk, Math.max(300 + V * 6, ils.along * 0.08)) * R2D * 2.2, -30, 30);
       const desiredTrack = crsDeg + intercept;
       const err = wrap180(desiredTrack - o.track);
       rollCmd = clamp(err * 1.6, -25, 25);
@@ -179,7 +180,7 @@ export class Autopilot {
       vsCmd = gsVs - ils.gsDev / FT * 6;
       vsCmd = clamp(vsCmd, -1800, 200);
       const ra = o.agl;
-      const flareH = clamp(Math.abs(o.vs) * 0.075, fm.isGA ? 15 : 40, 70);
+      const flareH = fm.isGA ? clamp(Math.abs(o.vs) * 0.1, 28, 45) : clamp(Math.abs(o.vs) * 0.075, 40, 70);
       if (ra < flareH && !this.flare) { this.flare = true; this.flareVs = o.vs; this.notify('FLARE'); }
       if (this.flare) { this.flareVs += (-((fm.isGA ? 100 : 170) + ra * 3.5) - this.flareVs) * Math.min(1, dt * 1.6); vsCmd = this.flareVs; }
       if (ra < 25 && this.at && !this.retard) { this.retard = true; this.notify('RETARD'); }
