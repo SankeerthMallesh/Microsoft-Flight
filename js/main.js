@@ -8,6 +8,8 @@ import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear, all
 import { MiniMap, gcPoints } from './minimap.js';
 import { getAircraftGLB } from './model/factory.js';
 import { World } from './world.js';
+import { Traffic } from './traffic.js';
+import { Pushback } from './airportgates.js';
 import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
 import { Systems } from './sim/systems.js';
@@ -15,7 +17,9 @@ import { SystemsUI } from './overhead.js';
 import { Checklist } from './checklist.js';
 import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
+import { ATC } from './atc.js';
 import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
+import { panelStyleFor, drawAirbusPFD, drawECAM, drawSixPack, drawEngineStrip } from './cockpit/panels.js';
 import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360, wrap180, distance, bearing } from './sim/math.js';
 
 const $ = (id) => document.getElementById(id);
@@ -36,8 +40,9 @@ if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
 const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60, dest: null, destRwy: '' }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const input = new Input();
-const GROUND_STARTS = ['runway', 'cold', 'taxi']; // spawn on the runway; systems state differs
+const GROUND_STARTS = ['runway', 'gate', 'gate-cold']; // ground starts; the systems state differs
 const audio = new Audio();
+const atc = new ATC(audio); // air traffic control (js/atc.js): talks only, never moves the controls
 input.invertPitch = settings.invertPitch;
 audio.setVolume(settings.volume);
 
@@ -51,7 +56,18 @@ function show(name, push = true) {
   if (name === 'hangar') openHangar(); else if (app.hangar) app.hangar.stop();
   if (name === 'setup') refreshSetup();
   if (name === 'settings') loadSettingsForm();
+  if (name === 'menu') refreshMenu();
   $('cesium').style.visibility = name === 'hangar' ? 'hidden' : 'visible';
+}
+// main menu: picture tiles + "ready to fly" summary of the current plan
+function refreshMenu() {
+  try {
+    const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId), ap = getAirport(plan.airport);
+    $('tileFlyBg').style.backgroundImage = `url("images/aircraft/${plan.acId}.jpg")`;
+    const alt = ['a380-800', 'b747-8i', 'b787-9', 'a350-900', 'b777-300er'].find((id) => id !== plan.acId);
+    $('tileHangarBg').style.backgroundImage = `url("images/aircraft/${alt}.jpg")`;
+    $('menuReady').innerHTML = `<span>Ready to fly</span><b>${ac.maker} ${ac.name}</b> · ${lv.name}<br>${ap ? ap.i + ' · ' + ap.n : ''}`;
+  } catch (e) { /* data not loaded yet */ }
 }
 document.addEventListener('click', (e) => {
   const go = e.target.closest('[data-go]');
@@ -79,17 +95,33 @@ function nextFact() {
   const card = $('factCard');
   card.classList.add('fade');
   const img = kind === 'ac' ? `images/aircraft/${v}.jpg` : (FACTS[plan.acId] ? `images/aircraft/${plan.acId}.jpg` : '');
-  const apply = () => { $('factTitle').textContent = title; $('factText').textContent = text; $('factImg').src = img; card.classList.remove('fade'); };
-  // preload the picture so the card swaps cleanly
-  if (img) { const pre = new Image(); pre.onload = pre.onerror = () => setTimeout(apply, factTimer ? 450 : 0); pre.src = img; } else setTimeout(apply, factTimer ? 450 : 0);
+  const apply = () => {
+    $('factTitle').textContent = title; $('factText').textContent = text; card.classList.remove('fade');
+    if (img && img !== factBgImg) {
+      // crossfade between two full-screen layers
+      factBgImg = img; factBgFlip = !factBgFlip;
+      const show = $(factBgFlip ? 'ldBgA' : 'ldBgB'), hide = $(factBgFlip ? 'ldBgB' : 'ldBgA');
+      show.style.backgroundImage = `url("${img}")`;
+      show.classList.remove('show'); void show.offsetWidth; show.classList.add('show'); hide.classList.remove('show');
+    }
+  };
+  // preload the picture so the swap is clean
+  if (img) { const pre = new Image(); pre.onload = pre.onerror = () => setTimeout(apply, factTimer ? 600 : 0); pre.src = img; } else setTimeout(apply, factTimer ? 600 : 0);
 }
+let factBgImg = null, factBgFlip = false;
 function startFacts() {
   if (factTimer) return;
   factQueue = FACTS[plan.acId] ? [['ac', plan.acId]] : [];
   $('factCard').classList.remove('off');
-  nextFact(); factTimer = setInterval(nextFact, 8000);
+  $('loading').classList.add('cinematic');
+  const ac = getAircraft(plan.acId), lv = getLivery(plan.liveryId), ap = getAirport(plan.airport);
+  $('ldFlight').innerHTML = `<b>${ac.maker} ${ac.name}</b> · ${lv.name}<br>${ap ? ap.i + ' · ' + ap.n : ''}${plan.dest ? ' → ' + plan.dest : ''}`;
+  nextFact(); factTimer = setInterval(nextFact, 9000);
 }
-function stopFacts() { clearInterval(factTimer); factTimer = null; $('factCard').classList.add('off'); }
+function stopFacts() {
+  clearInterval(factTimer); factTimer = null; $('factCard').classList.add('off'); $('loading').classList.remove('cinematic');
+  for (const id of ['ldBgA', 'ldBgB']) $(id).classList.remove('show'); factBgImg = null;
+}
 function loading(on, text, frac) {
   $('loading').classList.toggle('hidden', !on);
   if (on && app.screen !== 'menu' && !$('loading').dataset.boot) startFacts(); else if (!on) stopFacts();
@@ -101,14 +133,58 @@ function loading(on, text, frac) {
 $('helpTable').innerHTML = KEY_HELP.map(([a, k]) => `<tr><td>${a}</td><td>${k}</td></tr>`).join('');
 
 // ------------------------------------------------------------------ settings form
+function updateTokenStatus() {
+  const entered = $('tokenInput').value.trim();
+  const saved = String(settings.ionToken || '').trim();
+  const changed = entered !== saved;
+  const state = $('tokenState');
+  const help = $('tokenHelp');
+  state.classList.remove('is-ready', 'is-pending');
+  if (!entered && changed) {
+    state.textContent = 'Removal pending';
+    state.classList.add('is-pending');
+    help.textContent = 'The saved token will be removed when you choose Save & reload.';
+  } else if (!entered) {
+    state.textContent = 'No token saved';
+    help.innerHTML = 'A token is needed for photorealistic cities and streamed terrain. It stays in this browser, not in the game files. <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">Get a free token</a>.';
+  } else if (changed) {
+    state.textContent = 'Unsaved token';
+    state.classList.add('is-pending');
+    help.textContent = 'Token entered. Select your scenery and choose Save & reload to store it in this browser.';
+  } else {
+    state.textContent = 'Token configured';
+    state.classList.add('is-ready');
+    help.textContent = 'A token is configured. Cesium checks its permissions when the selected 3D scenery loads.';
+  }
+}
 function loadSettingsForm() {
-  $('tokenInput').value = settings.ionToken; $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
+  $('tokenInput').value = settings.ionToken;
+  $('tokenInput').type = 'password';
+  $('toggleToken').textContent = 'Show';
+  $('toggleToken').setAttribute('aria-pressed', 'false');
+  $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
   $('shadowsChk').checked = settings.shadows; $('assistSel').value = settings.assist; $('invertChk').checked = settings.invertPitch; $('volSel').value = settings.volume;
   $('musicChk').checked = settings.music !== false;
+  updateTokenStatus();
+  $('trafficChk').checked = settings.traffic !== false; $('trafficLblChk').checked = settings.trafficLabels !== false;
 }
+$('tokenInput').addEventListener('input', updateTokenStatus);
+$('toggleToken').addEventListener('click', () => {
+  const reveal = $('tokenInput').type === 'password';
+  $('tokenInput').type = reveal ? 'text' : 'password';
+  $('toggleToken').textContent = reveal ? 'Hide' : 'Show';
+  $('toggleToken').setAttribute('aria-pressed', String(reveal));
+  $('tokenInput').focus();
+});
+$('clearToken').addEventListener('click', () => {
+  $('tokenInput').value = '';
+  updateTokenStatus();
+  $('tokenInput').focus();
+});
 $('saveSettings').onclick = () => {
   settings.ionToken = $('tokenInput').value.trim(); settings.scenery = $('scenerySel').value; settings.quality = $('qualitySel').value;
   settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value; settings.music = $('musicChk').checked;
+  settings.traffic = $('trafficChk').checked; settings.trafficLabels = $('trafficLblChk').checked;
   store.set('settings', settings); location.reload();
 };
 
@@ -319,6 +395,9 @@ async function startFlight() {
     loading(true, 'Loading 3D cockpit…', 0.17);
     const ck = ac.cockpit && settings.cockpit3d !== false ? await world.loadCockpit(ac.cockpit) : await world.loadCockpit(null);
     $('flightUI').classList.toggle('ck3d', !!ck);
+    // 2D panel style for aircraft without a 3D flight deck (3D decks keep the shared glass displays)
+    app.panelStyle = ck ? 'boeing' : panelStyleFor(ac);
+    for (const k of ['airbus', 'ga', 'boeing']) $('flightUI').classList.toggle('panel-' + k, app.panelStyle === k);
     world.model.show = false;
     world.stopMenuOrbit();
     world.viewer.scene.screenSpaceCameraController.enableInputs = false;
@@ -356,11 +435,20 @@ async function startFlight() {
     const windFrom = plan.windDir * D2R, ws = plan.windSpd * KT;
     const wind = [-Math.cos(windFrom) * ws, -Math.sin(windFrom) * ws, 0];
     const base = { fuel, payload, geoid, wind, turbulence: plan.turb, heading: rwy.heading };
-    let spawn;
-    if (GROUND_STARTS.includes(plan.start)) {
-      const [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
-      let hg = world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
-      spawn = { ...base, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
+    let spawn, gate = null;
+    app.push = null;
+    if (plan.start === 'gate' || plan.start === 'gate-cold') {
+      loading(true, 'Finding a free gate…', 0.72);
+      gate = await world.pickGate(ap, ac.span);
+      if (!gate) toast('No gate data for this airport — starting on the runway', 'warn');
+    }
+    const onGround = GROUND_STARTS.includes(plan.start);
+    app.gate = gate;
+    if (onGround) {
+      let [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
+      if (gate) [la, lo] = destination(gate.lat, gate.lon, gate.hdg + Math.PI, built.physics.gear[0].x); // nose wheel on the stop bar
+      let hg = gate ? world.groundFast(la, lo) : world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
+      spawn = { ...base, heading: gate ? gate.hdg : rwy.heading, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: gate ? 0 : Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
       fm.reset(spawn);
     } else {
       const approach = plan.start === 'approach';
@@ -416,7 +504,7 @@ async function startFlight() {
       else { apl.alt = Math.round(fm.out.alt / 100) * 100; apl.hdg = Math.round(wrap360(hdg * R2D)); apl.spd = ias; apl.vert = 'ALT'; apl.lat = 'HDG'; apl.engaged = true; apl.at = true; apl.runway = rwy; }
       app.cruiseStart = cruise;
     }
-    if (GROUND_STARTS.includes(plan.start)) { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
+    if (onGround) { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
     // destination route
     app.dest = null; app.destAirport = null; app.destLights = false;
     const destAp = plan.dest ? getAirport(plan.dest) : null;
@@ -428,8 +516,7 @@ async function startFlight() {
     if (plan.start !== 'cruise' || !app.cruiseStart) world.setRunwayLights(rwy, geoid); else world.setRunwayLights(null);
     // ---- aircraft systems state for the chosen start (cold & dark / ready to taxi / runway / air)
     const sys = new Systems(fm); app.sys = sys; // created after the spawn so the tanks get the loaded fuel
-    if (plan.start === 'taxi') { fm.setFlapIndex(0); fm.flap = 0; fm.slat = 0; }
-    sys.setState(GROUND_STARTS.includes(plan.start) ? plan.start : 'air');
+    sys.setState(plan.start === 'gate-cold' ? 'cold' : plan.start === 'gate' ? 'taxi' : plan.start === 'runway' ? 'runway' : 'air');
     fm.runwayWet = plan.weather === 'storm'; // rain: wet-runway braking & cornering friction
     if (!app.sysUI) { app.sysUI = new SystemsUI($('flightUI'), { toast, audio }); app.checklist = new Checklist($('flightUI')); }
     app.sysUI.attach(sys); app.checklist.attach({ fm, sys, ap: apl });
@@ -439,17 +526,20 @@ async function startFlight() {
     // stream scenery at spawn point for air starts
     world.updateAircraft(fm, 0, true);
     world.updateCamera(fm, 0.016);
-    if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
-    audio.start(ac.engines.type); audio.vs = fm.vspeeds(); audio.callouts.clear();
+    if (!onGround) { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
+    audio.start(ac.engines.type, ac); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
+    if (app.traffic) app.traffic.start({ ap, rwy, geoid }); // live / AI air traffic
+    atc.start(app, plan);
     music.stop(4);
     if (app.map) { app.map.reset(fm, plan.start === 'cruise' ? 8 : 11); app.map.setDest(app.destAirport); }
     input.enabled = true;
     $('flightUI').classList.remove('hidden');
     loading(false);
-    toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} RWY ${rwy.ident}`, 'good');
-    if (plan.start === 'cold') setTimeout(() => toast('Cold & dark — O opens the systems panel, J the checklist, Ctrl+E auto-starts', 'warn'), 1500);
-    else if (GROUND_STARTS.includes(plan.start)) setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
+    toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} ${gate ? 'gate ' + (gate.ref || '') : 'RWY ' + rwy.ident}`, 'good');
+    if (plan.start === 'gate-cold') setTimeout(() => toast('Cold & dark — O opens the systems panel, I the checklist, Ctrl+E auto-starts', 'warn'), 1500);
+    else if (gate) setTimeout(() => toast('At the gate — press J for pushback (A / D swing the tail)', 'warn'), 1500);
+    else if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
     if (world.mode === 'lite' && settings.scenery !== 'lite') toast('Using Lite scenery — add a Cesium ion token in Settings for 3D terrain', 'warn');
     app.lastT = performance.now();
     clearTimeout(app.qkTimer); const qk = $('quickKeys'); if (qk) { qk.style.opacity = '1'; app.qkTimer = setTimeout(() => { qk.style.transition = 'opacity 1s'; qk.style.opacity = '0'; }, 20000); }
@@ -481,6 +571,12 @@ const act = {
   gear: () => { const fm = app.fm; if (!fm || fm.ac.geo.fixedGear) return; if (fm.onGround && fm.gearDown) { toast('Gear locked down on the ground', 'warn'); return; } fm.gearDown = !fm.gearDown; audio.click(); toast('Gear ' + (fm.gearDown ? 'down' : 'up')); },
   flapsDown: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex + 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
   flapsUp: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex - 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
+  pushback: () => {
+    const fm = app.fm; if (!fm || !fm.onGround) return;
+    if (app.push) { app.push = null; fm.parkingBrake = true; toast('Pushback stopped — parking brake set'); return; }
+    if (fm.out.gs > 2) { toast('Stop the aircraft before pushback', 'warn'); return; }
+    app.push = new Pushback(fm); toast('Pushback started — A / D swing the tail, J to stop', 'good');
+  },
   parkingBrake: () => { const fm = app.fm; if (!fm) return; fm.parkingBrake = !fm.parkingBrake; toast('Parking brake ' + (fm.parkingBrake ? 'set' : 'released')); },
   spoiler: () => { const fm = app.fm; if (!fm) return; fm.spoilerHandle = fm.spoilerHandle > 0 ? 0 : fm.onGround ? 1 : 0.6; fm.spoilersArmed = false; toast('Speedbrake ' + (fm.spoilerHandle ? 'extended' : 'retracted')); },
   spoilerArm: () => { const fm = app.fm; if (!fm) return; fm.spoilersArmed = !fm.spoilersArmed; fm.spoilerHandle = 0; toast('Ground spoilers ' + (fm.spoilersArmed ? 'armed' : 'disarmed')); },
@@ -518,7 +614,8 @@ $('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('r
 
 function endFlight(toMenu) {
   app.flying = false; input.enabled = false; app.paused = false;
-  audio.stopEngines();
+  audio.stopEngines(); atc.stop();
+  if (app.traffic) app.traffic.stop();
   $('flightUI').classList.add('hidden');
   if (app.world.model) app.world.model.show = false;
   if (app.world.cockpit) app.world.cockpit.show = false;
@@ -603,6 +700,7 @@ function tick() {
     ap.update(dt);
     app.sys?.update(dt);
     fm.step(dt, null);
+    if (app.push && !app.push.update(dt, c.yaw + c.roll)) { app.push = null; toast('Pushback complete — parking brake set. Release (N) and taxi', 'good'); }
     for (const ev of fm.events.splice(0)) handleEvent(ev);
   }
   // camera input
@@ -623,6 +721,7 @@ function tick() {
     sh.shakeAmp = app.paused ? 0 : rumble + turb + buffet + sh.jolt;
   }
   world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
+  if (app.traffic) app.traffic.update(fm, dt);
   world.updateCamera(fm, dt);
   world.updatePapi(fm);
   cloudTimer -= dt; if (cloudTimer <= 0) { cloudTimer = 1; world.updateClouds(fm.lat, fm.lon, fm.h); }
@@ -641,7 +740,11 @@ function tick() {
     if (near && !app.calibrated[near.i] && world.calibrateAirport(near)) app.calibrated[near.i] = true;
     if (near && app.calibrated[near.i]) world.flattenAirport(near);
   }
-  audio.update(fm, app.view, dt);
+  // exterior views: the camera position drives distance attenuation, directivity and Doppler
+  let camGeo = null;
+  if (app.view !== 'cockpit') { try { const cc = window.Cesium.Cartographic.fromCartesian(world.viewer.camera.positionWC); camGeo = { lat: cc.latitude, lon: cc.longitude, h: cc.height }; } catch (e) { /* */ } }
+  audio.update(fm, app.view, dt, camGeo);
+  if (!app.paused) atc.update(dt);
   if (app.sys) {
     app.sysUI.update(); app.checklist.update();
     // glass cockpit goes dark without AC power (GA panels run on the battery bus)
@@ -656,6 +759,7 @@ function tick() {
       app.routeCache = { t: now, pts, line };
     }
     app.map.update(fm, app.routeCache.line);
+    if (app.traffic && app.map.setTraffic) app.map.setTraffic(app.traffic.active ? app.traffic.list() : null);
   }
   // speed trend (kt per second, smoothed)
   const o = fm.out;
@@ -668,6 +772,7 @@ function tick() {
 }
 
 function handleEvent(ev) {
+  atc.event(ev);
   if (ev.type === 'touchdown') {
     toast(`Touchdown ${-ev.fpm > 0 ? '' : '-'}${Math.abs(ev.fpm)} fpm · ${ev.rating}`, ev.fpm > 600 ? 'bad' : ev.fpm > 360 ? 'warn' : 'good');
     audio.thump(clamp(ev.fpm / 400, 0.3, 1.5));
@@ -677,7 +782,7 @@ function handleEvent(ev) {
   } else if (ev.type === 'crash') {
     app.crashed = true; input.enabled = false; audio.thump(2); audio.stopEngines();
     $('crashReason').textContent = ev.reason; show('crash', false);
-  } else if (ev.type === 'warn') { toast(ev.text, 'bad'); }
+  } else if (ev.type === 'warn') { toast(ev.text, 'bad'); audio.masterCaution(); }
   else if (ev.type === 'msg') toast(ev.text, 'warn');
 }
 
@@ -692,10 +797,11 @@ function instrumentState() {
     ap.engaged ? ({ ALT: 'ALT HOLD', VS: 'V/S', FLCH: 'FLCH SPD', VNAV: 'VNAV PTH', GS: ap.flare ? 'FLARE' : 'G/S' }[ap.vert] || '') : '',
   ];
   return {
-    out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
+    style: app.panelStyle, out: fm.out, ap, vspeeds: vs, stallSpeed, phase: fm.onGround && fm.out.ias < vs.vr + 20 && fm.ctl.throttle > 0.3 ? 'takeoff' : fm.onGround ? 'takeoff' : 'air',
     trend, fma, ils: ils && ils.along > -200 && ils.d < 30 * NM && (ap.lat === 'LOC' || ap.appArmed) ? ils : null,
     routePts: app.routeCache?.pts || null,
     lat: fm.lat, lon: fm.lon, nearby: app.nearby, ndRange: app.ndRange, runway: app.dest ? app.dest.rwy : app.rwy, dist: app.dest ? ap.navInfo()?.togo : ils ? ils.d : null, fm,
+    traffic: app.traffic?.active ? app.traffic.list() : null,
     warn: fm._tailStruck ? 'TAIL STRIKE' : fm.out.alt > fm.ac.perf.ceiling + 2000 ? 'ABOVE CEILING' : fm.out.ias > vs.vmo + 5 || fm.out.mach > vs.mmo + 0.01 ? 'OVERSPEED' : '',
   };
 }
@@ -739,9 +845,13 @@ function drawCockpit3D(s) {
 function drawInstruments() {
   const s = instrumentState();
   if (app.view === 'cockpit' && app.world.ckMeta) { drawCockpit3D(s); return; }
+  const st = app.panelStyle;
   if (app.view === 'cockpit') {
-    if (app.panel) { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
-  } else if (app.panel) drawPFD($('pfdMini'), s);
+    if (!app.panel) return;
+    if (st === 'ga') { drawSixPack($('pfd'), s); drawEngineStrip($('eicas'), s); }
+    else if (st === 'airbus') { drawAirbusPFD($('pfd'), s); drawND($('nd'), s); drawECAM($('eicas'), s); }
+    else { drawPFD($('pfd'), s); drawND($('nd'), s); drawEICAS($('eicas'), s); }
+  } else if (app.panel) (st === 'ga' ? drawSixPack : st === 'airbus' ? drawAirbusPFD : drawPFD)($('pfdMini'), s);
 }
 function updateHud() {
   const fm = app.fm, o = fm.out, ap = app.ap;
@@ -794,12 +904,21 @@ async function boot() {
     app.world = world;
     input.attachMouse(world.viewer.canvas);
     world.viewer.scene.preUpdate.addEventListener(tick);
+    app.traffic = new Traffic(world, { enabled: settings.traffic !== false, labels: settings.trafficLabels !== false, proxy: settings.trafficProxy || (/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname) || location.protocol === 'file:' ? '' : location.origin + '/api/feed?url=') });
+    app.traffic.onStatus = (txt, st) => { if (app.flying) toast(st === 'live' ? `Live traffic: ${txt.replace('live · ', '')}` : st === 'ai' ? 'Live traffic unavailable — showing AI traffic' : txt, st === 'live' ? 'good' : 'warn'); };
+    world.excludeExtra = () => app.traffic.primitives();
     loading(true, 'Loading airports…', 0.3);
     await loadAirports();
     try { app.map = new MiniMap($('minimap'), { airports: allAirports, onSetDest: (a, ident) => setDestination(a, ident) }); } catch (e) { console.warn('map failed', e); }
     loading(true, 'Loading scenery…', 0.5);
     const mode = await world.setScenery(settings.scenery, (t) => loading(true, t, 0.6));
-    if (mode !== settings.scenery && settings.scenery !== 'lite') $('tokenNote').textContent = settings.ionToken ? 'Could not load 3D scenery with this token — using Lite scenery.' : $('tokenNote').textContent;
+    if (mode !== settings.scenery && settings.scenery !== 'lite') {
+      $('tokenNote').textContent = settings.ionToken
+        ? '3D scenery did not load. Check the Cesium token permissions and your connection in Settings.'
+        : 'Add your free Cesium ion token in Settings to unlock photorealistic 3D cities and terrain.';
+    } else if (mode === 'photoreal') {
+      $('tokenNote').textContent = 'Photorealistic 3D scenery is ready.';
+    }
     world.setWeather(plan.weather);
     const a = getAirport(plan.airport) || getAirport('KDAL');
     world.setTimeOfDay(plan.hour, a.lo * D2R);

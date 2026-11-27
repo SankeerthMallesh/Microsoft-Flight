@@ -90,6 +90,27 @@ export class MiniMap {
     setTimeout(() => this.map.invalidateSize(), 100);
   }
   setDest(a) { this.dest = a; this.drawAirports(); }
+  // live / AI traffic layer: small rotated aircraft symbols with callsign + altitude tooltips
+  setTraffic(list) {
+    if (!this.map) return;
+    if (!this.trafficLayer) { this.trafficLayer = L.layerGroup().addTo(this.map); this.trafficM = new Map(); }
+    const seen = new Set();
+    for (const t of list || []) {
+      seen.add(t.id);
+      let m = this.trafficM.get(t.id);
+      const ll = [t.lat * R2D, t.lon * R2D];
+      if (!m) {
+        const icon = L.divIcon({ className: 'traffic-icon', html: `<svg viewBox="0 0 40 40" width="20" height="20"><path d="M20 3 L22.5 15 L35 21 L35 24 L22.5 20.5 L21.6 30 L26 33.5 L26 35.5 L20 34 L14 35.5 L14 33.5 L18.4 30 L17.5 20.5 L5 24 L5 21 L17.5 15 Z" fill="${t.ai ? '#9fd4ff' : '#4dfcff'}" stroke="#08202a" stroke-width="1.6"/></svg>`, iconSize: [20, 20], iconAnchor: [10, 10] });
+        m = L.marker(ll, { icon, interactive: true, keyboard: false, zIndexOffset: 500 }).addTo(this.trafficLayer);
+        m.bindTooltip('', { direction: 'top', offset: [0, -8] });
+        this.trafficM.set(t.id, m);
+      } else m.setLatLng(ll);
+      const el = m.getElement(); if (el && el.firstChild) el.firstChild.style.transform = `rotate(${Math.round(t.hdg)}deg)`;
+      const tip = `${t.cs} · ${t.type}<br>${t.ground ? 'on ground' : Math.round(t.altFt / 100) * 100 + ' ft'} · ${Math.round(t.gsKt)} kt${t.ai ? ' · AI' : ''}`;
+      if (m._tipTxt !== tip) { m._tipTxt = tip; m.setTooltipContent(tip); }
+    }
+    for (const [id, m] of this.trafficM) if (!seen.has(id)) { this.trafficLayer.removeLayer(m); this.trafficM.delete(id); }
+  }
 }
 
 // great-circle intermediate points (degrees) for drawing long routes

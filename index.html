@@ -27,16 +27,19 @@
 
   <!-- ============================== MAIN MENU -->
   <section id="menu" class="screen">
-    <div class="menu-card">
+    <div class="menu-top">
       <div class="brand"><span class="logo">✈</span><div><h1>OpenSkies</h1><p>Flight Simulator</p></div></div>
-      <nav class="menu-buttons">
-        <button class="btn primary" data-go="setup">Free Flight</button>
-        <button class="btn" data-go="hangar">Hangar</button>
-        <button class="btn" data-go="settings">Settings</button>
-        <button class="btn" data-go="help">Controls</button>
-      </nav>
+      <div class="menu-ready" id="menuReady"></div>
+    </div>
+    <nav class="menu-tiles">
+      <button class="tile tile-main" data-go="setup" id="tileFly"><span class="tile-bg" id="tileFlyBg"></span><span class="tile-k">Fly</span><b>Free Flight</b><small>Any airport, any aircraft, live route</small></button>
+      <button class="tile" data-go="hangar" id="tileHangar"><span class="tile-bg" id="tileHangarBg"></span><span class="tile-k">Aircraft</span><b>Hangar</b><small>53 aircraft · real liveries</small></button>
+      <button class="tile tile-plain" data-go="settings"><span class="tile-ic">⚙</span><span class="tile-k">Options</span><b>Settings</b><small>Graphics, scenery, sound</small></button>
+      <button class="tile tile-plain" data-go="help"><span class="tile-ic">⌨</span><span class="tile-k">Learn</span><b>Controls</b><small>Keys, autopilot, tips</small></button>
+    </nav>
+    <div class="menu-foot">
       <p class="menu-note" id="tokenNote"></p>
-      <p class="fine">Free &amp; open: CesiumJS · three.js · OurAirports. Airline names and liveries are trademarks of their owners and are recreated here for personal, non-commercial simulation.</p>
+      <p class="fine">Free &amp; open: CesiumJS · three.js · OpenStreetMap · OurAirports · FlightGear. Airline names and liveries are trademarks of their owners and are recreated here for personal, non-commercial simulation.</p>
     </div>
   </section>
 
@@ -67,7 +70,7 @@
           <div id="destPicked" class="muted small"></div></div>
         <div class="field"><label for="destRwySel">Arrival runway</label><select id="destRwySel"><option value="">Best for wind</option></select></div>
         <div class="field"><label for="startSel">Start position</label>
-          <select id="startSel"><option value="cold">Cold &amp; dark (everything off, parking brake set)</option><option value="taxi">Engines running, ready to taxi</option><option value="runway">On runway, ready for takeoff</option><option value="approach">6 NM final approach</option><option value="air">In flight (12 NM out)</option><option value="cruise">Cruising toward destination (autopilot on)</option></select></div>
+          <select id="startSel"><option value="gate-cold">Parked at a gate, cold &amp; dark</option><option value="gate">Parked at a gate, engines running (J for pushback)</option><option value="runway">On runway, ready for takeoff</option><option value="approach">6 NM final approach</option><option value="air">In flight (12 NM out)</option><option value="cruise">Cruising toward destination (autopilot on)</option></select></div>
         <div class="field"><label for="timeSel">Time of day <span id="timeLbl" class="muted"></span></label><input type="range" id="timeSel" min="0" max="23.75" step="0.25" value="11" /></div>
         <div class="field"><label for="wxSel">Weather</label>
           <select id="wxSel"><option value="clear">Clear skies</option><option value="few">Few clouds</option><option value="scattered" selected>Scattered clouds</option><option value="broken">Broken clouds</option><option value="overcast">Overcast</option><option value="storm">Stormy</option></select></div>
@@ -104,25 +107,51 @@
   <!-- ============================== SETTINGS -->
   <section id="settings" class="screen hidden">
     <div class="panel settings-panel">
-      <header><h2>Settings</h2><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
-      <div class="field"><label for="tokenInput">Cesium ion access token</label>
-        <input id="tokenInput" type="password" placeholder="Paste your free token from ion.cesium.com/tokens" autocomplete="off" />
-        <p class="muted small">Stored only in this browser (localStorage). Get one free at <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">ion.cesium.com/tokens</a>. Without a token the sim uses free satellite imagery on a flat globe.</p></div>
-      <div class="field"><label for="scenerySel">Scenery</label>
-        <select id="scenerySel">
-          <option value="photoreal">Photorealistic 3D cities (Google tiles via Cesium ion)</option>
-          <option value="terrain">World terrain + aerial imagery + 3D buildings</option>
-          <option value="lite">Lite: satellite imagery, flat ground (no token)</option>
-        </select></div>
-      <div class="field"><label for="qualitySel">Graphics quality</label>
-        <select id="qualitySel"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low (laptops)</option></select></div>
-      <div class="field"><label><input type="checkbox" id="shadowsChk" /> Shadows</label></div>
-      <div class="field"><label for="assistSel">Flight model</label>
-        <select id="assistSel"><option value="assisted">Assisted (fly-by-wire: attitude hold, protections)</option><option value="realistic">Realistic (direct control, manual trim)</option></select></div>
-      <div class="field"><label><input type="checkbox" id="invertChk" /> Invert pitch (↑ = nose up)</label></div>
-      <div class="field"><label for="volSel">Volume</label><input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7" /></div>
-      <div class="field"><label><input type="checkbox" id="musicChk" checked /> Menu &amp; loading music</label></div>
-      <footer><span class="muted small">Scenery and quality changes apply on reload.</span><button class="btn primary" id="saveSettings">Save &amp; reload</button></footer>
+      <header><div><span class="settings-kicker">WORLD &amp; PERFORMANCE</span><h2>Settings</h2></div><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
+      <div class="settings-intro">
+        <span class="settings-intro-icon">◈</span>
+        <div><strong>Build your world</strong><p>Choose detailed 3D scenery and tune the simulator to your device.</p></div>
+      </div>
+      <section class="settings-section" aria-labelledby="sceneryHeading">
+        <div class="settings-section-title"><h3 id="sceneryHeading">3D scenery</h3><span id="tokenState" class="token-state">No token saved</span></div>
+        <div class="field token-field">
+          <label for="tokenInput">Cesium ion access token</label>
+          <div class="token-control">
+            <input id="tokenInput" type="password" placeholder="Paste your Cesium ion token" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            <button class="btn small token-action" id="toggleToken" type="button" aria-controls="tokenInput" aria-pressed="false">Show</button>
+            <button class="btn small token-action" id="clearToken" type="button">Clear</button>
+          </div>
+          <p id="tokenHelp" class="muted small" aria-live="polite">Saved only in this browser. It is not written into the game files or repository. <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">Get a free token</a>.</p>
+        </div>
+        <div class="field"><label for="scenerySel">World detail</label>
+          <select id="scenerySel">
+            <option value="photoreal">Photorealistic 3D cities — Google 3D Tiles</option>
+            <option value="terrain">3D terrain, aerial imagery &amp; buildings</option>
+            <option value="lite">Lite satellite globe — no token required</option>
+          </select>
+          <p class="settings-footnote">Photorealistic cities and streamed terrain require a working Cesium ion token and an internet connection.</p>
+        </div>
+      </section>
+      <section class="settings-section">
+        <div class="settings-section-title"><h3>Visual quality</h3><span class="settings-section-note">Adaptive performance</span></div>
+        <div class="field"><label for="qualitySel">Graphics preset</label>
+          <select id="qualitySel"><option value="high">High — sharper detail, richer shadows</option><option value="medium" selected>Balanced — recommended</option><option value="low">Performance — lighter rendering</option></select></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="shadowsChk" /> Enable shadows in Balanced / Performance presets</label></div>
+      </section>
+      <section class="settings-section settings-section-compact">
+        <h3>Flight &amp; sound</h3>
+        <div class="field"><label for="assistSel">Flight model</label>
+          <select id="assistSel"><option value="assisted">Assisted — flight protections</option><option value="realistic">Realistic — direct control, manual trim</option></select></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="invertChk" /> Invert pitch (↑ = nose up)</label></div>
+        <div class="field"><label for="volSel">Volume</label><input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7" /></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="musicChk" checked /> Menu &amp; loading music</label></div>
+      </section>
+      <section class="settings-section settings-section-compact">
+        <h3>Air traffic</h3>
+        <div class="field checkbox-field"><label><input type="checkbox" id="trafficChk" checked /> Live air traffic (real ADS-B positions, AI traffic when offline)</label></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="trafficLblChk" checked /> Traffic labels</label></div>
+      </section>
+      <footer><span class="muted small">World and quality changes apply after reload.</span><button class="btn primary" id="saveSettings">Save &amp; reload</button></footer>
     </div>
   </section>
 
@@ -165,9 +194,9 @@
         </div>
       </div>
       <div class="instrument-panel">
-        <div class="screen-bezel"><canvas id="pfd"></canvas></div>
-        <div class="screen-bezel"><canvas id="nd"></canvas></div>
-        <div class="screen-bezel"><canvas id="eicas"></canvas></div>
+        <div class="screen-bezel bz-pfd"><canvas id="pfd"></canvas></div>
+        <div class="screen-bezel bz-nd"><canvas id="nd"></canvas></div>
+        <div class="screen-bezel bz-eicas"><canvas id="eicas"></canvas></div>
         <div class="side-controls">
           <button class="gear-lever" id="gearLever" title="Landing gear (G)"><span>GEAR</span><b id="gearState">DN</b></button>
           <div class="lights"><span id="lgtL">●</span><span id="lgtN">●</span><span id="lgtR">●</span></div>
@@ -208,8 +237,12 @@
     <button class="btn" data-go="help">Controls</button><button class="btn" id="quitBtn">Main menu</button></div></div>
   <div id="crash" class="screen hidden"><div class="panel small-panel"><h2>Crashed</h2><p id="crashReason"></p>
     <button class="btn primary" id="crashRestart">Try again</button><button class="btn" id="crashQuit">Main menu</button></div></div>
-  <div id="loading" class="screen hidden"><div class="loading-card"><div class="spinner"></div><p id="loadingText">Loading…</p><div class="bar"><i id="loadingBar"></i></div>
-    <div class="fact-card off" id="factCard"><img id="factImg" alt="" /><span class="fact-label">Did you know?</span><b id="factTitle"></b><p id="factText"></p></div></div></div>
+  <div id="loading" class="screen hidden">
+    <div class="ld-bg" id="ldBgA"></div><div class="ld-bg" id="ldBgB"></div><div class="ld-shade"></div>
+    <div class="ld-top"><span class="ld-brand">OpenSkies</span><span id="ldFlight"></span></div>
+    <div class="fact-card off" id="factCard"><span class="fact-label">Did you know?</span><b id="factTitle"></b><p id="factText"></p></div>
+    <div class="loading-card"><div class="spinner"></div><p id="loadingText">Loading…</p><div class="bar"><i id="loadingBar"></i></div></div>
+  </div>
   <div id="toasts"></div>
 
   <!-- optional local config (created by the setup script, never committed): window.OPENSKIES_CONFIG = { ionToken: "..." } -->

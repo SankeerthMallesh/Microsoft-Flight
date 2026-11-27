@@ -4,6 +4,9 @@ import { D2R, R2D, clamp, lerp, qrot, quatToEuler, wrapPi } from './sim/math.js'
 
 import { buildAirportRunways, runwayInfo, offsetLL } from './runways.js';
 import { buildAirport3D, fetchAirportOSM } from './airport3d.js';
+import { AirportLights } from './airportlights.js';
+import { AirportGates } from './airportgates.js';
+const LITE_H = 0.3; // lite scenery: flat airport surfaces sit just above the ellipsoid globe
 const C = () => window.Cesium;
 
 export class World {
@@ -89,15 +92,18 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const sse = { high: 7, medium: 12, low: 20 }[this.settings.quality] ?? 12;
+        const sse = { high: 4, medium: 8, low: 14 }[this.settings.quality] ?? 8;
         this.baseSSE = sse;
         const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
           maximumScreenSpaceError: sse,
-          cacheBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
-          maximumCacheOverflowBytes: ({ high: 256, medium: 192, low: 128 }[this.settings.quality] ?? 192) * 1024 * 1024,
+          cacheBytes: ({ high: 1024, medium: 768, low: 512 }[this.settings.quality] ?? 768) * 1024 * 1024,
+          maximumCacheOverflowBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
           preloadFlightDestinations: true, foveatedScreenSpaceError: true,
+          // a flight sim's camera never stops: Cesium's default skips detailed tiles while the camera moves,
+          // which left the ground permanently blurry. Always request them.
+          cullRequestsWhileMoving: false,
           // lower detail toward the horizon (big saving at low altitude, barely visible)
-          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 2.0e-4, dynamicScreenSpaceErrorFactor: 24, dynamicScreenSpaceErrorHeightFalloff: 0.25,
+          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 1.0e-4, dynamicScreenSpaceErrorFactor: 6, dynamicScreenSpaceErrorHeightFalloff: 0.25,
         });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
@@ -139,6 +145,7 @@ export class World {
     if (this.tileset && scene.sampleHeightSupported) {
       try {
         const ex = [this.points, this.rwyPoints, this.cloudCollection]; if (this.model) ex.push(this.model);
+        if (this.excludeExtra) ex.push(...this.excludeExtra()); // e.g. traffic models / lights
         const hgt = scene.sampleHeight(carto, ex, 1.5);
         if (hgt !== undefined) return hgt;
       } catch (e) { /* ignore */ }
@@ -167,7 +174,7 @@ export class World {
     const mid = Math.max(this.rprMin, Math.min(this.rprTarget, 1.15));
     if (fps < 28) {
       if (this.rpr > mid + 0.01) setR(this.rpr - 0.1);
-      else if (ts && ts.maximumScreenSpaceError < base * 1.6) ts.maximumScreenSpaceError = Math.min(base * 1.6, ts.maximumScreenSpaceError + 2);
+      else if (ts && ts.maximumScreenSpaceError < base * 1.35) ts.maximumScreenSpaceError = Math.min(base * 1.35, ts.maximumScreenSpaceError + 1);
       else setR(this.rpr - 0.05);
     } else if (fps > 50) {
       if (this.rpr < mid - 0.01) setR(this.rpr + 0.05);
@@ -202,11 +209,12 @@ export class World {
     const Cesium = C(), scene = this.viewer.scene;
     if (!this.tileset || !scene.sampleHeightSupported) return undefined;
     try {
-      const ex = [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : []), ...(this.cockpit ? [this.cockpit] : []), ...this.runwayPrims()];
+      const ex = [this.points, this.rwyPoints, this.cloudCollection, ...(this.model ? [this.model] : []), ...(this.cockpit ? [this.cockpit] : []), ...this.runwayPrims(), ...(this.excludeExtra ? this.excludeExtra() : [])];
       return scene.sampleHeight(new Cesium.Cartographic(lon, lat), ex, 1);
     } catch (e) { return undefined; }
   }
   calibrateAirport(a) {
+    if (this.mode === 'lite') return true; // flat globe: nothing to calibrate
     if (!this.tileset || !this.viewer.scene.sampleHeightSupported || !a.r.length) return false;
     if (this.rwySurf?.has(a.i)) return true; // already flattened: tiles under the runway are clipped
     const offs = [];
@@ -233,8 +241,10 @@ export class World {
     return out;
   }
   flattenAirport(a) {
-    if (!this.tileset || this.mode !== 'photoreal' || !a?.r?.length) return false;
+    const lite = this.mode === 'lite';
+    if ((!lite && (!this.tileset || this.mode !== 'photoreal')) || !a?.r?.length) return false;
     this.rwySurf = this.rwySurf || new Map(); this.ap3d = this.ap3d || new Map(); this.aptPlane = this.aptPlane || {};
+    if (lite && !this.aptPlane[a.i]) this.aptPlane[a.i] = () => LITE_H;
     if (this.rwySurf.has(a.i)) { this.fetch3D(a); return true; }
     const g = this.aptGeoid?.[a.i]; if (g === undefined) return false;
     if (!this.buildRunways(a)) return false;
@@ -258,18 +268,21 @@ export class World {
     if (old) for (const p of old.prims) this.viewer.scene.primitives.remove(p);
     for (const p of built.prims) this.viewer.scene.primitives.add(p);
     this.rwySurf.set(a.i, built);
+    this.ensureLights(a, true);
     this.applyNightTint();
     return true;
   }
   addAirport3D(a, elements) {
     let res;
     try {
-      res = buildAirport3D(a, this.aptGeoid[a.i], elements, { sampleTile: (la, lo) => this.sampleTile(la, lo), buildings: this.buildingsEnabled !== false });
+      res = buildAirport3D(a, this.aptGeoid[a.i], elements, { sampleTile: (la, lo) => this.sampleTile(la, lo), buildings: this.buildingsEnabled !== false, flatH: this.mode === 'lite' ? LITE_H : undefined, quality: this.quality });
     } catch (e) { console.warn('airport 3D build failed', e); return; }
     this.aptPlane[a.i] = res.plane;
-    this.buildRunways(a); // re-level the runways onto the shared airport plane
     for (const p of res.prims) this.viewer.scene.primitives.add(p);
     this.ap3d.set(a.i, res);
+    this.buildRunways(a); // re-level the runways (and their lights) onto the shared airport plane
+    try { this.apLights.get(a.i)?.buildNet(res.detail, res.frame); } catch (e) { console.warn('taxiway lights failed', e); }
+    try { res.gates = new AirportGates(C(), this.viewer.scene, a, res.detail, res.frame, { quality: this.quality }); res.gates.populate(); } catch (e) { console.warn('gates failed', e); }
     this.applyNightTint();
     this.applyClipping();
     // Google has no real 3D buildings here: add OpenStreetMap 3D buildings for the surrounding city too
@@ -278,8 +291,30 @@ export class World {
     this.onAirport3D?.(a, res);
   }
   dropAirport(id) {
-    for (const m of [this.rwySurf, this.ap3d]) { const v = m?.get(id); if (v) { for (const p of v.prims) this.viewer.scene.primitives.remove(p); m.delete(id); } }
+    for (const m of [this.rwySurf, this.ap3d]) { const v = m?.get(id); if (v) { for (const p of v.prims) this.viewer.scene.primitives.remove(p); v.gates?.destroy(); m.delete(id); } }
     if (this.aptPlane) delete this.aptPlane[id];
+    const L = this.apLights?.get(id); if (L) { L.destroy(); this.apLights.delete(id); }
+  }
+  // a free gate stand for "Start at gate" (waits for the OpenStreetMap airport data)
+  async pickGate(a, span, maxMs = 25000) {
+    const t0 = performance.now();
+    while (!this.ap3d?.has(a.i) && performance.now() - t0 < maxMs) await new Promise((r) => setTimeout(r, 250));
+    return this.ap3d?.get(a.i)?.gates?.pick(span) || null;
+  }
+  // full airport lighting (runways, approach, PAPI; taxiways once OpenStreetMap data arrives)
+  ensureLights(a, rebuild = false) {
+    this.apLights = this.apLights || new Map();
+    let L = this.apLights.get(a.i);
+    if (L && !rebuild) return L;
+    const g = this.aptGeoid?.[a.i]; if (g === undefined) return null;
+    try {
+      if (!L) { L = new AirportLights(C(), this.viewer.scene, a, { quality: this.quality }); this.apLights.set(a.i, L); }
+      L.opts.geoid = g; L.opts.plane = this.aptPlane?.[a.i] || (this.mode === 'lite' ? () => LITE_H : null);
+      L.buildRunways();
+      L.setDay(this.sunK ?? 1, this.weather);
+      while (this.apLights.size > 4) { const k = this.apLights.keys().next().value; if (k === a.i) break; this.apLights.get(k).destroy(); this.apLights.delete(k); }
+    } catch (e) { console.warn('airport lights failed', e); return null; }
+    return L;
   }
   async ensureOsmBuildings() {
     const Cesium = C();
@@ -354,6 +389,8 @@ export class World {
     if (this.tileset && this.tileset.customShader !== sh) this.tileset.customShader = sh;
     if (this.osmBuildings && this.osmBuildings.customShader !== sh) this.osmBuildings.customShader = sh;
     for (const e of (this.ap3d || new Map()).values()) if (e.tint && e._tinted !== v) { if (e.tint(v)) e._tinted = v; }
+    for (const L of (this.apLights || new Map()).values()) L.setDay(this.sunK ?? 1, this.weather);
+    for (const e of (this.ap3d || new Map()).values()) e.gates?.tint(this.sunK ?? 1);
     for (const m of [this.rwySurf, this.ap3d]) if (m) for (const e of m.values()) for (const mat of e.mats || []) {
       const b = mat._base || Cesium.Color.WHITE;
       mat.uniforms.color = new Cesium.Color(b.red * v, b.green * v * 0.98, b.blue * v * 0.96, b.alpha);
@@ -712,6 +749,9 @@ export class World {
     const Cesium = C();
     this.rwyPoints.removeAll(); this.papi = null;
     if (!rwy) return;
+    // airports with full lighting (built with the flat runways) need no simple runway lights
+    const apt = (this.gAirports || []).find((x) => x.i === rwy.airport);
+    if (this.apLights?.has(rwy.airport) || (apt && this.aptGeoid?.[apt.i] !== undefined && this.ensureLights(apt))) return;
     const pts = [];
     const brg = rwy.heading, perp = brg + Math.PI / 2;
     const off = (lat, lon, b, d) => {

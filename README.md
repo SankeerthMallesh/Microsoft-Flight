@@ -29,7 +29,8 @@ A free flight simulator that runs in your web browser. You fly real airliners ov
   - Boeing-style autopilot panel (MCP) with A/T, FLCH, HDG SEL, ALT HLD, V/S, APP (ILS) and CMD
 - **Autopilot** with localizer and glideslope capture and an autoland flare. Runway edge lights, approach lights and a working PAPI on your runway.
 - **Weather and time of day:** cloud layers, wind, turbulence, sun position and night lighting.
-- **Sound:** synthesized engine and wind sound, plus voice callouts ("V one", "Rotate", "One hundred… fifty… ten", "Retard", "Sink rate").
+- **Air traffic control:** clearance delivery, ground, tower, departure, centre, approach and back to ground, with ICAO/FAA phraseology and airline callsigns ("Southwest 1234", "Speedbird 412 heavy"). ATC follows what you and the autopilot are doing, the controller and your pilot (readbacks) speak in different voices over a radio squelch, and the ATC window (`` ` `` or **L**) has a log and a request menu like MSFS.
+- **Sound, all synthesized live:** turbofan fan tone, buzz-saw, core whine and jet roar that track N1, separate from the cockpit and outside; distance, directivity and Doppler in the fly-by view; turboprop and piston engines, APU, wind, gear and flap motors, runway rumble and wheel thumps, touchdown squeal, spoilers, reverse thrust, avionics fans, stick shaker, overspeed clacker, master caution chime and the autopilot-disconnect warning (cavalry charge on Airbus). Also GPWS and radio-altimeter callouts ("Five hundred", "Minimums", "Fifty, forty, thirty, twenty, ten", "Retard", "Sink rate", "Too low, gear", "Bank angle", "Glideslope").
 - **Controls:** keyboard, mouse, gamepad and joystick/HOTAS.
 
 Everything is free. There is no build step and nothing to buy.
@@ -63,10 +64,11 @@ In the repository, go to **Settings → Pages**. Choose **Deploy from a branch**
 ## Get the best scenery (free)
 
 1. Create a free account at <https://ion.cesium.com/signup>.
-2. Copy your **Default token** from <https://ion.cesium.com/tokens>.
-3. In the game, open **Settings**, paste the token and choose **Photorealistic 3D** scenery.
+2. Copy a browser-appropriate token from <https://ion.cesium.com/tokens>. Restrict the token to the domains where you host the game when possible.
+3. In the game, open **Settings → 3D scenery**, paste the token, select **Photorealistic 3D cities**, and choose **Save & reload**.
+4. The Settings screen shows whether a token is saved locally. A saved token is not necessarily valid; Cesium checks its permissions when the 3D scenery loads.
 
-The token is only stored in your own browser (localStorage). It is never put into the repository.
+The token is saved in this browser's local storage. It is not written into the source files or repository. Because browser-based Cesium must send the token with asset requests, treat it as a browser token and restrict its allowed origins in Cesium ion.
 
 ## Controls
 
@@ -84,6 +86,7 @@ The token is only stored in your own browser (localStorage). It is never put int
 | Autopilot / autothrottle | Z / X (or click the MCP in the cockpit) |
 | Cameras | C cycles. 1 cockpit, 2 chase, 3 orbit, 4 fly-by. Drag the mouse to look, scroll to zoom |
 | Cockpit panel | H |
+| Air traffic control | `` ` `` or L opens the ATC window; 1–9 pick a request while it is open |
 | Pause | P / Esc |
 
 **Your first takeoff:** press **N** to release the parking brake, then hold **W** for full thrust. At the "Rotate" call, hold **↓** for about a second to lift the nose. Then press **G** to raise the gear and **Z** + **X** to engage the autopilot and autothrottle.
@@ -99,6 +102,8 @@ js/world.js           CesiumJS scenery, aircraft placement, lights, clouds, came
 js/hangar.js          three.js hangar
 js/sim/flightmodel.js 6-DOF flight dynamics, engines, gear, fly-by-wire
 js/sim/autopilot.js   autopilot / autothrottle / ILS
+js/atc.js             air traffic control (phases, phraseology, voices, ATC window)
+js/audio.js           procedural Web Audio sound, GPWS callouts, speech/radio manager
 js/model/builder.js   procedural aircraft geometry from real dimensions
 js/model/painter.js   livery texture painter
 js/data/aircraft.js   aircraft specifications
@@ -108,9 +113,12 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 
 ## Credits and legal
 
+- All sound is generated at run time with the Web Audio API, and voices use the browser's built-in speech synthesis (Web Speech API). The project ships no recorded sound files, so it has no third-party audio licences.
 - The detailed Boeing 737-800 model is "B737-800 Model" by hakai315 on Sketchfab, licensed CC BY 4.0 and modified for this sim. See [models/CREDITS.md](models/CREDITS.md).
 - The 3D A320neo flight deck comes from the [FlightGear](https://www.flightgear.org/) A320-family (Josh Davidson, Jonathan Redpath, merspieler, Matthew Maring, Thorsten Herrmann, Semir Gebran), GPL v2.
 - The 3D 737-800 flight deck comes from the [FlightGear](https://www.flightgear.org/) Boeing 737-800 (Innis Cunningham, Syd Adams, David Culp, Michael Soitanen and contributors), licensed GNU GPL v2 or later and converted for this sim.
+- The 3D Boeing 777 flight deck (777-300ER, also used on the 777-200ER, 777F and 777-9) comes from the [FlightGear](https://www.flightgear.org/) Boeing 777 Series (Syd Adams, Justin Smithies, Karla, Thorsten Brehm, Joshua Davidson, Isaak Dieleman, Sidi Liang, Yongfan Li, Valkmjolnir, Lars Van Hattum and contributors), GPL v2.
+- The 3D Boeing 787 flight deck (787-9, also used on the 787-8 and 787-10) comes from the [FlightGear](https://www.flightgear.org/) Boeing 787-8 Dreamliner (Omega95, Joshua W, Redneck, Jentron, Hooray, Thomas Albrecht and contributors), GPL v2.
 
 ### License
 

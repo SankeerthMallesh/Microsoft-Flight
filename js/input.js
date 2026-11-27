@@ -4,12 +4,12 @@ import { clamp } from './sim/math.js';
 export const KEY_HELP = [
   ['Pitch', '↑ / ↓  (↓ = nose up, like pulling a yoke)'], ['Roll / taxi steering', '← / →'], ['Rudder / nosewheel', 'Q / E  or  A / D'],
   ['Throttle', 'W / S  ·  PgUp / PgDn  ·  F1 idle · F4 full'], ['Flaps', 'F extend · R retract'], ['Landing gear', 'G'],
-  ['Brakes', 'B (hold) · N parking brake'], ['Speedbrake', '/  toggle · Shift+/ arm'], ['Reverse thrust', 'T (on ground)'],
+  ['Brakes', 'B (hold) · N parking brake'], ['Pushback (at the gate)', 'J start / stop · A / D swing the tail'], ['Speedbrake', '/  toggle · Shift+/ arm'], ['Reverse thrust', 'T (on ground)'],
   ['Trim', '[ nose down · ] nose up  (Home / End)'], ['Autopilot', 'Z master · X autothrottle'], ['Camera', 'C cycle · 1 cockpit · 2 chase · 3 orbit · 4 fly-by'],
-  ['Systems / overhead panel', 'O  (electrics, APU, engine start, fuel, lights, failures)'], ['Electronic checklist', 'J'],
-  ['Engine auto-start / shutdown', 'Ctrl+E (or Shift+E)  ·  Ctrl+Shift+E shut down'], ['Lights', 'L landing · Shift+L all external lights'],
+  ['Systems / overhead panel', 'O  (electrics, APU, engine start, fuel, lights, failures)'], ['Electronic checklist', 'I'],
+  ['Engine auto-start / shutdown', 'Ctrl+E (or Shift+E)  ·  Ctrl+Shift+E shut down'], ['Lights', 'Shift+L landing · Ctrl+Shift+L all external lights'],
   ['Autobrake', 'Shift+B cycle OFF / LO / MED / MAX / RTO'], ['Alternate gear extension', 'Shift+G'], ['Master caution / warning', 'Shift+M (or click the light) to reset'],
-  ['Mouse flying', 'Y toggles mouse-yoke mode (steer with the pointer)'], ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Map / fly to airport', 'M map · click an airport → Fly here'], ['Autopilot route', 'LNAV + VNAV on the panel fly to your destination'], ['Cockpit panel', 'H show / hide'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'U'],
+  ['Mouse flying', 'Y toggles mouse-yoke mode (steer with the pointer)'], ['Look / orbit', 'Drag mouse · wheel zoom · V reset view'], ['Map / fly to airport', 'M map · click an airport → Fly here'], ['Autopilot route', 'LNAV + VNAV on the panel fly to your destination'], ['Cockpit panel', 'H show / hide'], ['Air traffic control', '` or L opens the ATC window · 1–9 pick a request while it is open'], ['Pause / menu', 'P or Esc'], ['Mute sound', 'U'],
 ];
 
 export class Input {
@@ -56,12 +56,12 @@ export class Input {
       if (!e.repeat) {
         const lower = k.length === 1 ? k.toLowerCase() : k;
         const map = {
-          y: 'mouseYoke', o: 'systems', j: 'checklist', l: 'landingLights', g: 'gear', f: 'flapsDown', r: 'flapsUp', n: 'parkingBrake', t: 'reversers', z: 'ap', x: 'at', c: 'camera', h: 'panel', m: 'map', u: 'mute', v: 'resetView',
+          y: 'mouseYoke', o: 'systems', i: 'checklist', g: 'gear', f: 'flapsDown', r: 'flapsUp', n: 'parkingBrake', j: 'pushback', t: 'reversers', z: 'ap', x: 'at', c: 'camera', h: 'panel', m: 'map', u: 'mute', v: 'resetView',
           '1': 'cam1', '2': 'cam2', '3': 'cam3', '4': 'cam4', F1: 'idle', F4: 'full', '?': 'help', k: 'help',
         };
         // modifier combos for the systems (checked before the plain keys)
         const combo = (e.ctrlKey || e.metaKey ? 'ctrl+' : '') + (e.shiftKey ? 'shift+' : '') + lower;
-        const comboMap = { 'ctrl+e': 'autostart', 'shift+e': 'autostart', 'ctrl+shift+e': 'shutdown', 'shift+l': 'allLights', 'shift+b': 'autobrake', 'shift+g': 'altGear', 'shift+m': 'masterAck' };
+        const comboMap = { 'ctrl+e': 'autostart', 'shift+e': 'autostart', 'ctrl+shift+e': 'shutdown', 'shift+l': 'landingLights', 'ctrl+shift+l': 'allLights', 'shift+b': 'autobrake', 'shift+g': 'altGear', 'shift+m': 'masterAck' };
         if (comboMap[combo]) { this.fire(comboMap[combo]); e.preventDefault(); }
         else if (e.ctrlKey || e.metaKey) { /* leave browser shortcuts alone */ }
         else if (k === '/' ) { this.fire(e.shiftKey ? 'spoilerArm' : 'spoiler'); }

@@ -1,0 +1,37 @@
+{
+ "exterior": "Models/777-300ER.ac",
+ "extNames": "^Fuselage$",
+ "xcg": 31.589,
+ "groundFG": -5.66,
+ "groundZ": -5.42,
+ "keep": "^Models/(flightdeck|pedestal|lowpedestal|OHpanel|APpanel|Panel3|L_Mid|R_Mid|gear-ctl|panel\\.|Instruments/)",
+ "dropNames": "\\.Led$|LED_ON|Mouse_Led|screenoff|^SpotLight|^FloodLight|[Cc]one|_lit$|_on$|halo|^hud|^HUD|FlashLight",
+ "screens": {
+  "pfd": [
+   "EFIS.screen"
+  ],
+  "nd": [
+   "ND.screenL"
+  ],
+  "eicas": [
+   "EFIS.screen.002"
+  ],
+  "pfd2": [
+   "EFIS.screen.001"
+  ],
+  "nd2": [
+   "ND.screenR"
+  ],
+  "eicas2": [
+   "MFD.screen"
+  ]
+ },
+ "eyeFG": [
+  -28.0781,
+  -0.57,
+  0.8
+ ],
+ "pitchDeg": -13.5,
+ "decimateOver": 500,
+ "decimateMin": 0.06
+}
