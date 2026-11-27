@@ -844,6 +844,79 @@ export const LIVERIES = [
       band(0.38, 0.28, 0.55, '#FFCC00');
     },
   },
+  {
+    id: 'austrian', name: 'Austrian Airlines', subtitle: '2018 livery', country: 'AT',
+    fleet: ['a320neo', 'b767-300er', 'b777-200er', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#e3e5e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#E30613', wingletOut: '#E30613', wingletIn: '#E30613', stab: '#d3d6da',
+    fuselage(p, l) {
+      p.text('Austrian', titleX(l, 0.34), TH, titleSize(l, 0.42), '#E30613', { font: FONTS.sans, weight: 700 });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.5), '#E30613', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#E30613');
+      // red-white-red: white band with the forward-pointing chevron
+      f.poly([[-0.3, 0.4], [1.3, 0.4], [1.3, 0.6], [-0.3, 0.6]], '#ffffff');
+      f.draw(0.38, 0.5, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.3; c.fillStyle = '#E30613';
+        c.beginPath(); c.moveTo(-s * 0.9, 0); c.lineTo(s * 0.1, s * 0.55); c.lineTo(s * 0.1, s * 0.28); c.lineTo(-s * 0.35, 0); c.lineTo(s * 0.1, -s * 0.28); c.lineTo(s * 0.1, -s * 0.55); c.closePath(); c.fill();
+      });
+    },
+  },
+  {
+    id: 'finnair', name: 'Finnair', subtitle: '2010 livery', country: 'FI',
+    fleet: ['a330-300', 'a350-900', 'atr72-600', 'e190'],
+    base: '#ffffff', engine: '#e6e8eb', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#ffffff', wingletIn: '#ffffff', stab: '#d6d9dd',
+    fuselage(p, l) {
+      p.text('FINNAIR', titleX(l, 0.34), TH, titleSize(l, 0.4), '#0B1560', { font: FONTS.sans, weight: 800, spacing: 0.08 });
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      f.text('FINNAIR', 0.5, 0.42, f.h * 0.11, '#0B1560', { weight: 800, maxW: f.midChord * 0.72 });
+    },
+  },
+  {
+    id: 'koreanair', name: 'Korean Air', subtitle: 'Sky blue (classic)', country: 'KR',
+    fleet: ['a220-300', 'a321neo', 'a330-300', 'a380-800', 'b737-800', 'b737-900er', 'b737-max8', 'b747-8i', 'b747-8f', 'b777-200er', 'b777-300er', 'b777f', 'b787-9', 'b787-10', 'a330-200'],
+    base: '#8FC9EC', belly: '#c4c9cf', engine: '#8FC9EC', engineLip: '#c8ccd2', pylon: '#8FC9EC', finBase: '#8FC9EC', wingletOut: '#8FC9EC', wingletIn: '#8FC9EC', stab: '#8FC9EC',
+    windowColor: '#14283a', regColor: '#0B2265',
+    fuselage(p, l) {
+      p.band(-0.3, -1.6, '#c4c9cf');
+      p.band(-0.25, -0.3, '#ffffff');
+      p.band(-0.3, -0.34, '#0B2265', { x0: l.L * 0.04, x1: l.L * 0.9 });
+      const sz = titleSize(l, 0.32);
+      titleRow(p, titleX(l, 0.37), TH, [
+        { t: 'KOREAN AIR', size: sz, color: '#0B2265', o: { font: FONTS.sans, weight: 700, spacing: 0.08 } },
+        { t: '대한항공', size: sz * 0.8, color: '#0B2265', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.9);
+    },
+    fin(f) {
+      f.fill('#8FC9EC');
+      f.draw(0.48, 0.5, (c) => { const r = Math.min(f.h, f.midChord) * 0.3; circle(c, r * 1.1); c.fillStyle = '#ffffff'; c.fill(); taegeuk(c, r); });
+    },
+  },
+  {
+    id: 'eva', name: 'EVA Air', subtitle: '2015 livery', country: 'TW',
+    fleet: ['a321neo', 'a330-300', 'a350-1000', 'b777-300er', 'b777f', 'b787-9', 'b787-10'],
+    base: '#ffffff', engine: '#00563F', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#00563F', wingletOut: '#00563F', wingletIn: '#00563F', stab: '#cfd4d2',
+    regColor: '#ffffff',
+    fuselage(p, l) {
+      p.band(-0.22, -1.6, '#00563F');
+      p.band(-0.17, -0.22, '#F08300');
+      p.text('EVA AIR', titleX(l, 0.3), TH, titleSize(l, 0.38), '#00563F', { font: FONTS.sans, weight: 800, spacing: 0.12 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.4), '#00563F', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#00563F');
+      f.draw(0.48, 0.5, (c) => { // globe with orange ring
+        const r = Math.min(f.h, f.midChord) * 0.3;
+        circle(c, r * 1.12); c.fillStyle = '#F08300'; c.fill();
+        circle(c, r); c.fillStyle = '#ffffff'; c.fill();
+        c.strokeStyle = '#00563F'; c.lineWidth = r * 0.08;
+        for (const k of [0.35, 0.7]) { c.beginPath(); c.ellipse(0, 0, r * k, r, 0, 0, 7); c.stroke(); }
+        for (const y of [-0.5, 0, 0.5]) { const w = Math.sqrt(1 - y * y) * r; c.beginPath(); c.moveTo(-w, y * r); c.lineTo(w, y * r); c.stroke(); }
+      });
+    },
+  },
   // ------------------------------------------------------------ house & generic
   {
     id: 'airbus-house', name: 'Airbus House', subtitle: 'Manufacturer demonstrator', country: 'EU',

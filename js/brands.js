@@ -43,6 +43,9 @@ const E = {
   latam: () => '<path d="M-13,4 C-4,6 4,9 12,15 C8,6 0,2 -13,4 Z M-9,-6 C0,-4 7,2 12,10 C8,0 0,-4 -9,-6 Z" fill="#E8114B"/>',
   eagleKnight: () => '<path d="M10,-12 Q12,8 1,12 Q-6,13 -9,7 L-13,4 Q-12,1 -9,-1 L-8,1 Q-4,-3 -3,-12 Z" fill="#c9cfd8"/><path d="M-6,6 Q-3,7.5 0,6 Q-3,5 -6,6 Z" fill="#0B2343"/><path d="M1,9 Q3,1 1,-9 M4,9 Q6,1 4,-9 M7,8 Q9,1 7,-9" stroke="#0B2343" stroke-width="1" fill="none"/>',
   iberia: () => '<path d="M-14,-14 H14 V2 Q0,-2 -14,-10 Z" fill="#D7192D"/><path d="M-14,-7 Q0,1 14,5 V8 Q0,4 -14,-4 Z" fill="#F39200"/><path d="M-14,-1 Q0,7 14,11 V13 Q0,10 -14,2 Z" fill="#FFCC00"/>',
+  austrian: () => '<rect x="-13" y="-13" width="26" height="26" rx="3" fill="#E30613"/><rect x="-13" y="-4" width="26" height="8" fill="#fff"/><path d="M-9,0 L1,5 L1,2.6 L-4,0 L1,-2.6 L1,-5 Z" fill="#E30613"/>',
+  taegeuk: () => '<circle r="14" fill="#fff"/><circle r="12" fill="#C60C30"/><path d="M-12,0 A12,12 0 0,0 12,0 Z" fill="#003478"/><path d="M-12,0 A6,6 0 0,0 0,0 Z" fill="#C60C30"/><path d="M0,0 A6,6 0 0,1 12,0 Z" fill="#003478"/>',
+  evaGlobe: () => '<circle r="14" fill="#F08300"/><circle r="12" fill="#fff"/><g stroke="#00563F" stroke-width="1.2" fill="none"><ellipse rx="4.2" ry="12"/><ellipse rx="8.4" ry="12"/><path d="M-12,0 H12 M-10.4,-6 H10.4 M-10.4,6 H10.4"/></g>',
   circleMark: (c, t) => `<circle r="13" fill="none" stroke="${c}" stroke-width="2"/><text y="4.5" text-anchor="middle" font-family="${F.wide}" font-size="11" fill="${c}">${t}</text>`,
 };
 
@@ -89,6 +92,10 @@ const B = {
   aeromexico: { bg: '#0B2343', word: 'AEROMEXICO', color: '#fff', font: F.sans, weight: 700, size: 12, ls: 1, emblem: E.eagleKnight(), pos: 'left' },
   westjet: { bg: '#00505A', word: 'WESTJET', color: '#fff', font: F.sans, weight: 800, size: 15, ls: 2, emblem: E.maple('#00A7A5'), pos: 'left' },
   iberia: { bg: '#ffffff', word: 'IBERIA', color: '#D7192D', font: F.sans, weight: 800, size: 20, ls: 2, emblem: E.iberia(), pos: 'left' },
+  austrian: { bg: '#ffffff', word: 'Austrian', color: '#E30613', font: F.sans, weight: 700, size: 19, emblem: E.austrian(), pos: 'left' },
+  finnair: { bg: '#ffffff', word: 'FINNAIR', color: '#0B1560', font: F.sans, weight: 800, size: 20, ls: 2, pos: 'none' },
+  koreanair: { bg: '#8FC9EC', word: 'KOREAN AIR', color: '#0B2265', font: F.sans, weight: 700, size: 12, ls: 1, emblem: E.taegeuk(), pos: 'left' },
+  eva: { bg: '#00563F', word: 'EVA AIR', color: '#fff', font: F.sans, weight: 800, size: 17, ls: 2, emblem: E.evaGlobe(), pos: 'left' },
   'airbus-house': { bg: '#00205B', word: 'AIRBUS', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, pos: 'none' },
   'boeing-house': { bg: '#0039A6', word: 'BOEING', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, emblem: E.circleMark('#fff', 'B'), pos: 'left' },
   'embraer-house': { bg: '#1b2a3f', word: 'EMBRAER', color: '#fff', font: F.sans, weight: 700, size: 16, ls: 3, pos: 'none' },
