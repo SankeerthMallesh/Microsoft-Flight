@@ -8,6 +8,7 @@ import { loadAirports, searchAirports, getAirport, runwayEnds, airportsNear, all
 import { MiniMap, gcPoints } from './minimap.js';
 import { getAircraftGLB } from './model/factory.js';
 import { World } from './world.js';
+import { LiveWeather, getLiveWeather, describe as describeWx, presetFor, flightCat } from './weather.js';
 import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
@@ -32,6 +33,7 @@ const fileToken = (window.OPENSKIES_CONFIG && String(window.OPENSKIES_CONFIG.ion
 if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
 const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60, dest: null, destRwy: '' }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
+const wxSys = new LiveWeather();
 const input = new Input();
 const audio = new Audio();
 input.invertPitch = settings.invertPitch;
@@ -141,6 +143,23 @@ function refreshSetup() {
   $('windDir').value = plan.windDir; $('windSpd').value = plan.windSpd; $('turbSel').value = String(plan.turb);
   $('fuelSel').value = plan.fuel; $('payloadSel').value = plan.payload;
   updateSetupLabels();
+  updateWxPreview();
+}
+// live weather: show the real METAR for the departure airport, and lock the manual wind fields
+async function updateWxPreview() {
+  const live = $('wxSel').value === 'live', box = $('wxInfo');
+  for (const id of ['windDir', 'windSpd', 'turbSel']) $(id).disabled = live;
+  if (!box) return;
+  box.classList.toggle('hidden', !live);
+  if (!live) return;
+  const ap = getAirport(plan.airport); if (!ap) return;
+  const token = (updateWxPreview.n = (updateWxPreview.n || 0) + 1);
+  box.innerHTML = `<span class="muted">Fetching live weather for ${ap.i}…</span>`;
+  const wx = await getLiveWeather(ap).catch(() => null);
+  if (token !== updateWxPreview.n) return;
+  if (!wx) { box.innerHTML = '<span class="warn">Live weather unavailable (offline?) — scattered clouds will be used.</span>'; return; }
+  const esc = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  box.innerHTML = `<span class="wx-cat ${flightCat(wx)}">${flightCat(wx)}</span> <code>${esc(wx.raw)}</code><br>${esc(describeWx(wx))}<br><span class="muted">${esc(wx.source)}${wx.stale ? ' · cached, offline' : ''}</span>`;
 }
 function updateSetupLabels() {
   const h = +$('timeSel').value; const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
@@ -161,6 +180,7 @@ const savePlanFromForm = () => {
   plan.windDir = +$('windDir').value || 0; plan.windSpd = +$('windSpd').value || 0; plan.turb = +$('turbSel').value; plan.fuel = +$('fuelSel').value; plan.payload = +$('payloadSel').value;
   store.set('plan', plan);
 };
+$('wxSel').addEventListener('change', updateWxPreview);
 ['runwaySel', 'startSel', 'wxSel', 'windDir', 'windSpd', 'turbSel', 'fuelSel', 'payloadSel', 'timeSel'].forEach((id) => $(id).addEventListener('change', savePlanFromForm));
 let resIdx = -1;
 $('airportSearch').addEventListener('input', () => {
@@ -318,7 +338,10 @@ async function startFlight() {
     world.model.show = false;
     world.stopMenuOrbit();
     world.viewer.scene.screenSpaceCameraController.enableInputs = false;
-    world.setWeather(plan.weather);
+    const destForWx = plan.dest ? getAirport(plan.dest) : null;
+    const liveWx = plan.weather === 'live' ? await wxSys.prepare(ap, destForWx, (t) => loading(true, t, 0.18)) : null;
+    if (plan.weather === 'live' && !liveWx) toast('Live weather unavailable — using scattered clouds', 'warn');
+    world.setWeather(liveWx ? presetFor(liveWx) : plan.weather === 'live' ? 'scattered' : plan.weather);
     world.setTimeOfDay(plan.hour, rwy.lon);
     // load scenery around the runway threshold first (to measure terrain/geoid offset)
     const Cesium = window.Cesium;
@@ -340,6 +363,8 @@ async function startFlight() {
     world.flattenAirport(ap);
     app.calibrated = { [ap.i]: true }; app.lastNear = 0;
     world.setGroundAirports(airportsNear(rwy.lat, rwy.lon, 40 * NM, 12).concat([ap]));
+    wxSys.apply(world, plan.weather, geoid); // clouds, visibility, precipitation (live or preset)
+    const wxs = plan.weather === 'live' ? wxSys.spawnParams(plan) : { windDir: plan.windDir, windSpd: plan.windSpd, turb: plan.turb, dT: 0, pRatio: 1 };
     // spawn
     const fm = new FlightModel(ac, built.physics);
     fm.assist = settings.assist;
@@ -349,9 +374,9 @@ async function startFlight() {
     const isGA = ac.category === 'General aviation';
     const fuel = ac.fuel * (plan.fuel / 100);
     const payload = Math.max(0, ac.mtow - ac.oew - ac.fuel * 0.3) * (plan.payload / 100) * 0.55;
-    const windFrom = plan.windDir * D2R, ws = plan.windSpd * KT;
+    const windFrom = wxs.windDir * D2R, ws = wxs.windSpd * KT;
     const wind = [-Math.cos(windFrom) * ws, -Math.sin(windFrom) * ws, 0];
-    const base = { fuel, payload, geoid, wind, turbulence: plan.turb, heading: rwy.heading };
+    const base = { fuel, payload, geoid, wind, turbulence: wxs.turb, heading: rwy.heading, dT: wxs.dT, pRatio: wxs.pRatio };
     let spawn;
     if (plan.start === 'runway') {
       const [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
@@ -373,7 +398,7 @@ async function startFlight() {
         [la, lo] = destination(rwy.lat, rwy.lon, brgTot, dTot - togo);
         hdg = bearing(la, lo, destAp.la * D2R, destAp.lo * D2R);
         altMsl = crzFt * FT;
-        const atmC = isa(altMsl, 0);
+        const atmC = isa(altMsl, wxs.dT, wxs.pRatio);
         const tas = ac.perf.cruiseMach ? ac.perf.cruiseMach * atmC.a : (ac.perf.cruiseKtas || 120) * KT;
         ias = Math.min(ac.perf.vmo - 10, Math.round((tas * Math.sqrt(atmC.sigma)) / KT));
       } else {
@@ -386,7 +411,7 @@ async function startFlight() {
       fm.reset({ ...base, heading: hdg, lat: la, lon: lo, h: altMsl + geoid, groundH: cruise ? 0 : rwy.elevM + geoid, flapIndex: approach ? ac.flaps.length - 1 : 0, gearDown: approach });
       const vs = fm.vspeeds();
       if (!ias) ias = approach ? vs.vref + 5 : isGA ? 100 : ac.engines.type === 'turboprop' ? 200 : 250;
-      const atm = isa(altMsl, 0);
+      const atm = isa(altMsl, wxs.dT, wxs.pRatio);
       const V = (ias * KT) / Math.sqrt(atm.sigma);
       const gamma = approach ? -3 * D2R : 0;
       const A = fm.aero;
@@ -501,6 +526,7 @@ $('rngDn').onclick = () => { app.ndRange = Math.max(5, app.ndRange / 2); }; $('r
 function endFlight(toMenu) {
   app.flying = false; input.enabled = false; app.paused = false;
   audio.stopEngines();
+  wxSys.stop();
   $('flightUI').classList.add('hidden');
   if (app.world.model) app.world.model.show = false;
   if (app.world.cockpit) app.world.cockpit.show = false;
@@ -605,6 +631,7 @@ function tick() {
   world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
   world.updateCamera(fm, dt);
   world.updatePapi(fm);
+  wxSys.update(fm, app.paused ? 0 : dt, { view: app.view, destAp: app.destAirport });
   cloudTimer -= dt; if (cloudTimer <= 0) { cloudTimer = 1; world.updateClouds(fm.lat, fm.lon, fm.h); }
   if (now - app.lastNear > 4000) {
     app.lastNear = now; app.nearby = airportsNear(fm.lat, fm.lon, app.ndRange * NM * 1.3, 25);
@@ -774,7 +801,7 @@ async function boot() {
     loading(true, 'Loading scenery…', 0.5);
     const mode = await world.setScenery(settings.scenery, (t) => loading(true, t, 0.6));
     if (mode !== settings.scenery && settings.scenery !== 'lite') $('tokenNote').textContent = settings.ionToken ? 'Could not load 3D scenery with this token — using Lite scenery.' : $('tokenNote').textContent;
-    world.setWeather(plan.weather);
+    world.setWeather(plan.weather === 'live' ? 'scattered' : plan.weather);
     const a = getAirport(plan.airport) || getAirport('KDAL');
     world.setTimeOfDay(plan.hour, a.lo * D2R);
     world.menuOrbit(a.la, a.lo);
