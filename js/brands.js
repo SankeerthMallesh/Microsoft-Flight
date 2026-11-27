@@ -33,6 +33,9 @@ const E = {
   upsShield: () => '<path d="M-12,-14 H12 V2 C12,10 6,14 0,16 C-6,14 -12,10 -12,2 Z" fill="#FFB500"/><text x="0" y="5" text-anchor="middle" font-family="' + F.sans + '" font-weight="800" font-size="10" fill="#351C15">ups</text>',
   swallow: () => '<circle r="14" fill="#fff" stroke="#1A2A6C" stroke-width="2"/><path d="M-9,4 C-4,-4 4,-8 10,-6 C4,-3 1,1 0,6 C-3,4 -6,4 -9,4 Z" fill="#D7172F"/><path d="M-4,8 C0,5 5,4 9,6" stroke="#1A2A6C" stroke-width="2" fill="none"/>',
   wing: (c) => `<path d="M-14,6 C-6,-4 6,-8 15,-8 C10,-4 6,0 4,6 Z" fill="${c}"/><path d="M-6,8 L-2,-2 L2,8 Z" fill="${c}"/>`,
+  swissFlag: () => '<rect x="-12" y="-12" width="24" height="24" rx="2" fill="#E2001A"/><rect x="-2.6" y="-8" width="5.2" height="16" fill="#fff"/><rect x="-8" y="-2.6" width="16" height="5.2" fill="#fff"/>',
+  fox: () => '<circle r="14" fill="#3f86c9"/><path d="M-12,0 Q-7,4 -2,5 L-1,12 L3,7 L7,11 L7,4 Q9,-3 5,-9 Q-2,-7 -12,0 Z" fill="#E36F1E"/><path d="M-12,0 Q-5,0 -1,-3 Q2,-7 5,-9 Q-2,-7 -12,0 Z" fill="#fff"/><circle cx="-11.5" cy="0" r="1.2" fill="#111"/>',
+  pualani: () => '<circle r="15" fill="#413691"/><path d="M-3,9 Q7,11 10,3 Q12,-5 8,-11 L0,-11 Q2,0 -3,9 Z" fill="#2a1b5c"/><path d="M-3,9 Q-4,5 -6,3 L-4,2 L-5,0 L-4,-1 L-4.5,-2 Q-4,-4 -1,-4 L0,-11 L3,-11 Q2,-2 2,3 Q1,7 -3,9 Z" fill="#f3e6ef"/><circle cx="5" cy="5" r="2.6" fill="#fff"/><circle cx="5" cy="5" r="0.9" fill="#CE0C88"/>',
   circleMark: (c, t) => `<circle r="13" fill="none" stroke="${c}" stroke-width="2"/><text y="4.5" text-anchor="middle" font-family="${F.wide}" font-size="11" fill="${c}">${t}</text>`,
 };
 
@@ -66,6 +69,11 @@ const B = {
   virgin: { bg: '#DA0530', word: 'virgin', color: '#fff', font: F.script, weight: 400, size: 24, pos: 'none', sub: 'atlantic', subColor: '#ffd5dd' },
   chinaeastern: { bg: '#ffffff', word: 'CHINA EASTERN', color: '#1A2A6C', font: F.sans, weight: 700, size: 11, ls: 1, emblem: E.swallow(), pos: 'left' },
   aeroflot: { bg: '#02458D', word: 'AEROFLOT', color: '#fff', font: F.sans, weight: 800, size: 15, ls: 2, emblem: E.wing('#F28B00'), pos: 'left' },
+  'southwest-canyon': { bg: '#3D5BA9', word: 'SOUTHWEST', color: '#fff', font: F.sans, weight: 800, size: 15, ls: 1, pos: 'none', sub: 'CANYON BLUE', subColor: '#E9A71C' },
+  spirit: { bg: '#FFE500', word: 'spirit', color: '#111', font: F.wide, weight: 900, size: 28, pos: 'none' },
+  frontier: { bg: '#ffffff', word: 'FRONTIER', color: '#00764C', font: F.wide, weight: 900, size: 14, emblem: E.fox(), pos: 'left' },
+  hawaiian: { bg: '#ffffff', word: 'HAWAIIAN', color: '#413691', font: F.sans, weight: 700, size: 13, ls: 2, emblem: E.pualani(), pos: 'left', sub: 'AIRLINES', subColor: '#CE0C88' },
+  swiss: { bg: '#ffffff', word: 'SWISS', color: '#1a1a1a', font: F.sans, weight: 800, size: 22, ls: 1, emblem: E.swissFlag(), pos: 'left' },
   'airbus-house': { bg: '#00205B', word: 'AIRBUS', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, pos: 'none' },
   'boeing-house': { bg: '#0039A6', word: 'BOEING', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, emblem: E.circleMark('#fff', 'B'), pos: 'left' },
   'embraer-house': { bg: '#1b2a3f', word: 'EMBRAER', color: '#fff', font: F.sans, weight: 700, size: 16, ls: 3, pos: 'none' },
