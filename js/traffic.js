@@ -286,7 +286,7 @@ export class Traffic {
     }
     arr.sort((a, b) => a.r.dist - b.r.dist);
     let models = 0, lights = 0;
-    const enu = this._enu || (this._enu = new Cesium.Matrix4()), m = this._m || (this._m = new Cesium.Matrix4());
+    const enu = this._enu || (this._enu = new Cesium.Matrix4());
     const sc = this._sc || (this._sc = { pos: new Cesium.Cartesian3(), X: [0, 0, 0], Y: [0, 0, 0], Z: [0, 0, 0] });
     for (let i = 0; i < arr.length; i++) {
       const tg = arr[i], p = tg.r;
@@ -303,8 +303,9 @@ export class Traffic {
       const mp = (v) => new Cesium.Cartesian3(P.x + X[0] * v[0] + Y[0] * v[1] + Z[0] * v[2], P.y + X[1] * v[0] + Y[1] * v[1] + Z[1] * v[2], P.z + X[2] * v[0] + Y[2] * v[1] + Z[2] * v[2]);
       const gearDown = p.ground || (p.agl < 2200 && p.vs < -1) || (p.agl < 600) || (p.agl < 1500 && Math.abs(p.vs) < 2 && p.gs < 95);
       if (tg.model && tg.model.ready) {
-        Cesium.Matrix4.fromArray([X[0], X[1], X[2], 0, Y[0], Y[1], Y[2], 0, Z[0], Z[1], Z[2], 0, P.x, P.y, P.z, 1], 0, m);
-        tg.model.modelMatrix = m;
+        // own matrix per aircraft: Model keeps a reference to what it is given
+        tg.mm = Cesium.Matrix4.fromArray([X[0], X[1], X[2], 0, Y[0], Y[1], Y[2], 0, Z[0], Z[1], Z[2], 0, P.x, P.y, P.z, 1], 0, tg.mm || new Cesium.Matrix4());
+        tg.model.modelMatrix = tg.mm;
         tg.model.show = true;
         if (tg.gearDown !== gearDown) { tg.gearDown = gearDown; for (const n of tg.gearNodes || []) n.show = gearDown; }
         if (tg.modelK !== sunK) {
