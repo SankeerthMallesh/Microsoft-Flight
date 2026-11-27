@@ -21,6 +21,8 @@ export function swatchRect(i) {
 }
 
 const D2R = Math.PI / 180;
+// outward cant (deg) of each wingtip-device style
+const TIP_CANT = { canted: 32, sharklet: 12, blended: 14, split: 10, curved: 16, fence: 0, md11: 8, 'winglet-small': 10 };
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
@@ -116,7 +118,14 @@ function airfoil(n, tc, camber = 0.02) {
 // ============================================================ main builder
 export function buildAircraft(ac) {
   const g = ac.geo;
-  const L = ac.length, b = ac.span, s = b / 2;
+  const L = ac.length, b = ac.span;
+  // Published spans are measured across the wingtip devices, so pull the wing tip in by
+  // however far an outward-canted winglet reaches. (Detailed GLB types keep the plain
+  // half-span for their physics points; their wings come from the model file.)
+  const tipDevH = g.tipH || (g.tip === 'sharklet' ? 2.4 : 2.0);
+  const tipCantDeg = TIP_CANT[g.tip];
+  const tipOut = !ac.detailed && tipCantDeg != null ? Math.max(0, (g.tip === 'fence' ? tipDevH * 0.6 : tipDevH) * Math.sin(tipCantDeg * D2R) - 0.02) : 0;
+  const s = b / 2 - tipOut;
   const R = g.d / 2, H0 = (g.dh || g.d) / 2;
   const isProp = ac.engines.type !== 'turbofan';
   const isGA = ac.category === 'General aviation';
@@ -128,7 +137,8 @@ export function buildAircraft(ac) {
   const Ln = noseLenD * g.d;
   const Lt = (g.tailLen || (isProp ? 2.7 : 2.6)) * g.d;
   const tailStart = L - Lt;
-  const tipZ = -0.28 * H0;
+  const tipZ = (g.noseTip ?? -0.28) * H0; // nose-tip height (fraction of half-height)
+  const crownK = g.noseCrown || 1.75; // larger = steeper rise of the crown behind the nose ("forehead")
   const pointy = { '787': 1.6, a350: 1.7, bizjet: 1.5, crj: 1.7, embraer: 1.8, q400: 1.7 }[g.nose] || 2;
   const deck2 = g.deck2 ? g.deck2 * L : 0;
   const wingX = g.wingX * L;
@@ -154,7 +164,7 @@ export function buildAircraft(ac) {
     if (x < Ln) {
       const t = clamp(x / Ln, 0, 1);
       const sB = Math.pow(1 - Math.pow(1 - t, pointy), 1 / pointy);
-      const sT = Math.pow(1 - Math.pow(1 - t, 1.75), 1 / 1.75);
+      const sT = Math.pow(1 - Math.pow(1 - t, crownK), 1 / crownK);
       top = tipZ + (H0 - tipZ) * sT;
       bot = tipZ - (H0 + tipZ) * sB;
       hw = R * sB;
@@ -388,10 +398,10 @@ export function buildAircraft(ac) {
     pc.grid(rings, side < 0);
   }
   if (['sharklet', 'blended', 'split', 'curved', 'canted', 'fence', 'md11', 'winglet-small'].includes(g.tip)) {
-    const h = g.tipH || (g.tip === 'sharklet' ? 2.4 : 2.0);
+    const h = tipDevH;
     const sec = wingSection(s);
     for (const side of [1, -1]) {
-      const cant = { canted: 32, sharklet: 12, blended: 14, split: 10, curved: 16, fence: 0, md11: 8, 'winglet-small': 10 }[g.tip] * D2R;
+      const cant = tipCantDeg * D2R;
       const sweepW = { fence: 30, curved: 50 }[g.tip] || 42;
       const baseC = g.tip === 'fence' ? sec.c * 0.95 : sec.c * 0.85;
       const base = { xl: sec.xl + (sec.c - baseC) * 0.5, c: baseC, y: s - 0.02, z: sec.z, cant };
@@ -417,6 +427,18 @@ export function buildAircraft(ac) {
   const vsweep = (g.tTail ? 36 : isGA ? 30 : isProp ? 32 : 39) * D2R;
   let vxRoot = (vt.x || 0.77) * L;
   if (vxRoot + vcr > L - 0.2) vxRoot = L - 0.2 - vcr;
+  // Published lengths are overall: keep the swept fin tip (and a T-tail's stabiliser) inside them.
+  const hsSpan = (g.tTail ? 0.34 : isGA ? 0.31 : isProp ? 0.3 : 0.37) * b * (b > 60 ? 0.92 : 1);
+  const hsArea = (g.tTail ? 0.2 : isGA ? 0.2 : 0.25) * ac.wingArea;
+  const hTaper = isGA ? 0.65 : 0.33;
+  const hcr = (2 * hsArea) / (hsSpan * (1 + hTaper));
+  const hsweep = (isGA ? 3 : isProp ? 8 : g.tTail ? 32 : 34) * D2R;
+  if (!ac.detailed) {
+    const tipLE0 = vxRoot + vh * Math.tan(vsweep);
+    let aft = tipLE0 + vct;
+    if (g.tTail) aft = Math.max(aft, tipLE0 + (vct - hcr * 0.9) * 0.5 + 0.05 * vct + (hsSpan / 2) * Math.tan(hsweep) + hcr * hTaper);
+    if (aft > L - 0.05) vxRoot -= aft - (L - 0.05);
+  }
   const nacTail3D = g.nacD;
   const finRootZ = (() => { const pr = profile(vxRoot + vcr * 0.45); return pr.top - 0.04 * H0 + (tail3 ? nacTail3D * 0.9 : 0); })();
   const fin = {
@@ -471,11 +493,6 @@ export function buildAircraft(ac) {
 
   // ---------------------------------------------------- horizontal tail
   {
-    const hsSpan = (g.tTail ? 0.34 : isGA ? 0.31 : isProp ? 0.3 : 0.37) * b * (b > 60 ? 0.92 : 1);
-    const hsArea = (g.tTail ? 0.2 : isGA ? 0.2 : 0.25) * ac.wingArea;
-    const hTaper = isGA ? 0.65 : 0.33;
-    const hcr = (2 * hsArea) / (hsSpan * (1 + hTaper));
-    const hsweep = (isGA ? 3 : isProp ? 8 : g.tTail ? 32 : 34) * D2R;
     let hxRoot, hz;
     if (g.tTail) { hxRoot = fin.tipLE + (vct - hcr * 0.9) * 0.5 + 0.05 * vct; hz = fin.zRoot + vh - 0.05; }
     else { hxRoot = Math.min(L - hcr - 0.25 * Lt, fin.rootLE + vcr * 0.25); const pr = profile(hxRoot + hcr * 0.4); hz = pr.cz + pr.ht * (isGA ? 0.1 : 0.05); }
@@ -653,9 +670,11 @@ export function buildAircraft(ac) {
       for (const side of [1, -1]) {
         const y = e.y * s;
         const sec = wingSection(y);
-        const len = e.mount === 'highwing' ? sec.c * 1.9 : sec.c * 1.55;
-        const xn0 = sec.xl - len * (e.mount === 'highwing' ? 0.32 : 0.4);
-        const zc = e.mount === 'highwing' ? sec.z - D * 0.18 : sec.z + D * 0.05;
+        // e.len: nacelle length in local chords; e.fwd: share of it ahead of the leading edge;
+        // e.drop: how far (in nacelle diameters) the nacelle axis hangs below the wing
+        const len = sec.c * (e.len || (e.mount === 'highwing' ? 1.9 : 1.55));
+        const xn0 = sec.xl - len * (e.fwd || (e.mount === 'highwing' ? 0.32 : 0.4));
+        const zc = e.mount === 'highwing' ? sec.z - D * (e.drop ?? 0.18) : sec.z + D * 0.05;
         propEngine(xn0, side * y, zc, D, len, ei++);
       }
     } else if (e.mount === 'nose') {
@@ -745,7 +764,17 @@ export function buildAircraft(ac) {
     const axleZ = contactZ + wheelR;
     const topZ = isGA ? profile(xcg).bot + 0.1 : strutTopMain + 0.1;
     const node = legNode(side > 0 ? 'gearL' : 'gearR', [mainX, y, topZ], side > 0 ? 'mainL' : 'mainR');
-    strut(node, mainX, y, axleZ, topZ, Math.max(0.06, wheelR * 0.22));
+    if (highWing && g.fixedGear) {
+      // spring-steel leg splayed out from the lower fuselage to the axle (Cessna style)
+      const pc = node.piece(false); const [u, v] = swatchUV(SW.gear);
+      const y0 = side * R * 0.55, z0 = profile(xcg).bot + 0.08, y1 = y - side * wheelR * 0.45, z1 = axleZ;
+      const w = 0.07, t = 0.025, nz = (y1 - y0), ny = -(z1 - z0), nl = Math.hypot(ny, nz) || 1; // normal to the leg in the y-z plane
+      const oy = ny / nl * t, oz = nz / nl * t;
+      const P = [[mainX + w, y0, z0], [mainX - w, y0, z0], [mainX - w * 0.7, y1, z1], [mainX + w * 0.7, y1, z1]];
+      const top = P.map((q) => pc.v(q[0], q[1] + oy, q[2] + oz, u, v)), bot = P.map((q) => pc.v(q[0], q[1] - oy, q[2] - oz, u, v));
+      const f = (i0, i1, i2, i3) => { pc.quad(i0, i1, i2, i3); pc.quad(i0, i3, i2, i1); };
+      f(...top); f(...bot); f(top[0], top[3], bot[3], bot[0]); f(top[1], top[2], bot[2], bot[1]);
+    } else strut(node, mainX, y, axleZ, topZ, Math.max(0.06, wheelR * 0.22));
     if (!isGA && !g.fixedGear && !isProp) doorPlate(node, mainX, y, axleZ + wheelR * 1.2, topZ - 0.1, wheelR * 1.6, side);
     const ww = wheelR * 0.75;
     if (mw === 1) wheel(node, mainX, y, axleZ, wheelR, ww);
