@@ -336,8 +336,7 @@ void main(void) {
 
 // cloud deck (stratus / stratocumulus layer) material: world-anchored fbm, holes for BKN, edge fade
 const DECK_GLSL = `
-uniform vec2 u_off; uniform float u_cov, u_radius, u_below, u_light, u_alpha;
-uniform vec3 u_tint;
+// uniforms (u_off, u_cov, u_radius, u_below, u_light, u_alpha, u_tint) are declared by the fabric
 float hh(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float vn(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   return mix(mix(hh(i), hh(i + vec2(1.0, 0.0)), f.x), mix(hh(i + vec2(0.0, 1.0)), hh(i + vec2(1.0, 1.0)), f.x), f.y); }
@@ -459,12 +458,17 @@ export class LiveWeather {
       boundingSphere: new Cesium.BoundingSphere(Cesium.Cartesian3.ZERO, R * 1.5),
     });
     const material = new Cesium.Material({ fabric: { type: 'OpenSkiesDeck' + Math.random().toString(36).slice(2, 7), uniforms: { u_off: new Cesium.Cartesian2(0, 0), u_cov: d.cov, u_radius: R, u_below: 1, u_light: 1, u_alpha: 1, u_tint: new Cesium.Cartesian3(1, 1, 1) }, source: DECK_GLSL }, translucent: true });
+    // geometry is authored in a local east-north-up frame; the instance matrix bakes the first placement
+    // in (Cesium also projects to 2D, which needs real world positions) and later moves are relative to it
+    const cc = scene.camera.positionCartographic;
+    const M0 = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromRadians(cc?.longitude ?? 0, cc?.latitude ?? 0, d.h));
     const prim = new Cesium.Primitive({
-      geometryInstances: new Cesium.GeometryInstance({ geometry }),
+      geometryInstances: new Cesium.GeometryInstance({ geometry, modelMatrix: M0 }),
       appearance: new Cesium.MaterialAppearance({ material, flat: true, translucent: true, closed: false, faceForward: false,
         renderState: { cull: { enabled: false }, depthTest: { enabled: true }, depthMask: false, blending: Cesium.BlendingState.ALPHA_BLEND } }),
       asynchronous: false, compressVertices: false, cull: false,
     });
+    d.M0inv = Cesium.Matrix4.inverseTransformation(M0, new Cesium.Matrix4());
     scene.primitives.add(prim);
     this.decks.push({ ...d, prim, material, center: null, anchor: null, drift: [0, 0] });
   }
@@ -484,7 +488,7 @@ export class LiveWeather {
       const moved = !d.center || distance(d.center.lat, d.center.lon, latR, lonR) > 4000 || d.center.below !== below;
       if (moved) {
         d.center = { lat: latR, lon: lonR, below };
-        d.prim.modelMatrix = Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromRadians(lonR, latR, hDeck));
+        d.prim.modelMatrix = Cesium.Matrix4.multiply(Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromRadians(lonR, latR, hDeck)), d.M0inv, new Cesium.Matrix4());
       }
       const e = (d.center.lon - d.anchor.lon) * 6378137 * Math.cos(latR), n = (d.center.lat - d.anchor.lat) * 6378137;
       const u = d.material.uniforms;
