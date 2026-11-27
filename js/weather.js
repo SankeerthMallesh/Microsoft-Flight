@@ -273,7 +273,7 @@ void main(void) {
   float dist = sky ? 1.0e7 : exp2(raw * czm_log2FarDepthFromNearPlusOne) - 1.0 + czm_currentFrustum.x;
   vec4 pv = czm_inverseProjection * vec4(uv * 2.0 - 1.0, 0.0, 1.0);
   vec3 dir = normalize(pv.xyz / pv.w);
-  bool near = !sky && dist < 4.5;          // aircraft cabin / cockpit interior: no weather inside
+  bool near = !sky && dist < (u_cockpit > 0.5 ? 9.0 : 4.5); // cockpit interior: no weather inside
   // windscreen rain: lens-like drops refracting the scene seen through the glass
   if (u_drops > 0.001 && u_cockpit > 0.5 && !near) {
     vec2 a = vec2(uv.x * czm_viewport.z / czm_viewport.w, uv.y);
@@ -576,7 +576,7 @@ export class LiveWeather {
     const view = ctx.view || 'chase';
     const cockpit = view === 'cockpit' ? 1 : 0;
     u.u_cockpit = cockpit;
-    u.u_rain = (p.rain || 0) * pk * (cockpit ? 0.45 : 1);
+    u.u_rain = (p.rain || 0) * pk * (cockpit ? 0.3 : 1);
     u.u_snow = (p.snow || 0) * pk;
     const gs = fm ? fm.out.tas : 0;
     u.u_speed = clamp(gs / 160, 0, 1);
