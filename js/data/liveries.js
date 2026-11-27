@@ -565,7 +565,6 @@ export const LIVERIES = [
       f.fill('#3D5BA9');
       f.poly([[0.62, -0.2], [1.3, -0.2], [1.3, 0.35], [0.95, 0.35]], '#C8102E');
       f.poly([[0.85, -0.2], [1.3, -0.2], [1.3, 0.12], [1.05, 0.12]], '#E9A71C');
-      f.text('SOUTHWEST', 0.45, 0.62, f.h * 0.09, '#ffffff', { weight: 800, maxW: f.midChord * 0.95 });
     },
   },
   {
@@ -652,6 +651,113 @@ export const LIVERIES = [
     fin(f) {
       f.fill('#E2001A');
       f.draw(0.5, 0.5, (c) => { const s = Math.min(f.h, f.midChord) * 0.32; c.fillStyle = '#ffffff'; c.fillRect(-s * 0.2, -s * 0.65, s * 0.4, s * 1.3); c.fillRect(-s * 0.65, -s * 0.2, s * 1.3, s * 0.4); });
+    },
+  },
+  {
+    id: 'airindia', name: 'Air India', subtitle: 'The Vista (2023)', country: 'IN',
+    fleet: ['a320neo', 'a321neo', 'a350-900', 'a350-1000', 'b777-200er', 'b777-300er', 'b787-8', 'b787-9'],
+    base: '#ffffff', engine: '#4B1E46', engineLip: '#C9A15B', pylon: '#ffffff', finBase: '#D9152B', wingletOut: '#D9152B', wingletIn: '#4B1E46', stab: '#d6d3d8',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.33);
+      const vista = (c) => { // gold "window" arch
+        const s = sz * 0.75; c.strokeStyle = '#C9A15B'; c.lineWidth = s * 0.14; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(-s * 0.55, -s); c.lineTo(-s * 0.55, s * 0.2); c.quadraticCurveTo(-s * 0.5, s * 0.75, 0, s * 1.05); c.quadraticCurveTo(s * 0.5, s * 0.75, s * 0.55, s * 0.2); c.lineTo(s * 0.55, -s); c.stroke();
+      };
+      titleRow(p, titleX(l, 0.33), TH, [{ w: sz * 0.9, draw: vista }, { t: 'AIR INDIA', size: sz, color: '#D9152B', o: { font: FONTS.sans, weight: 700, spacing: 0.1 } }], sz * 0.5);
+      // aubergine and red sweep from the tail onto the rear fuselage
+      const x0 = l.tailStart - l.L * 0.02;
+      p.band(3, ramp(x0, 1.1, l.L, -0.7), '#4B1E46', { x0 });
+      p.band(3, ramp(x0 + l.Lt * 0.25, 1.1, l.L, 0.1), '#D9152B', { x0: x0 + l.Lt * 0.25 });
+      p.band(ramp(x0, 1.1, l.L, -0.7), ramp(x0, 1.0, l.L, -0.8), '#C9A15B', { x0 });
+    },
+    fin(f) {
+      f.fill('#D9152B');
+      f.poly([[-0.3, -0.2], [1.3, -0.2], [1.3, 0.05], [-0.3, 0.32]], '#4B1E46');
+      f.poly([[-0.3, 0.32], [1.3, 0.05], [1.3, 0.09], [-0.3, 0.36]], '#C9A15B');
+      f.draw(0.5, 0.62, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.34; c.strokeStyle = '#C9A15B'; c.lineWidth = s * 0.09; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(-s * 0.6, -s * 0.9); c.lineTo(-s * 0.6, s * 0.15); c.quadraticCurveTo(-s * 0.55, s * 0.75, 0, s * 1.05); c.quadraticCurveTo(s * 0.55, s * 0.75, s * 0.6, s * 0.15); c.lineTo(s * 0.6, -s * 0.9); c.stroke();
+        c.lineWidth = s * 0.05; c.beginPath(); c.moveTo(-s * 0.35, -s * 0.9); c.lineTo(-s * 0.35, s * 0.1); c.quadraticCurveTo(-s * 0.3, s * 0.55, 0, s * 0.75); c.quadraticCurveTo(s * 0.3, s * 0.55, s * 0.35, s * 0.1); c.lineTo(s * 0.35, -s * 0.9); c.stroke();
+      });
+    },
+  },
+  {
+    id: 'indigo', name: 'IndiGo', subtitle: '6E', country: 'IN',
+    fleet: ['a320neo', 'a321neo', 'atr72-600'],
+    base: '#ffffff', engine: '#1B2A80', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#1B2A80', wingletOut: '#1B2A80', wingletIn: '#1B2A80', stab: '#d3d6db',
+    fuselage(p, l) {
+      p.text('IndiGo', titleX(l, 0.4), TH, titleSize(l, 0.44), '#1B2A80', { font: FONTS.sans, weight: 700, maxW: l.L * 0.4 * (p.kx / p.kv) });
+      p.band(3, ramp(l.tailStart, 0.85, l.L, -0.55), '#1B2A80', { x0: l.tailStart + l.Lt * 0.08 });
+      // trailing dots streaming forward from the tail along the lower fuselage
+      const x0 = l.L * 0.45;
+      for (let i = 0; i < 26; i++) for (let j = 0; j < 4; j++) {
+        const x = x0 + i * (l.tailStart - x0) / 26, t = i / 26, r = 0.04 + 0.16 * t * (1 - j * 0.15);
+        if ((i + j) % 2) continue;
+        p.draw(x, -0.48 - j * 0.16 + 0.35 * t * t, (c) => { c.beginPath(); c.arc(0, 0, r, 0, 7); c.fillStyle = '#1B2A80'; c.fill(); });
+      }
+    },
+    fin(f) {
+      f.fill('#1B2A80');
+      // dotted aircraft symbol
+      f.draw(0.5, 0.48, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.06; c.fillStyle = '#ffffff';
+        const pts = [[-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [0.5, 2], [1, 3], [0, -1], [0.5, -2], [1, -3], [3, 1], [3, -1], [4, 1.5]];
+        for (const [x, y] of pts) { c.beginPath(); c.arc(x * s * 1.3, y * s * 1.3, s * 0.45, 0, 7); c.fill(); }
+      });
+    },
+  },
+  {
+    id: 'ethiopian', name: 'Ethiopian Airlines', subtitle: 'Star Alliance member', country: 'ET',
+    fleet: ['b737-800', 'b737-max8', 'b767-300er', 'b777-200er', 'b777-300er', 'b777f', 'b787-8', 'b787-9', 'a350-900', 'a350-1000', 'dash8-400'],
+    base: '#ffffff', engine: '#e6e8eb', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#ffffff', wingletOut: '#078930', wingletIn: '#FCDD09', stab: '#d4d7db',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.38);
+      titleRow(p, titleX(l, 0.36), TH, [
+        { t: 'ethiopian', size: sz, color: '#078930', o: { font: FONTS.sans, weight: 700 } },
+        { t: 'ኢትዮጵያ', size: sz * 0.62, color: '#078930', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.6);
+      // tricolour ribbons along the tail cone
+      const x0 = l.tailStart - l.L * 0.02;
+      const rib = (h0, col) => p.band(ramp(x0, h0, l.L, h0 + 1.0), ramp(x0, h0 - 0.12, l.L, h0 + 0.82), col, { x0 });
+      rib(-0.3, '#078930'); rib(-0.45, '#FCDD09'); rib(-0.6, '#DA121A');
+    },
+    fin(f) {
+      f.fill('#ffffff');
+      // three sweeping feathers: green, yellow, red
+      const feather = (a0, h0, col) => {
+        const pts = [];
+        for (let k = 0; k <= 16; k++) { const t = k / 16; pts.push([a0 + 0.9 * t, h0 + 0.95 * t * t + 0.18]); }
+        for (let k = 16; k >= 0; k--) { const t = k / 16; pts.push([a0 + 0.9 * t + 0.08, h0 + 0.95 * t * t]); }
+        f.poly(pts, col);
+      };
+      feather(0.05, -0.05, '#DA121A'); feather(0.15, 0.12, '#FCDD09'); feather(0.25, 0.29, '#078930');
+    },
+  },
+  {
+    id: 'egyptair', name: 'EGYPTAIR', subtitle: 'Horus', country: 'EG',
+    fleet: ['a220-300', 'a320neo', 'a321neo', 'a330-200', 'a330-300', 'a350-900', 'b737-800', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#e3e5e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#0B2F6B', wingletOut: '#0B2F6B', wingletIn: '#0B2F6B', stab: '#d2d5da',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.33);
+      titleRow(p, titleX(l, 0.36), TH, [
+        { t: 'EGYPTAIR', size: sz, color: '#0B2F6B', o: { font: FONTS.sans, weight: 800, spacing: 0.06 } },
+        { t: 'مصر للطيران', size: sz * 0.9, color: '#0B2F6B', o: { font: FONTS.serif, weight: 700 } },
+      ], sz * 0.8);
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.5), '#0B2F6B', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#0B2F6B');
+      f.draw(0.5, 0.52, (c) => {
+        const s = Math.min(f.h, f.midChord) * 0.36; c.fillStyle = '#C9A23A'; // Horus head facing forward
+        c.beginPath(); c.moveTo(s * 0.7, -s * 0.9); c.quadraticCurveTo(s * 0.9, s * 0.4, s * 0.3, s * 0.85); c.quadraticCurveTo(-s * 0.35, s * 1.0, -s * 0.6, s * 0.45);
+        c.quadraticCurveTo(-s * 0.95, s * 0.35, -s * 0.9, s * 0.05); c.quadraticCurveTo(-s * 0.75, s * 0.1, -s * 0.6, s * 0.12); c.quadraticCurveTo(-s * 0.45, -s * 0.2, -s * 0.15, -s * 0.3);
+        c.quadraticCurveTo(-s * 0.05, -s * 0.7, -s * 0.2, -s * 0.9); c.closePath(); c.fill();
+        c.fillStyle = '#0B2F6B';
+        c.beginPath(); c.ellipse(-s * 0.2, s * 0.42, s * 0.14, s * 0.09, 0, 0, 7); c.fill();
+        c.lineWidth = s * 0.07; c.strokeStyle = '#0B2F6B'; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(-s * 0.05, s * 0.42); c.lineTo(s * 0.45, s * 0.42); c.moveTo(-s * 0.18, s * 0.3); c.quadraticCurveTo(-s * 0.1, -s * 0.1, -s * 0.05, -s * 0.2);
+        c.moveTo(s * 0.1, s * 0.25); c.quadraticCurveTo(s * 0.35, -s * 0.2, s * 0.15, -s * 0.45); c.stroke();
+      });
     },
   },
   // ------------------------------------------------------------ house & generic

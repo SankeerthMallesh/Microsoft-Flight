@@ -36,6 +36,10 @@ const E = {
   swissFlag: () => '<rect x="-12" y="-12" width="24" height="24" rx="2" fill="#E2001A"/><rect x="-2.6" y="-8" width="5.2" height="16" fill="#fff"/><rect x="-8" y="-2.6" width="16" height="5.2" fill="#fff"/>',
   fox: () => '<circle r="14" fill="#3f86c9"/><path d="M-12,0 Q-7,4 -2,5 L-1,12 L3,7 L7,11 L7,4 Q9,-3 5,-9 Q-2,-7 -12,0 Z" fill="#E36F1E"/><path d="M-12,0 Q-5,0 -1,-3 Q2,-7 5,-9 Q-2,-7 -12,0 Z" fill="#fff"/><circle cx="-11.5" cy="0" r="1.2" fill="#111"/>',
   pualani: () => '<circle r="15" fill="#413691"/><path d="M-3,9 Q7,11 10,3 Q12,-5 8,-11 L0,-11 Q2,0 -3,9 Z" fill="#2a1b5c"/><path d="M-3,9 Q-4,5 -6,3 L-4,2 L-5,0 L-4,-1 L-4.5,-2 Q-4,-4 -1,-4 L0,-11 L3,-11 Q2,-2 2,3 Q1,7 -3,9 Z" fill="#f3e6ef"/><circle cx="5" cy="5" r="2.6" fill="#fff"/><circle cx="5" cy="5" r="0.9" fill="#CE0C88"/>',
+  vista: () => '<path d="M-7,12 V-1 Q-6.5,-9 0,-13 Q6.5,-9 7,-1 V12" fill="none" stroke="#C9A15B" stroke-width="2.4"/><path d="M-3.5,12 V0 Q-3,-5 0,-8 Q3,-5 3.5,0 V12" fill="none" stroke="#C9A15B" stroke-width="1.4"/>',
+  dotPlane: (c) => [[-4, 0], [-3, 0], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [0, -1], [0.5, -2], [1, -3], [0, 1], [0.5, 2], [1, 3], [3, -1], [3, 1]].map(([x, y]) => `<circle cx="${x * 3}" cy="${y * 3}" r="1.2" fill="${c}"/>`).join(''),
+  feathers: () => ['#DA121A', '#FCDD09', '#078930'].map((c, i) => `<path d="M${-12 + i * 4},${12 - i * 6} Q${2 + i * 3},${8 - i * 6} ${10 + i * 2},${-6 - i * 4} L${12 + i * 2},${-5 - i * 4} Q${4 + i * 3},${12 - i * 6} ${-12 + i * 4},${15 - i * 6} Z" fill="${c}"/>`).join(''),
+  horus: () => '<rect x="-14" y="-14" width="28" height="28" rx="4" fill="#0B2F6B"/><path d="M7,11 Q9,-4 3,-9 Q-4,-11 -6,-5 Q-9,-4 -9,-1 Q-7,-1 -6,-1 Q-4,2 -1,3 Q-1,8 -2,11 Z" fill="#C9A23A"/><ellipse cx="-2" cy="-4.5" rx="1.6" ry="1" fill="#0B2F6B"/><path d="M0,-4.5 H5 M-1,-3 Q0,1 0,3" stroke="#0B2F6B" stroke-width="0.9" fill="none"/>',
   circleMark: (c, t) => `<circle r="13" fill="none" stroke="${c}" stroke-width="2"/><text y="4.5" text-anchor="middle" font-family="${F.wide}" font-size="11" fill="${c}">${t}</text>`,
 };
 
@@ -74,6 +78,10 @@ const B = {
   frontier: { bg: '#ffffff', word: 'FRONTIER', color: '#00764C', font: F.wide, weight: 900, size: 14, emblem: E.fox(), pos: 'left' },
   hawaiian: { bg: '#ffffff', word: 'HAWAIIAN', color: '#413691', font: F.sans, weight: 700, size: 13, ls: 2, emblem: E.pualani(), pos: 'left', sub: 'AIRLINES', subColor: '#CE0C88' },
   swiss: { bg: '#ffffff', word: 'SWISS', color: '#1a1a1a', font: F.sans, weight: 800, size: 22, ls: 1, emblem: E.swissFlag(), pos: 'left' },
+  airindia: { bg: '#ffffff', word: 'AIR INDIA', color: '#D9152B', font: F.sans, weight: 700, size: 15, ls: 2, emblem: E.vista(), pos: 'left' },
+  indigo: { bg: '#1B2A80', word: 'IndiGo', color: '#fff', font: F.sans, weight: 700, size: 21, emblem: E.dotPlane('#fff'), pos: 'left' },
+  ethiopian: { bg: '#ffffff', word: 'ethiopian', color: '#078930', font: F.sans, weight: 700, size: 17, emblem: E.feathers(), pos: 'left' },
+  egyptair: { bg: '#ffffff', word: 'EGYPTAIR', color: '#0B2F6B', font: F.sans, weight: 800, size: 14, ls: 1, emblem: E.horus(), pos: 'left' },
   'airbus-house': { bg: '#00205B', word: 'AIRBUS', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, pos: 'none' },
   'boeing-house': { bg: '#0039A6', word: 'BOEING', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, emblem: E.circleMark('#fff', 'B'), pos: 'left' },
   'embraer-house': { bg: '#1b2a3f', word: 'EMBRAER', color: '#fff', font: F.sans, weight: 700, size: 16, ls: 3, pos: 'none' },
