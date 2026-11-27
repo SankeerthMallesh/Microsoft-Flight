@@ -148,7 +148,7 @@ export class Audio {
 
   start(engineType, ac, ctx) {
     if (!this.init(ctx)) return;
-    if (this.ctx.state === 'suspended' && this.ctx.resume) this.ctx.resume();
+    if (this.ctx.state === 'suspended' && !(typeof OfflineAudioContext !== 'undefined' && this.ctx instanceof OfflineAudioContext)) this.ctx.resume();
     this.stopEngines();
     const c = this.ctx;
     this.type = engineType; this.ac = ac || null;
@@ -278,7 +278,7 @@ export class Audio {
       if (jump) { this.extDelay.delayTime.cancelScheduledValues(t); this.extDelay.delayTime.setValueAtTime(d, t); this.extGain.gain.setValueAtTime(0.0001, t); }
       else set(this.extDelay.delayTime, d, 0.06);
       set(this.extAir.frequency, clamp(19000 * Math.exp(-dist / 700), 600, 19000), 0.1); set(this.extBody.gain, 0, 0.15);
-      set(this.extGain.gain, clamp(55 / dist, 0.004, 1.2), jump ? 0.3 : 0.08);
+      set(this.extGain.gain, clamp(70 / dist, 0.004, 1.2), jump ? 0.3 : 0.08);
       set(this.cabBus.gain, 0, 0.15);
     }
     const front = clamp(0.25 + 0.75 * (cosF + 1) / 2, 0, 1); // forward-radiated (fan tones, buzz-saw)
