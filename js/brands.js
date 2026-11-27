@@ -46,6 +46,10 @@ const E = {
   austrian: () => '<rect x="-13" y="-13" width="26" height="26" rx="3" fill="#E30613"/><rect x="-13" y="-4" width="26" height="8" fill="#fff"/><path d="M-9,0 L1,5 L1,2.6 L-4,0 L1,-2.6 L1,-5 Z" fill="#E30613"/>',
   taegeuk: () => '<circle r="14" fill="#fff"/><circle r="12" fill="#C60C30"/><path d="M-12,0 A12,12 0 0,0 12,0 Z" fill="#003478"/><path d="M-12,0 A6,6 0 0,0 0,0 Z" fill="#C60C30"/><path d="M0,0 A6,6 0 0,1 12,0 Z" fill="#003478"/>',
   evaGlobe: () => '<circle r="14" fill="#F08300"/><circle r="12" fill="#fff"/><g stroke="#00563F" stroke-width="1.2" fill="none"><ellipse rx="4.2" ry="12"/><ellipse rx="8.4" ry="12"/><path d="M-12,0 H12 M-10.4,-6 H10.4 M-10.4,6 H10.4"/></g>',
+  orchid: () => '<g transform="scale(0.85)">' + [[0, 13, '#D4A017'], [72, 12, '#C3228B'], [-72, 12, '#C3228B'], [140, 10, '#D4A017'], [-140, 10, '#D4A017']].map(([r, l, c]) => `<ellipse cx="0" cy="${-l / 2}" rx="4" ry="${l * 0.55}" fill="${c}" transform="rotate(${r})"/>`).join('') + '<circle r="2.8" fill="#fff"/></g>',
+  koru: (c) => `<path d="M2,14 Q-10,8 -8,-2 Q-6,-11 3,-10 Q10,-8 9,-1 Q8,5 2,4 Q-2,3 -1,-1 Q0,-4 3,-3" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+  lotus: (c) => [0, 34, -34, 66, -66].map((r, i) => `<path d="M0,6 Q-5,-${i < 1 ? 6 : 4} 0,-${i < 1 ? 13 : i < 3 ? 11 : 8} Q5,-${i < 1 ? 6 : 4} 0,6 Z" fill="${c}" transform="rotate(${r} 0 6)"/>`).join('') + `<ellipse cx="0" cy="8" rx="10" ry="1.5" fill="${c}"/>`,
+  palmSwords: (c) => `<g stroke="${c}" fill="none" stroke-linecap="round"><path d="M-10,9 Q0,14 10,4 M10,9 Q0,14 -10,4" stroke-width="1.6"/><path d="M0,11 V-3" stroke-width="2"/></g>` + [-60, -35, -12, 12, 35, 60].map((r) => `<ellipse cx="0" cy="-8" rx="1.6" ry="5" fill="${c}" transform="rotate(${r} 0 -3)"/>`).join(''),
   circleMark: (c, t) => `<circle r="13" fill="none" stroke="${c}" stroke-width="2"/><text y="4.5" text-anchor="middle" font-family="${F.wide}" font-size="11" fill="${c}">${t}</text>`,
 };
 
@@ -96,6 +100,10 @@ const B = {
   finnair: { bg: '#ffffff', word: 'FINNAIR', color: '#0B1560', font: F.sans, weight: 800, size: 20, ls: 2, pos: 'none' },
   koreanair: { bg: '#8FC9EC', word: 'KOREAN AIR', color: '#0B2265', font: F.sans, weight: 700, size: 12, ls: 1, emblem: E.taegeuk(), pos: 'left' },
   eva: { bg: '#00563F', word: 'EVA AIR', color: '#fff', font: F.sans, weight: 800, size: 17, ls: 2, emblem: E.evaGlobe(), pos: 'left' },
+  thai: { bg: '#4E1A74', word: 'THAI', color: '#fff', font: F.sans, weight: 800, size: 22, ls: 3, emblem: E.orchid(), pos: 'left' },
+  airnz: { bg: '#111111', word: 'AIR NEW ZEALAND', color: '#fff', font: F.sans, weight: 700, size: 10, ls: 1, emblem: E.koru('#fff'), pos: 'left' },
+  vietnam: { bg: '#005C8F', word: 'VIETNAM', color: '#fff', font: F.sans, weight: 700, size: 13, ls: 2, emblem: E.lotus('#C9A14A'), pos: 'left', sub: 'AIRLINES', subColor: '#C9A14A' },
+  saudia: { bg: '#0B5DA7', word: 'SAUDIA', color: '#fff', font: F.sans, weight: 700, size: 17, ls: 3, emblem: E.palmSwords('#E3CE9B'), pos: 'left' },
   'airbus-house': { bg: '#00205B', word: 'AIRBUS', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, pos: 'none' },
   'boeing-house': { bg: '#0039A6', word: 'BOEING', color: '#fff', font: F.sans, weight: 800, size: 19, ls: 3, emblem: E.circleMark('#fff', 'B'), pos: 'left' },
   'embraer-house': { bg: '#1b2a3f', word: 'EMBRAER', color: '#fff', font: F.sans, weight: 700, size: 16, ls: 3, pos: 'none' },

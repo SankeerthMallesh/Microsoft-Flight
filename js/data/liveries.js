@@ -917,6 +917,90 @@ export const LIVERIES = [
       });
     },
   },
+  {
+    id: 'thai', name: 'Thai Airways', subtitle: 'Royal Orchid', country: 'TH',
+    fleet: ['a321neo', 'a330-300', 'a350-900', 'b777-300er', 'b787-8', 'b787-9'],
+    base: '#ffffff', engine: '#e4e2e8', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#4E1A74', wingletOut: '#4E1A74', wingletIn: '#4E1A74', stab: '#d4d2da',
+    fuselage(p, l) {
+      const sz = titleSize(l, 0.36);
+      titleRow(p, titleX(l, 0.33), TH, [
+        { t: 'THAI', size: sz, color: '#4E1A74', o: { font: FONTS.sans, weight: 800, spacing: 0.12 } },
+        { t: 'การบินไทย', size: sz * 0.7, color: '#4E1A74', o: { font: FONTS.sans, weight: 700 } },
+      ], sz * 0.8);
+      // purple, gold and magenta sweep under the tail
+      const x0 = l.tailStart - l.L * 0.06;
+      p.band(3, ramp(x0, 1.1, l.L, -0.55), '#4E1A74', { x0 });
+      p.band(ramp(x0, 1.1, l.L, -0.55), ramp(x0, 0.98, l.L, -0.7), '#D4A017', { x0 });
+      p.band(ramp(x0, 0.98, l.L, -0.7), ramp(x0, 0.82, l.L, -0.9), '#C3228B', { x0 });
+    },
+    fin(f) {
+      f.fill('#4E1A74');
+      f.draw(0.5, 0.5, (c) => { // stylised orchid
+        const s = Math.min(f.h, f.midChord) * 0.36;
+        const petal = (rot, len, wid, col) => { c.save(); c.rotate(rot); c.beginPath(); c.ellipse(0, len * 0.5, wid, len * 0.55, 0, 0, 7); c.fillStyle = col; c.fill(); c.restore(); };
+        petal(0.0, s * 1.1, s * 0.32, '#D4A017');
+        petal(1.25, s * 1.0, s * 0.3, '#C3228B'); petal(-1.25, s * 1.0, s * 0.3, '#C3228B');
+        petal(2.45, s * 0.85, s * 0.28, '#D4A017'); petal(-2.45, s * 0.85, s * 0.28, '#D4A017');
+        circle(c, s * 0.22); c.fillStyle = '#ffffff'; c.fill();
+      });
+    },
+  },
+  {
+    id: 'airnz', name: 'Air New Zealand', subtitle: 'Koru (2012)', country: 'NZ',
+    fleet: ['a320neo', 'a321neo', 'atr72-600', 'b777-200er', 'b777-300er', 'b787-9'],
+    base: '#ffffff', engine: '#111111', engineLip: '#b9bec5', pylon: '#ffffff', finBase: '#111111', wingletOut: '#111111', wingletIn: '#111111', stab: '#d0d3d6',
+    fuselage(p, l) {
+      p.text('AIR NEW ZEALAND', titleX(l, 0.35), TH, titleSize(l, 0.28), '#111111', { font: FONTS.sans, weight: 700, spacing: 0.1 });
+      p.band(3, ramp(l.tailStart - l.L * 0.03, 1.0, l.L, -0.65), '#111111', { x0: l.tailStart - l.L * 0.03 });
+    },
+    fin(f) {
+      f.fill('#111111');
+      f.draw(0.5, 0.55, (c) => koru(c, Math.min(f.h, f.midChord) * 0.4, '#ffffff'));
+    },
+  },
+  {
+    id: 'vietnam', name: 'Vietnam Airlines', subtitle: 'Golden Lotus', country: 'VN',
+    fleet: ['a321neo', 'a350-900', 'b787-9', 'b787-10', 'atr72-600'],
+    base: '#ffffff', engine: '#005C8F', engineLip: '#C9A14A', pylon: '#ffffff', finBase: '#005C8F', wingletOut: '#005C8F', wingletIn: '#005C8F', stab: '#d2d6da',
+    fuselage(p, l) {
+      p.text('VIETNAM AIRLINES', titleX(l, 0.35), TH, titleSize(l, 0.28), '#005C8F', { font: FONTS.sans, weight: 700, spacing: 0.08 });
+      p.band(3, ramp(l.tailStart, 0.8, l.L, -0.5), '#005C8F', { x0: l.tailStart + l.Lt * 0.1 });
+    },
+    fin(f) {
+      f.fill('#005C8F');
+      f.draw(0.5, 0.48, (c) => { // golden lotus
+        const s = Math.min(f.h, f.midChord) * 0.34; c.fillStyle = '#C9A14A';
+        const petal = (rot, len, wid) => { c.save(); c.rotate(rot); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(-wid, len * 0.55, 0, len); c.quadraticCurveTo(wid, len * 0.55, 0, 0); c.fill(); c.restore(); };
+        petal(0, s * 1.15, s * 0.42); petal(0.6, s, s * 0.38); petal(-0.6, s, s * 0.38); petal(1.15, s * 0.8, s * 0.32); petal(-1.15, s * 0.8, s * 0.32);
+        c.beginPath(); c.ellipse(0, -s * 0.12, s * 0.75, s * 0.1, 0, 0, 7); c.fill();
+      });
+    },
+  },
+  {
+    id: 'saudia', name: 'Saudia', subtitle: '2016 livery', country: 'SA',
+    fleet: ['a320neo', 'a321neo', 'a330-300', 'b777-300er', 'b787-9', 'b787-10'],
+    base: '#ffffff', belly: '#CDB78A', engine: '#e4e6e9', engineLip: '#c8ccd2', pylon: '#ffffff', finBase: '#0B5DA7', wingletOut: '#0B5DA7', wingletIn: '#CDB78A', stab: '#d3d5d6',
+    fuselage(p, l) {
+      p.band(-0.5, -1.6, '#CDB78A', { x0: l.L * 0.03 });
+      p.band(-0.44, -0.5, '#0B5DA7', { x0: l.L * 0.05, x1: l.L * 0.92 });
+      const sz = titleSize(l, 0.34);
+      titleRow(p, titleX(l, 0.35), TH, [
+        { t: 'SAUDIA', size: sz, color: '#1F3D7A', o: { font: FONTS.sans, weight: 700, spacing: 0.14 } },
+        { t: 'السعودية', size: sz * 1.0, color: '#1F3D7A', o: { font: FONTS.serif, weight: 700 } },
+      ], sz * 0.9);
+    },
+    fin(f) {
+      const g = [['#0B5DA7', 0.55, 1.3], ['#1475BE', 0.4, 0.55], ['#1F8FD0', 0.28, 0.4]];
+      for (const [col, h0, h1] of g) f.poly([[-0.3, h0], [1.3, h0], [1.3, h1], [-0.3, h1]], col);
+      f.poly([[-0.3, -0.2], [1.3, -0.2], [1.3, 0.12], [-0.3, 0.32]], '#CDB78A');
+      f.draw(0.5, 0.64, (c) => { // palm and crossed swords
+        const s = Math.min(f.h, f.midChord) * 0.3; c.strokeStyle = '#E3CE9B'; c.fillStyle = '#E3CE9B'; c.lineCap = 'round';
+        c.lineWidth = s * 0.08; c.beginPath(); c.moveTo(-s * 0.75, -s * 0.55); c.quadraticCurveTo(0, -s * 0.95, s * 0.75, -s * 0.2); c.moveTo(s * 0.75, -s * 0.55); c.quadraticCurveTo(0, -s * 0.95, -s * 0.75, -s * 0.2); c.stroke();
+        c.lineWidth = s * 0.1; c.beginPath(); c.moveTo(0, -s * 0.8); c.lineTo(0, s * 0.35); c.stroke();
+        for (let k = 0; k < 7; k++) { const a = Math.PI * (0.1 + 0.8 * k / 6); c.save(); c.translate(0, s * 0.38); c.rotate(a - Math.PI / 2); c.beginPath(); c.ellipse(0, s * 0.32, s * 0.08, s * 0.34, 0, 0, 7); c.fill(); c.restore(); }
+      });
+    },
+  },
   // ------------------------------------------------------------ house & generic
   {
     id: 'airbus-house', name: 'Airbus House', subtitle: 'Manufacturer demonstrator', country: 'EU',
