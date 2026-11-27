@@ -267,11 +267,12 @@ float flakes(vec2 uv, float scale, float spd, float seed) {
 void main(void) {
   vec2 uv = v_textureCoordinates;
   vec4 col = texture(colorTexture, uv);
-  float depth = czm_readDepth(depthTexture, uv);
-  bool sky = depth >= 1.0;
-  vec4 pEC = czm_windowToEyeCoordinates(gl_FragCoord.xy, sky ? 0.999999 : depth);
-  float dist = sky ? 1.0e7 : length(pEC.xyz);
-  vec3 dir = normalize(pEC.xyz);
+  // distance from the raw logarithmic depth (czm_windowToEyeCoordinates loses it in a post pass)
+  float raw = texture(depthTexture, uv).r;
+  bool sky = raw >= 1.0;
+  float dist = sky ? 1.0e7 : exp2(raw * czm_log2FarDepthFromNearPlusOne) - 1.0 + czm_currentFrustum.x;
+  vec4 pv = czm_inverseProjection * vec4(uv * 2.0 - 1.0, 0.0, 1.0);
+  vec3 dir = normalize(pv.xyz / pv.w);
   bool near = !sky && dist < 4.5;          // aircraft cabin / cockpit interior: no weather inside
   // windscreen rain: lens-like drops refracting the scene seen through the glass
   if (u_drops > 0.001 && u_cockpit > 0.5 && !near) {
