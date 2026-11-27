@@ -101,7 +101,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 330, cruiseMach: 0.78, ceiling: 41000, range: 6700, seats: '130–160' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 3.7, nose: 'airbus', wingX: 0.36, sweep: 27, dihedral: 5, taper: 0.28, tip: 'raked', gc: 0.8,
-      eng: twinWing(0.33), nacD: 2.15, vt: { h: 6.2 }, mainWheels: 2 },
+      eng: twinWing(0.33), nacD: 2.15, vt: { h: 6.7 }, mainWheels: 2 },
   },
   {
     id: 'a319neo', maker: 'Airbus', name: 'A319neo', family: 'A320', category: 'Narrow-body',
@@ -110,7 +110,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 350, cruiseMach: 0.78, ceiling: 39800, range: 6850, seats: '120–160' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 3.95, nose: 'airbus', wingX: 0.33, sweep: 25, dihedral: 5.1, taper: 0.24, tip: 'sharklet', gc: 1.0,
-      eng: twinWing(0.34), nacD: 2.4, vt: { h: 6.3 }, mainWheels: 2 },
+      eng: twinWing(0.34), nacD: 2.4, vt: { h: 6.7 }, mainWheels: 2 },
   },
   {
     id: 'a320neo', maker: 'Airbus', name: 'A320neo', family: 'A320', category: 'Narrow-body',
@@ -130,7 +130,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 350, cruiseMach: 0.78, ceiling: 39800, range: 7400, seats: '180–244' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 3.95, nose: 'airbus', wingX: 0.37, sweep: 25, dihedral: 5.1, taper: 0.24, tip: 'sharklet', gc: 1.0,
-      eng: twinWing(0.34), nacD: 2.4, vt: { h: 6.3 }, mainWheels: 2 },
+      eng: twinWing(0.34), nacD: 2.4, vt: { h: 6.5 }, mainWheels: 2 },
   },
   {
     id: 'a330-300', maker: 'Airbus', name: 'A330-300', family: 'A330', category: 'Wide-body',
@@ -139,7 +139,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 330, cruiseMach: 0.82, ceiling: 41450, range: 11750, seats: '277–300' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.64, nose: 'airbus', wingX: 0.36, sweep: 30, dihedral: 5.5, taper: 0.25, tip: 'blended', tipH: 2.7, gc: 1.5,
-      eng: twinWing(0.33), nacD: 3.0, vt: { h: 8.9 }, mainWheels: 4 },
+      eng: twinWing(0.33), nacD: 3.0, vt: { h: 10.0 }, mainWheels: 4 },
   },
   {
     id: 'a330-900', maker: 'Airbus', name: 'A330-900neo', family: 'A330', category: 'Wide-body',
@@ -148,7 +148,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 330, cruiseMach: 0.82, ceiling: 41450, range: 13334, seats: '260–300' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.64, nose: 'airbus', wingX: 0.36, sweep: 30, dihedral: 5.5, taper: 0.24, tip: 'sharklet', tipH: 3.7, gc: 1.5,
-      eng: twinWing(0.33), nacD: 3.35, vt: { h: 8.9 }, mainWheels: 4 },
+      eng: twinWing(0.33), nacD: 3.35, vt: { h: 9.8 }, mainWheels: 4 },
   },
   {
     id: 'a340-600', maker: 'Airbus', name: 'A340-600', family: 'A340', category: 'Wide-body',
@@ -157,7 +157,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 330, cruiseMach: 0.83, ceiling: 41450, range: 14450, seats: '326–380' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.64, nose: 'airbus', wingX: 0.37, sweep: 31.1, dihedral: 5.5, taper: 0.22, tip: 'blended', tipH: 2.9, gc: 1.6,
-      eng: quadWing(0.28, 0.55), nacD: 2.9, vt: { h: 9.2 }, mainWheels: 4, centerGear: true },
+      eng: quadWing(0.28, 0.55), nacD: 2.9, vt: { h: 10.2 }, mainWheels: 4, centerGear: true },
   },
   {
     id: 'a350-900', maker: 'Airbus', name: 'A350-900', family: 'A350', category: 'Wide-body',
@@ -166,7 +166,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 340, cruiseMach: 0.85, ceiling: 43100, range: 15372, seats: '300–350' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.96, nose: 'a350', wingX: 0.36, sweep: 31.9, dihedral: 6, taper: 0.2, tip: 'curved', tipH: 4.2, gc: 1.6,
-      eng: twinWing(0.33), nacD: 3.6, vt: { h: 9.1 }, mainWheels: 4 },
+      eng: twinWing(0.33), nacD: 3.6, vt: { h: 9.7 }, mainWheels: 4 },
   },
   {
     id: 'a350-1000', maker: 'Airbus', name: 'A350-1000', family: 'A350', category: 'Wide-body',
@@ -175,7 +175,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 340, cruiseMach: 0.85, ceiling: 41450, range: 16100, seats: '350–410' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.96, nose: 'a350', wingX: 0.37, sweep: 31.9, dihedral: 6, taper: 0.2, tip: 'curved', tipH: 4.2, gc: 1.6,
-      eng: twinWing(0.33), nacD: 3.7, vt: { h: 9.1 }, mainWheels: 6 },
+      eng: twinWing(0.33), nacD: 3.7, vt: { h: 9.5 }, mainWheels: 6 },
   },
   {
     id: 'a380-800', maker: 'Airbus', name: 'A380-800', family: 'A380', category: 'Wide-body',
@@ -183,8 +183,8 @@ export const AIRCRAFT = [
     engines: { count: 4, type: 'turbofan', thrust: 334, name: 'RR Trent 900 / EA GP7200' },
     perf: { mmo: 0.89, vmo: 340, cruiseMach: 0.85, ceiling: 43000, range: 14800, seats: '525–853' },
     flaps: AIRBUS_FLAPS, fbw: true,
-    geo: { d: 7.14, dh: 8.41, nose: 'a380', wingX: 0.33, sweep: 33.5, dihedral: 5.6, taper: 0.22, tip: 'fence', tipH: 2.4, gc: 1.9,
-      eng: quadWing(0.31, 0.58), nacD: 3.4, vt: { h: 13.0 }, mainWheels: 4, bodyGear: 6, noseLen: 1.6, tailLen: 2.7 },
+    geo: { d: 7.14, dh: 8.41, nose: 'a380', noseTip: -0.1, noseCrown: 2.4, wingX: 0.33, sweep: 33.5, dihedral: 5.6, taper: 0.22, tip: 'fence', tipH: 2.4, gc: 1.9,
+      eng: quadWing(0.36, 0.64), nacD: 3.4, vt: { h: 14.5 }, mainWheels: 4, bodyGear: 6, noseLen: 1.6, tailLen: 2.7 },
   },
   // ---------------------------------------------------------------- BOEING
   {
@@ -194,7 +194,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.785, ceiling: 41000, range: 6370, seats: '126–149' },
     flaps: BOEING_737_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: 'boeing', wingX: 0.34, sweep: 25, dihedral: 6, taper: 0.28, tip: 'blended', tipH: 2.5, gc: 0.55,
-      eng: twinWing(0.31), nacD: 2.0, flatNacelle: true, vt: { h: 6.9 }, mainWheels: 2 },
+      eng: twinWing(0.31), nacD: 2.0, flatNacelle: true, vt: { h: 8.0 }, mainWheels: 2 },
   },
   {
     id: 'b737-800', maker: 'Boeing', name: '737-800', family: '737 NG', category: 'Narrow-body',
@@ -226,7 +226,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.79, ceiling: 41000, range: 6570, seats: '178–220' },
     flaps: BOEING_737_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: 'boeing', wingX: 0.37, sweep: 25, dihedral: 6, taper: 0.28, tip: 'split', tipH: 2.9, gc: 0.6,
-      eng: twinWing(0.31), nacD: 2.15, chevrons: true, vt: { h: 6.9 }, mainWheels: 2, tailCone: 'max' },
+      eng: twinWing(0.31), nacD: 2.15, chevrons: true, vt: { h: 7.3 }, mainWheels: 2, tailCone: 'max' },
   },
   {
     id: 'b747-400', maker: 'Boeing', name: '747-400', family: '747', category: 'Wide-body',
@@ -235,7 +235,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.85, ceiling: 45100, range: 13450, seats: '416–524' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 6.5, dh: 7.8, nose: 'b747', wingX: 0.32, sweep: 37.5, dihedral: 7, taper: 0.24, tip: 'canted', tipH: 1.8, gc: 1.8,
-      eng: quadWing(0.4, 0.69), nacD: 2.9, vt: { h: 10.8 }, mainWheels: 4, bodyGear: 4, deck2: 0.3, noseLen: 1.4 },
+      eng: quadWing(0.4, 0.69), nacD: 2.9, vt: { h: 9.9 }, mainWheels: 4, bodyGear: 4, deck2: 0.3, noseLen: 1.4 },
   },
   {
     id: 'b747-8i', maker: 'Boeing', name: '747-8 Intercontinental', family: '747', category: 'Wide-body',
@@ -244,7 +244,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.855, ceiling: 43100, range: 14320, seats: '410–467' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 6.5, dh: 7.8, nose: 'b747', wingX: 0.33, sweep: 37.5, dihedral: 7, taper: 0.22, tip: 'raked', gc: 1.8,
-      eng: quadWing(0.4, 0.69), nacD: 3.1, chevrons: true, vt: { h: 10.8 }, mainWheels: 4, bodyGear: 4, deck2: 0.37, noseLen: 1.4 },
+      eng: quadWing(0.4, 0.69), nacD: 3.1, chevrons: true, vt: { h: 9.9 }, mainWheels: 4, bodyGear: 4, deck2: 0.37, noseLen: 1.4 },
   },
   {
     id: 'b757-200', maker: 'Boeing', name: '757-200', family: '757', category: 'Narrow-body',
@@ -253,7 +253,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 350, cruiseMach: 0.8, ceiling: 42000, range: 7250, seats: '200–239' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: '757', wingX: 0.36, sweep: 25, dihedral: 6, taper: 0.24, tip: 'blended', tipH: 3.1, gc: 1.3,
-      eng: twinWing(0.33), nacD: 2.5, vt: { h: 7.4 }, mainWheels: 4 },
+      eng: twinWing(0.33), nacD: 2.5, vt: { h: 8.3 }, mainWheels: 4 },
   },
   {
     id: 'b767-300er', maker: 'Boeing', name: '767-300ER', family: '767', category: 'Wide-body',
@@ -262,7 +262,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 360, cruiseMach: 0.8, ceiling: 43100, range: 11070, seats: '218–269' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 5.03, nose: '767', wingX: 0.36, sweep: 31.5, dihedral: 6, taper: 0.24, tip: 'none', gc: 1.4,
-      eng: twinWing(0.32), nacD: 2.9, vt: { h: 8.6 }, mainWheels: 4 },
+      eng: twinWing(0.32), nacD: 2.9, vt: { h: 9.6 }, mainWheels: 4 },
   },
   {
     id: 'b777-200er', maker: 'Boeing', name: '777-200ER', family: '777', category: 'Wide-body',
@@ -271,7 +271,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13080, seats: '301–400' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 6.19, nose: '777', wingX: 0.36, sweep: 31.6, dihedral: 6, taper: 0.2, tip: 'none', gc: 1.9,
-      eng: twinWing(0.32), nacD: 3.9, vt: { h: 10.0 }, mainWheels: 6, tailCone: '777' },
+      eng: twinWing(0.32), nacD: 3.9, vt: { h: 10.7 }, mainWheels: 6, tailCone: '777' },
   },
   {
     id: 'b777-300er', maker: 'Boeing', name: '777-300ER', family: '777', category: 'Wide-body',
@@ -280,7 +280,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13650, seats: '350–396' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 6.19, nose: '777', wingX: 0.37, sweep: 31.6, dihedral: 6, taper: 0.2, tip: 'raked', gc: 1.9,
-      eng: twinWing(0.32), nacD: 4.2, vt: { h: 10.0 }, mainWheels: 6, tailCone: '777' },
+      eng: twinWing(0.32), nacD: 4.2, vt: { h: 10.3 }, mainWheels: 6, tailCone: '777' },
   },
   {
     id: 'b777f', maker: 'Boeing', name: '777 Freighter', family: '777', category: 'Cargo',
@@ -289,7 +289,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 9070, seats: 'Cargo 102 t' },
     flaps: BOEING_WIDE_FLAPS, cargo: true,
     geo: { d: 6.19, nose: '777', wingX: 0.36, sweep: 31.6, dihedral: 6, taper: 0.2, tip: 'raked', gc: 1.9,
-      eng: twinWing(0.32), nacD: 4.2, vt: { h: 10.0 }, mainWheels: 6, tailCone: '777' },
+      eng: twinWing(0.32), nacD: 4.2, vt: { h: 10.6 }, mainWheels: 6, tailCone: '777' },
   },
   {
     id: 'b777-9', maker: 'Boeing', name: '777-9', family: '777X', category: 'Wide-body',
@@ -297,8 +297,8 @@ export const AIRCRAFT = [
     engines: { count: 2, type: 'turbofan', thrust: 470, name: 'GE GE9X' },
     perf: { mmo: 0.89, vmo: 330, cruiseMach: 0.84, ceiling: 43100, range: 13500, seats: '426' },
     flaps: BOEING_WIDE_FLAPS,
-    geo: { d: 6.19, nose: '787', wingX: 0.36, sweep: 29.5, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.9,
-      eng: twinWing(0.31), nacD: 4.4, chevrons: false, vt: { h: 10.4 }, mainWheels: 6, tailCone: '777' },
+    geo: { d: 6.19, nose: '777', wingX: 0.36, sweep: 29.5, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.9,
+      eng: twinWing(0.31), nacD: 4.4, chevrons: false, vt: { h: 11.4 }, mainWheels: 6, tailCone: '777' },
   },
   {
     id: 'b787-8', maker: 'Boeing', name: '787-8 Dreamliner', family: '787', category: 'Wide-body',
@@ -307,7 +307,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 43100, range: 13530, seats: '248' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 5.77, nose: '787', wingX: 0.35, sweep: 32.2, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.5, wingFlex: 1.2,
-      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 9.0 }, mainWheels: 4 },
+      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 10.1 }, mainWheels: 4 },
   },
   {
     id: 'b787-9', maker: 'Boeing', name: '787-9 Dreamliner', family: '787', category: 'Wide-body',
@@ -316,7 +316,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 43100, range: 14010, seats: '296' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 5.77, nose: '787', wingX: 0.36, sweep: 32.2, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.5, wingFlex: 1.2,
-      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 9.0 }, mainWheels: 4 },
+      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 10.1 }, mainWheels: 4 },
   },
   {
     id: 'b787-10', maker: 'Boeing', name: '787-10 Dreamliner', family: '787', category: 'Wide-body',
@@ -325,7 +325,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.9, vmo: 360, cruiseMach: 0.85, ceiling: 41100, range: 11910, seats: '336' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 5.77, nose: '787', wingX: 0.37, sweep: 32.2, dihedral: 6, taper: 0.18, tip: 'raked', gc: 1.5, wingFlex: 1.2,
-      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 9.0 }, mainWheels: 4 },
+      eng: twinWing(0.32), nacD: 3.4, chevrons: true, vt: { h: 10.0 }, mainWheels: 4 },
   },
   // ------------------------------------------------------------- McDONNELL
   {
@@ -335,7 +335,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.87, vmo: 365, cruiseMach: 0.83, ceiling: 42000, range: 6725, seats: 'Cargo 91 t' },
     flaps: MD11_FLAPS, cargo: true,
     geo: { d: 6.02, nose: 'dc10', wingX: 0.33, sweep: 35, dihedral: 5.5, taper: 0.24, tip: 'md11', tipH: 2.5, gc: 1.6,
-      eng: [{ mount: 'wing', y: 0.33 }, { mount: 'tail3' }], nacD: 2.9, vt: { h: 9.2, x: 0.84 }, mainWheels: 4, centerGear: true },
+      eng: [{ mount: 'wing', y: 0.33 }, { mount: 'tail3' }], nacD: 2.9, vt: { h: 7.8, x: 0.84 }, mainWheels: 4, centerGear: true },
   },
   // -------------------------------------------------------------- EMBRAER
   {
@@ -345,7 +345,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 320, cruiseMach: 0.78, ceiling: 41000, range: 3700, seats: '76–88' },
     flaps: EMB_FLAPS,
     geo: { d: 3.01, dh: 3.35, nose: 'embraer', wingX: 0.36, sweep: 23.5, dihedral: 5, taper: 0.3, tip: 'blended', tipH: 1.3, gc: 0.8,
-      eng: twinWing(0.33), nacD: 1.45, vt: { h: 4.9 }, mainWheels: 2 },
+      eng: twinWing(0.33), nacD: 1.45, vt: { h: 5.9 }, mainWheels: 2 },
   },
   {
     id: 'e190-e2', maker: 'Embraer', name: 'E190-E2', family: 'E-Jet E2', category: 'Regional jet',
@@ -354,7 +354,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 320, cruiseMach: 0.78, ceiling: 41000, range: 5300, seats: '97–114' },
     flaps: EMB_FLAPS,
     geo: { d: 3.01, dh: 3.35, nose: 'embraer', wingX: 0.36, sweep: 25, dihedral: 5, taper: 0.26, tip: 'raked', gc: 0.9,
-      eng: twinWing(0.32), nacD: 2.0, vt: { h: 5.6 }, mainWheels: 2 },
+      eng: twinWing(0.32), nacD: 2.0, vt: { h: 6.5 }, mainWheels: 2 },
   },
   {
     id: 'e195-e2', maker: 'Embraer', name: 'E195-E2', family: 'E-Jet E2', category: 'Regional jet',
@@ -363,7 +363,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 320, cruiseMach: 0.78, ceiling: 41000, range: 4800, seats: '120–146' },
     flaps: EMB_FLAPS,
     geo: { d: 3.01, dh: 3.35, nose: 'embraer', wingX: 0.38, sweep: 25, dihedral: 5, taper: 0.26, tip: 'raked', gc: 0.9,
-      eng: twinWing(0.32), nacD: 2.0, vt: { h: 5.6 }, mainWheels: 2 },
+      eng: twinWing(0.32), nacD: 2.0, vt: { h: 6.4 }, mainWheels: 2 },
   },
   // ---------------------------------------------------- BOMBARDIER / MHI
   {
@@ -382,7 +382,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.6, vmo: 286, cruiseKtas: 360, ceiling: 27000, range: 2040, seats: '78–90' },
     flaps: Q400_FLAPS,
     geo: { d: 2.69, nose: 'q400', wingX: 0.4, wingZ: 'high', sweep: 2, dihedral: 2.5, taper: 0.5, tip: 'none', gc: 1.0,
-      eng: [{ mount: 'highwing', y: 0.29 }], nacD: 1.25, tTail: true, vt: { h: 4.9, x: 0.79 }, mainWheels: 2, tailLen: 2.6 },
+      eng: [{ mount: 'highwing', y: 0.29, len: 2.9, fwd: 0.3, drop: 0.42 }], nacD: 1.25, tTail: true, vt: { h: 4.9, x: 0.79 }, mainWheels: 2, tailLen: 2.6 },
   },
   {
     id: 'atr72-600', maker: 'ATR', name: 'ATR 72-600', family: 'ATR', category: 'Turboprop',
@@ -391,7 +391,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 275, ceiling: 25000, range: 1528, seats: '70–78' },
     flaps: ATR_FLAPS,
     geo: { d: 2.77, nose: 'atr', wingX: 0.42, wingZ: 'high', sweep: 3, dihedral: 2.5, taper: 0.55, tip: 'none', gc: 0.75,
-      eng: [{ mount: 'highwing', y: 0.31 }], nacD: 1.15, tTail: true, vt: { h: 4.0, x: 0.8 }, mainWheels: 2, tailLen: 2.7, sponson: true },
+      eng: [{ mount: 'highwing', y: 0.31, len: 2.2, fwd: 0.36, drop: 0.36 }], nacD: 1.15, tTail: true, vt: { h: 4.5, x: 0.8 }, mainWheels: 2, tailLen: 2.7, sponson: true },
   },
   // ----------------------------------------------------------- OTHER JETS
   {
@@ -401,7 +401,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.785, ceiling: 39800, range: 5555, seats: '158–192' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 3.96, nose: 'airbus', wingX: 0.35, sweep: 25, dihedral: 5, taper: 0.24, tip: 'sharklet', gc: 1.0,
-      eng: twinWing(0.33), nacD: 2.3, vt: { h: 6.4 }, mainWheels: 2 },
+      eng: twinWing(0.33), nacD: 2.3, vt: { h: 6.9 }, mainWheels: 2 },
   },
   {
     id: 'ssj100', maker: 'Sukhoi', name: 'Superjet 100', family: 'SSJ', category: 'Regional jet',
@@ -410,7 +410,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.81, vmo: 320, cruiseMach: 0.78, ceiling: 40000, range: 3048, seats: '87–108' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 3.24, nose: 'airbus', wingX: 0.35, sweep: 24, dihedral: 5, taper: 0.28, tip: 'sharklet', tipH: 1.4, gc: 0.9,
-      eng: twinWing(0.33), nacD: 1.75, vt: { h: 5.0 }, mainWheels: 2 },
+      eng: twinWing(0.33), nacD: 1.75, vt: { h: 6.2 }, mainWheels: 2 },
   },
   // ------------------------------------------------------ BUSINESS / GA
   {
@@ -420,7 +420,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.925, vmo: 340, cruiseMach: 0.9, ceiling: 51000, range: 13890, seats: '11–19' },
     flaps: BIZJET_FLAPS,
     geo: { d: 2.5, dh: 2.6, nose: 'bizjet', wingX: 0.39, sweep: 36, dihedral: 3, taper: 0.3, tip: 'blended', tipH: 1.5, gc: 0.6,
-      eng: [{ mount: 'tail' }], nacD: 1.45, tTail: true, vt: { h: 3.7, x: 0.79 }, mainWheels: 2, ovalWindows: true },
+      eng: [{ mount: 'tail' }], nacD: 1.45, tTail: true, vt: { h: 4.6, x: 0.79 }, mainWheels: 2, ovalWindows: true },
   },
   {
     id: 'kingair350', maker: 'Beechcraft', name: 'King Air 350i', family: 'King Air', category: 'Turboprop',
@@ -448,7 +448,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 330, cruiseMach: 0.82, ceiling: 41450, range: 13450, seats: '210–250' },
     flaps: AIRBUS_FLAPS, fbw: true,
     geo: { d: 5.64, nose: 'airbus', wingX: 0.35, sweep: 30, dihedral: 5.5, taper: 0.25, tip: 'blended', tipH: 2.7, gc: 1.5,
-      eng: twinWing(0.33), nacD: 3.0, vt: { h: 9.4 }, mainWheels: 4 },
+      eng: twinWing(0.33), nacD: 3.0, vt: { h: 10.7 }, mainWheels: 4 },
   },
   {
     id: 'a300-600f', maker: 'Airbus', name: 'A300-600F', family: 'A300', category: 'Cargo',
@@ -457,7 +457,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 335, cruiseMach: 0.78, ceiling: 40000, range: 4850, seats: 'Cargo 48 t' },
     flaps: [{ label: '0', flap: 0, slat: 0 }, { label: '15/0', flap: 0, slat: 0.8 }, { label: '15/15', flap: 0.35, slat: 1 }, { label: '15/20', flap: 0.55, slat: 1 }, { label: '30/40', flap: 1, slat: 1 }], cargo: true,
     geo: { d: 5.64, nose: 'airbus', wingX: 0.35, sweep: 28, dihedral: 5.5, taper: 0.3, tip: 'fence', tipH: 1.4, gc: 1.4,
-      eng: twinWing(0.34), nacD: 2.9, vt: { h: 8.6 }, mainWheels: 4 },
+      eng: twinWing(0.34), nacD: 2.9, vt: { h: 10.0 }, mainWheels: 4 },
   },
   {
     id: 'b737-max7', maker: 'Boeing', name: '737 MAX 7', family: '737 MAX', category: 'Narrow-body',
@@ -466,7 +466,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.79, ceiling: 41000, range: 7130, seats: '138–172' },
     flaps: BOEING_737_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: 'boeing', wingX: 0.35, sweep: 25, dihedral: 6, taper: 0.28, tip: 'split', tipH: 2.9, gc: 0.6,
-      eng: twinWing(0.31), nacD: 2.15, vt: { h: 6.9 }, mainWheels: 2, tailCone: 'max' },
+      eng: twinWing(0.31), nacD: 2.15, vt: { h: 7.4 }, mainWheels: 2, tailCone: 'max' },
   },
   {
     id: 'b737-900er', maker: 'Boeing', name: '737-900ER', family: '737 NG', category: 'Narrow-body',
@@ -475,7 +475,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.785, ceiling: 41000, range: 5460, seats: '178–220' },
     flaps: BOEING_737_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: 'boeing', wingX: 0.37, sweep: 25, dihedral: 6, taper: 0.28, tip: 'blended', tipH: 2.5, gc: 0.55,
-      eng: twinWing(0.31), nacD: 2.0, flatNacelle: true, vt: { h: 6.9 }, mainWheels: 2 },
+      eng: twinWing(0.31), nacD: 2.0, flatNacelle: true, vt: { h: 7.8 }, mainWheels: 2 },
   },
   {
     id: 'b737-max10', maker: 'Boeing', name: '737 MAX 10', family: '737 MAX', category: 'Narrow-body',
@@ -484,7 +484,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.79, ceiling: 41000, range: 6110, seats: '188–230' },
     flaps: BOEING_737_FLAPS,
     geo: { d: 3.76, dh: 4.01, nose: 'boeing', wingX: 0.37, sweep: 25, dihedral: 6, taper: 0.28, tip: 'split', tipH: 2.9, gc: 0.7,
-      eng: twinWing(0.31), nacD: 2.15, vt: { h: 6.9 }, mainWheels: 2, tailCone: 'max' },
+      eng: twinWing(0.31), nacD: 2.15, vt: { h: 7.5 }, mainWheels: 2, tailCone: 'max' },
   },
   {
     id: 'b767-400er', maker: 'Boeing', name: '767-400ER', family: '767', category: 'Wide-body',
@@ -493,7 +493,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.86, vmo: 360, cruiseMach: 0.8, ceiling: 43100, range: 10415, seats: '245–304' },
     flaps: BOEING_WIDE_FLAPS,
     geo: { d: 5.03, nose: '767', wingX: 0.37, sweep: 31.5, dihedral: 6, taper: 0.22, tip: 'raked', gc: 1.4,
-      eng: twinWing(0.31), nacD: 2.9, vt: { h: 8.6 }, mainWheels: 4 },
+      eng: twinWing(0.31), nacD: 2.9, vt: { h: 10.6 }, mainWheels: 4 },
   },
   {
     id: 'b747-8f', maker: 'Boeing', name: '747-8 Freighter', family: '747', category: 'Cargo',
@@ -511,7 +511,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 340, cruiseMach: 0.77, ceiling: 37000, range: 3820, seats: '106–134' },
     flaps: [{ label: 'UP', flap: 0, slat: 0 }, { label: '5', flap: 0.15, slat: 1 }, { label: '13', flap: 0.3, slat: 1 }, { label: '18', flap: 0.4, slat: 1 }, { label: '25', flap: 0.55, slat: 1 }, { label: '40', flap: 1, slat: 1 }],
     geo: { d: 3.34, nose: 'dc10', wingX: 0.42, sweep: 24.5, dihedral: 3, taper: 0.25, tip: 'none', gc: 0.8,
-      eng: [{ mount: 'tail' }], nacD: 1.6, tTail: true, vt: { h: 4.2, x: 0.8 }, mainWheels: 2, tailLen: 2.5 },
+      eng: [{ mount: 'tail' }], nacD: 1.6, tTail: true, vt: { h: 5.1, x: 0.8 }, mainWheels: 2, tailLen: 2.5 },
   },
   {
     id: 'e190', maker: 'Embraer', name: 'E190', family: 'E-Jet', category: 'Regional jet',
@@ -520,7 +520,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.82, vmo: 320, cruiseMach: 0.78, ceiling: 41000, range: 4537, seats: '96–114' },
     flaps: EMB_FLAPS,
     geo: { d: 3.01, dh: 3.35, nose: 'embraer', wingX: 0.37, sweep: 23.5, dihedral: 5, taper: 0.3, tip: 'blended', tipH: 1.4, gc: 0.85,
-      eng: twinWing(0.33), nacD: 1.7, vt: { h: 5.4 }, mainWheels: 2 },
+      eng: twinWing(0.33), nacD: 1.7, vt: { h: 6.3 }, mainWheels: 2 },
   },
   {
     id: 'crj700', maker: 'Bombardier', name: 'CRJ700', family: 'CRJ', category: 'Regional jet',
@@ -529,7 +529,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.85, vmo: 335, cruiseMach: 0.78, ceiling: 41000, range: 2593, seats: '66–78' },
     flaps: CRJ_FLAPS,
     geo: { d: 2.69, nose: 'crj', wingX: 0.43, sweep: 26.9, dihedral: 4, taper: 0.3, tip: 'blended', tipH: 1.1, gc: 0.6,
-      eng: [{ mount: 'tail' }], nacD: 1.42, tTail: true, vt: { h: 4.2, x: 0.79 }, mainWheels: 2, tailLen: 2.4 },
+      eng: [{ mount: 'tail' }], nacD: 1.42, tTail: true, vt: { h: 4.4, x: 0.79 }, mainWheels: 2, tailLen: 2.4 },
   },
   {
     id: 'atr42-600', maker: 'ATR', name: 'ATR 42-600', family: 'ATR', category: 'Turboprop',
@@ -538,7 +538,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 300, ceiling: 25000, range: 1326, seats: '48–50' },
     flaps: ATR_FLAPS,
     geo: { d: 2.77, nose: 'atr', wingX: 0.41, wingZ: 'high', sweep: 3, dihedral: 2.5, taper: 0.55, tip: 'none', gc: 0.75,
-      eng: [{ mount: 'highwing', y: 0.33 }], nacD: 1.15, tTail: true, vt: { h: 4.0, x: 0.78 }, mainWheels: 2, tailLen: 2.7, sponson: true },
+      eng: [{ mount: 'highwing', y: 0.33, len: 2.2, fwd: 0.36, drop: 0.36 }], nacD: 1.15, tTail: true, vt: { h: 4.4, x: 0.78 }, mainWheels: 2, tailLen: 2.7, sponson: true },
   },
   {
     id: 'global7500', maker: 'Bombardier', name: 'Global 7500', family: 'Global', category: 'Business jet',
@@ -547,7 +547,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.925, vmo: 340, cruiseMach: 0.9, ceiling: 51000, range: 14260, seats: '14–19' },
     flaps: BIZJET_FLAPS,
     geo: { d: 2.69, dh: 2.8, nose: 'bizjet', wingX: 0.4, sweep: 34, dihedral: 3, taper: 0.3, tip: 'blended', tipH: 1.6, gc: 0.6,
-      eng: [{ mount: 'tail' }], nacD: 1.6, tTail: true, vt: { h: 3.9, x: 0.79 }, mainWheels: 2, ovalWindows: true },
+      eng: [{ mount: 'tail' }], nacD: 1.6, tTail: true, vt: { h: 5.0, x: 0.79 }, mainWheels: 2, ovalWindows: true },
   },
   {
     id: 'cj4', maker: 'Cessna', name: 'Citation CJ4 Gen2', family: 'Citation', category: 'Business jet',
@@ -556,7 +556,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.77, vmo: 305, cruiseMach: 0.73, ceiling: 45000, range: 4010, seats: '9–10' },
     flaps: BIZJET_FLAPS,
     geo: { d: 1.68, dh: 1.75, nose: 'bizjet', wingX: 0.4, sweep: 12.5, dihedral: 4, taper: 0.4, tip: 'none', gc: 0.45,
-      eng: [{ mount: 'tail' }], nacD: 0.82, tTail: true, vt: { h: 2.1, x: 0.78 }, mainWheels: 1, ovalWindows: true, noseLen: 2.6 },
+      eng: [{ mount: 'tail' }], nacD: 0.82, tTail: true, vt: { h: 2.6, x: 0.78 }, mainWheels: 1, ovalWindows: true, noseLen: 2.6 },
   },
   {
     id: 'pc12', maker: 'Pilatus', name: 'PC-12 NGX', family: 'PC-12', category: 'Turboprop',
@@ -565,7 +565,7 @@ export const AIRCRAFT = [
     perf: { mmo: 0.48, vmo: 236, cruiseKtas: 290, ceiling: 30000, range: 3417, seats: '6–10' },
     flaps: [{ label: '0°', flap: 0, slat: 0 }, { label: '15°', flap: 0.37, slat: 0 }, { label: '30°', flap: 0.75, slat: 0 }, { label: '40°', flap: 1, slat: 0 }],
     geo: { d: 1.52, dh: 1.75, nose: 'c172', wingX: 0.33, sweep: 1, dihedral: 4, taper: 0.55, tip: 'winglet-small', tipH: 0.5, gc: 0.5,
-      eng: [{ mount: 'nose' }], tTail: true, vt: { h: 2.0, x: 0.78 }, mainWheels: 1, noseLen: 2.0, tailLen: 3.0, boxy: true },
+      eng: [{ mount: 'nose' }], tTail: true, vt: { h: 2.5, x: 0.78 }, mainWheels: 1, noseLen: 2.0, tailLen: 3.0, boxy: true },
   },
   {
     id: 'sr22', maker: 'Cirrus', name: 'SR22T G7', family: 'SR22', category: 'General aviation',
