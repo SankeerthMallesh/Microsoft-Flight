@@ -9,6 +9,7 @@ import { MiniMap, gcPoints } from './minimap.js';
 import { getAircraftGLB } from './model/factory.js';
 import { World } from './world.js';
 import { Traffic } from './traffic.js';
+import { Pushback } from './airportgates.js';
 import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
 import { Input, KEY_HELP } from './input.js';
@@ -430,11 +431,20 @@ async function startFlight() {
     const windFrom = plan.windDir * D2R, ws = plan.windSpd * KT;
     const wind = [-Math.cos(windFrom) * ws, -Math.sin(windFrom) * ws, 0];
     const base = { fuel, payload, geoid, wind, turbulence: plan.turb, heading: rwy.heading };
-    let spawn;
-    if (plan.start === 'runway') {
-      const [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
-      let hg = world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
-      spawn = { ...base, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
+    let spawn, gate = null;
+    app.push = null;
+    if (plan.start === 'gate') {
+      loading(true, 'Finding a free gate…', 0.72);
+      gate = await world.pickGate(ap, ac.span);
+      if (!gate) toast('No gate data for this airport — starting on the runway', 'warn');
+    }
+    const onGround = plan.start === 'runway' || plan.start === 'gate';
+    app.gate = gate;
+    if (onGround) {
+      let [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
+      if (gate) [la, lo] = destination(gate.lat, gate.lon, gate.hdg + Math.PI, built.physics.gear[0].x); // nose wheel on the stop bar
+      let hg = gate ? world.groundFast(la, lo) : world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
+      spawn = { ...base, heading: gate ? gate.hdg : rwy.heading, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: gate ? 0 : Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
       fm.reset(spawn);
     } else {
       const approach = plan.start === 'approach';
@@ -490,7 +500,7 @@ async function startFlight() {
       else { apl.alt = Math.round(fm.out.alt / 100) * 100; apl.hdg = Math.round(wrap360(hdg * R2D)); apl.spd = ias; apl.vert = 'ALT'; apl.lat = 'HDG'; apl.engaged = true; apl.at = true; apl.runway = rwy; }
       app.cruiseStart = cruise;
     }
-    if (plan.start === 'runway') { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
+    if (onGround) { apl.sync(); apl.alt = Math.round((rwy.elevM / FT + (isGA ? 3000 : 5000)) / 100) * 100; apl.hdg = Math.round(wrap360(rwy.heading * R2D)); apl.spd = Math.round(isGA ? 90 : 220); apl.vs = isGA ? 700 : 1800; apl.vert = 'VS'; apl.runway = rwy; }
     // destination route
     app.dest = null; app.destAirport = null; app.destLights = false;
     const destAp = plan.dest ? getAirport(plan.dest) : null;
@@ -506,7 +516,7 @@ async function startFlight() {
     // stream scenery at spawn point for air starts
     world.updateAircraft(fm, 0, true);
     world.updateCamera(fm, 0.016);
-    if (plan.start !== 'runway') { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
+    if (!onGround) { loading(true, 'Streaming scenery around the aircraft…', 0.75); await world.waitForScenery(world.mode === 'lite' ? 1500 : 8000, (f) => loading(true, null, 0.75 + f * 0.2)); }
     audio.start(ac.engines.type, ac); audio.vs = fm.vspeeds(); audio.callouts.clear();
     app.flying = true; app.paused = false; app.crashed = false;
     if (app.traffic) app.traffic.start({ ap, rwy, geoid }); // live / AI air traffic
@@ -516,8 +526,9 @@ async function startFlight() {
     input.enabled = true;
     $('flightUI').classList.remove('hidden');
     loading(false);
-    toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} RWY ${rwy.ident}`, 'good');
-    if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
+    toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} ${gate ? 'gate ' + (gate.ref || '') : 'RWY ' + rwy.ident}`, 'good');
+    if (gate) setTimeout(() => toast('At the gate — press J for pushback (A / D swing the tail)', 'warn'), 1500);
+    else if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
     if (world.mode === 'lite' && settings.scenery !== 'lite') toast('Using Lite scenery — add a Cesium ion token in Settings for 3D terrain', 'warn');
     app.lastT = performance.now();
     clearTimeout(app.qkTimer); const qk = $('quickKeys'); if (qk) { qk.style.opacity = '1'; app.qkTimer = setTimeout(() => { qk.style.transition = 'opacity 1s'; qk.style.opacity = '0'; }, 20000); }
@@ -549,6 +560,12 @@ const act = {
   gear: () => { const fm = app.fm; if (!fm || fm.ac.geo.fixedGear) return; if (fm.onGround && fm.gearDown) { toast('Gear locked down on the ground', 'warn'); return; } fm.gearDown = !fm.gearDown; audio.click(); toast('Gear ' + (fm.gearDown ? 'down' : 'up')); },
   flapsDown: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex + 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
   flapsUp: () => { const fm = app.fm; if (!fm) return; fm.setFlapIndex(fm.flapIndex - 1); audio.click(); toast('Flaps ' + fm.flapLabel); },
+  pushback: () => {
+    const fm = app.fm; if (!fm || !fm.onGround) return;
+    if (app.push) { app.push = null; fm.parkingBrake = true; toast('Pushback stopped — parking brake set'); return; }
+    if (fm.out.gs > 2) { toast('Stop the aircraft before pushback', 'warn'); return; }
+    app.push = new Pushback(fm); toast('Pushback started — A / D swing the tail, J to stop', 'good');
+  },
   parkingBrake: () => { const fm = app.fm; if (!fm) return; fm.parkingBrake = !fm.parkingBrake; toast('Parking brake ' + (fm.parkingBrake ? 'set' : 'released')); },
   spoiler: () => { const fm = app.fm; if (!fm) return; fm.spoilerHandle = fm.spoilerHandle > 0 ? 0 : fm.onGround ? 1 : 0.6; fm.spoilersArmed = false; toast('Speedbrake ' + (fm.spoilerHandle ? 'extended' : 'retracted')); },
   spoilerArm: () => { const fm = app.fm; if (!fm) return; fm.spoilersArmed = !fm.spoilersArmed; fm.spoilerHandle = 0; toast('Ground spoilers ' + (fm.spoilersArmed ? 'armed' : 'disarmed')); },
@@ -665,6 +682,7 @@ function tick() {
     }
     ap.update(dt);
     fm.step(dt, null);
+    if (app.push && !app.push.update(dt, c.yaw + c.roll)) { app.push = null; toast('Pushback complete — parking brake set. Release (N) and taxi', 'good'); }
     for (const ev of fm.events.splice(0)) handleEvent(ev);
   }
   // camera input

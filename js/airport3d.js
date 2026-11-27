@@ -1,5 +1,6 @@
 // 3D airport surroundings from OpenStreetMap: flat taxiways and aprons (replacing lumpy photogrammetry)
 // plus extruded terminals, hangars, the control tower and other buildings where Google's tiles are flat.
+import { buildAirportDetail } from './airportdetail.js';
 const C = () => window.Cesium;
 const RE = 6371008.8, FT = 0.3048, D2R = Math.PI / 180;
 const ENDPOINTS = [
@@ -16,24 +17,30 @@ export function airportBBox(ap, margin = 0.014) {
   return [s - margin, w - mLo, n + margin, e + mLo];
 }
 
-const KEEP_TAGS = ['aeroway', 'building', 'height', 'building:levels', 'width', 'tower:type', 'name'];
+const KEEP_TAGS = ['aeroway', 'building', 'height', 'building:levels', 'width', 'tower:type', 'name', 'ref', 'holding_position:type'];
 function slim(elements) {
   const g = (geom) => geom.map((p) => ({ lat: +p.lat.toFixed(6), lon: +p.lon.toFixed(6) }));
   const tags = (t = {}) => { const o = {}; for (const k of KEEP_TAGS) if (t[k] != null) o[k] = t[k]; return o; };
   return elements.map((e) => e.type === 'relation'
     ? { type: 'relation', tags: tags(e.tags), members: (e.members || []).filter((m) => m.role === 'outer' && m.geometry).map((m) => ({ role: 'outer', geometry: g(m.geometry) })) }
+    : e.type === 'node' ? { type: 'node', tags: tags(e.tags), lat: +(+e.lat).toFixed(6), lon: +(+e.lon).toFixed(6) }
     : { type: e.type, tags: tags(e.tags), geometry: e.geometry ? g(e.geometry) : undefined });
 }
+const CK = 'openskies.osm2.'; // v2: adds gates, stands, jet bridges, holding positions and refs
+try { // drop the v1 cache (no gate data) to free storage
+  const old = JSON.parse(localStorage.getItem('openskies.osm.index') || 'null');
+  if (old) { for (const id of old) localStorage.removeItem('openskies.osm.' + id); localStorage.removeItem('openskies.osm.index'); }
+} catch (e) { /* no storage */ }
 function cacheGet(id) {
-  try { const v = localStorage.getItem('openskies.osm.' + id); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+  try { const v = localStorage.getItem(CK + id); return v ? JSON.parse(v) : null; } catch (e) { return null; }
 }
 function cachePut(id, elements) {
   try {
-    const idx = JSON.parse(localStorage.getItem('openskies.osm.index') || '[]').filter((x) => x !== id);
+    const idx = JSON.parse(localStorage.getItem(CK + 'index') || '[]').filter((x) => x !== id);
     idx.push(id);
-    while (idx.length > 8) { localStorage.removeItem('openskies.osm.' + idx.shift()); }
-    localStorage.setItem('openskies.osm.' + id, JSON.stringify(elements));
-    localStorage.setItem('openskies.osm.index', JSON.stringify(idx));
+    while (idx.length > 8) { localStorage.removeItem(CK + idx.shift()); }
+    localStorage.setItem(CK + id, JSON.stringify(elements));
+    localStorage.setItem(CK + 'index', JSON.stringify(idx));
   } catch (e) { /* storage full: skip caching */ }
 }
 const lastFail = new Map();
@@ -44,7 +51,7 @@ export function fetchAirportOSM(ap) {
   if (Date.now() - (lastFail.get(ap.i) || 0) < 30000) return Promise.resolve(null);
   const [s, w, n, e] = airportBBox(ap).map((v) => v.toFixed(5));
   const bb = `(${s},${w},${n},${e})`;
-  const q = `[out:json][timeout:25];(way["aeroway"~"^(taxiway|taxilane|apron|terminal|hangar|tower)$"]${bb};relation["aeroway"="apron"]${bb};way["building"]${bb};);out tags geom;`;
+  const q = `[out:json][timeout:25];(way["aeroway"~"^(taxiway|taxilane|apron|terminal|hangar|tower|jet_bridge|parking_position|holding_position)$"]${bb};node["aeroway"~"^(gate|parking_position|holding_position)$"]${bb};relation["aeroway"="apron"]${bb};way["building"]${bb};);out tags geom;`;
   const p = (async () => {
     for (let round = 0; round < 2; round++) {
       for (const url of ENDPOINTS) {
@@ -67,7 +74,7 @@ export function fetchAirportOSM(ap) {
 }
 
 // ---------------------------------------------------------------- local frame + airport plane
-function makeFrame(ap, geoid) {
+export function makeFrame(ap, geoid, flatH) {
   const lat0 = ap.la * D2R, lon0 = ap.lo * D2R, cl = Math.cos(lat0);
   const toXY = (lat, lon) => [(lon - lon0) * cl * RE, (lat - lat0) * RE];
   // least-squares plane through runway end elevations (ridge-regularised for single runways)
@@ -80,7 +87,7 @@ function makeFrame(ap, geoid) {
   const det = sxx * syy - sxy * sxy;
   let b = (sxz * syy - syz * sxy) / det, c = (syz * sxx - sxz * sxy) / det;
   const g = Math.hypot(b, c); if (g > 0.02) { b *= 0.02 / g; c *= 0.02 / g; } // airports are nearly level
-  const planeXY = (x, y) => mz + b * (x - mx) + c * (y - my) + geoid;
+  const planeXY = flatH != null ? () => flatH : (x, y) => mz + b * (x - mx) + c * (y - my) + geoid;
   return { toXY, planeXY, plane: (lat, lon) => { const [x, y] = toXY(lat, lon); return planeXY(x, y); } };
 }
 
@@ -155,7 +162,7 @@ const ringArea = (r) => { let s = 0; for (let i = 0, j = r.length - 1; i < r.len
 // opts.sampleTile(lat, lon) -> Google tile height; used to decide whether Google already has 3D buildings here
 export function buildAirport3D(ap, geoid, elements, opts = {}) {
   const Cesium = C();
-  const F = makeFrame(ap, geoid);
+  const F = makeFrame(ap, geoid, opts.flatH);
   const lat0 = ap.la * D2R, lon0 = ap.lo * D2R, cl = Math.cos(lat0);
   const fromXY = (x, y) => [lat0 + y / RE, lon0 + x / (RE * cl)];
   const cart = (x, y, dh = 0) => { const [la, lo] = fromXY(x, y); return Cesium.Cartesian3.fromRadians(lo, la, F.planeXY(x, y) + dh); };
@@ -167,6 +174,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
   const under = [];
 
   const addUnder = (ring, dh) => {
+    if (opts.flatH != null) return; // lite scenery: nothing lumpy to hide
     try {
       under.push(new Cesium.GeometryInstance({
         geometry: new Cesium.PolygonGeometry({ polygonHierarchy: new Cesium.PolygonHierarchy(ring.map(([x, y]) => cart(x, y, dh))), perPositionHeight: true, vertexFormat: Cesium.MaterialAppearance.MaterialSupport.BASIC.vertexFormat }),
@@ -203,11 +211,13 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
 
   // ---- taxiways / taxilanes (ribbons)
   let k = 0;
+  const taxis = [];
   for (const w of ways) {
     const a = w.tags?.aeroway; if (a !== 'taxiway' && a !== 'taxilane') continue;
     const pts = xyOf(w.geometry);
     let width = parseFloat(w.tags.width); if (!(width > 5 && width < 80)) width = a === 'taxilane' ? 15 : 23;
     const hw = width / 2;
+    taxis.push({ pts, hw, ref: (w.tags.ref || '').trim().slice(0, 4), kind: a });
     const { L, R } = ribbon(pts, hw + 1);
     const dh = -0.05 - (k++ % 8) * 0.004; // tiny per-way offsets avoid coplanar flicker where taxiways overlap
     const pos = [], nrm = [], st = [], idx = [];
@@ -280,10 +290,10 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       const isTerm = aw === 'terminal' || b === 'terminal', isHang = aw === 'hangar' || b === 'hangar', isTower = aw === 'tower' || t['tower:type'] === 'airport_control';
       const color = isTerm ? '#b7c3cc' : isHang ? '#c3c6cb' : isTower ? '#d8d8d4' : pal[(nb * 7) % pal.length];
       const ring = (sc = 1, dz = 0) => r.map(([x, y]) => { const [la, lo] = fromXY(cx + (x - cx) * sc, cy + (y - cy) * sc); return Cesium.Cartesian3.fromRadians(lo, la, base + dz); });
-      const add = (positions, hb, ht, col) => {
+      const add = (positions, hb, ht, col, glow = false) => {
         try {
           const id = 'bld' + ap.i + '_' + instances.length;
-          bldColors.push([id, Cesium.Color.fromCssColorString(col)]);
+          bldColors.push([id, Cesium.Color.fromCssColorString(col), glow]);
           instances.push(new Cesium.GeometryInstance({
             id,
             geometry: new Cesium.PolygonGeometry({ polygonHierarchy: new Cesium.PolygonHierarchy(positions), height: hb, extrudedHeight: ht, vertexFormat: Cesium.PerInstanceColorAppearance.VERTEX_FORMAT }),
@@ -294,12 +304,12 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       if (isTower && A < 900) {
         add(ring(), base, base + h - 9, color);                       // shaft
         add(ring(1.9), base + h - 9, base + h - 8.2, '#9da3a8');      // cab floor
-        add(ring(1.75), base + h - 8.2, base + h - 2.6, '#263845');   // glass cab
+        add(ring(1.75), base + h - 8.2, base + h - 2.6, '#263845', true); // glass cab
         add(ring(2.0), base + h - 2.6, base + h - 1.8, '#a9aeb2');    // roof
         add(ring(0.25), base + h - 1.8, base + h + 4, '#c33');        // antenna mast
       } else {
         add(ring(), base, base + h, color);
-        if (isTerm && h > 8) add(ring(1.0), base + h * 0.35, base + h * 0.8, '#5d7484'); // glazing band (slightly proud)
+        if (isTerm && h > 8) add(ring(1.0), base + h * 0.35, base + h * 0.8, '#5d7484', true); // glazing band (slightly proud)
       }
       nb++;
     }
@@ -308,6 +318,17 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       asynchronous: true, shadows: Cesium.ShadowMode.ENABLED,
     }));
   }
+
+  // ---- markings, signs, gate stands, jet bridges, floodlight masts
+  let detail = null;
+  try {
+    const bl = ways.filter((w) => w.tags && (w.tags.building || /^(terminal|hangar)$/.test(w.tags.aeroway || ''))).map((w) => {
+      const r = xyOf(w.geometry).slice(0, -1); if (r.length < 3) return null;
+      return { r, tags: w.tags, A: ringArea(r), c: r.reduce((a, p) => [a[0] + p[0] / r.length, a[1] + p[1] / r.length], [0, 0]) };
+    }).filter(Boolean);
+    detail = buildAirportDetail({ Cesium, ap, F, fromXY, elements, taxis, aprons: surfaces.rings, buildings: bl, quality: opts.quality });
+    prims.push(...detail.prims); mats.push(...detail.mats);
+  } catch (e) { console.warn('airport detail failed', e); }
 
   // ---- physics lookup: plane height on taxiways and aprons
   const surfaceHeight = (lat, lon) => {
@@ -320,9 +341,18 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
   const bboxRing = [[bs, bw], [bs, be], [bn, be], [bn, bw]].map(([la, lo]) => Cesium.Cartesian3.fromDegrees(lo, la, F.plane(la * D2R, lo * D2R)));
   // daylight scaling for the extruded buildings (per-instance colours)
   const tint = (v) => {
-    if (!bldPrim || !bldPrim.ready) return false;
-    for (const [id, c] of bldColors) { const at = bldPrim.getGeometryInstanceAttributes(id); if (at) at.color = Cesium.ColorGeometryInstanceAttribute.toValue(new Cesium.Color(c.red * v, c.green * v, c.blue * v * 1.04, 1), at.color); }
+    // signs are internally lit: never darker than ~85 % at night
+    if (detail) for (const m of detail.glowMats) { const b = Math.max(v, 0.85 - 0.25 * v); m.uniforms.color = new Cesium.Color(b, b, b, 1); }
+    if (!bldPrim) return true;
+    if (!bldPrim.ready) return false;
+    // glazing glows warm at night (lit interiors)
+    const n = Math.max(0, Math.min(1, (0.7 - v) / 0.5));
+    for (const [id, c, glow] of bldColors) {
+      const at = bldPrim.getGeometryInstanceAttributes(id); if (!at) continue;
+      const col = glow ? new Cesium.Color(c.red * v + 0.95 * n, c.green * v + 0.78 * n, c.blue * v * 1.04 + 0.5 * n, 1) : new Cesium.Color(c.red * v, c.green * v, c.blue * v * 1.04, 1);
+      at.color = Cesium.ColorGeometryInstanceAttribute.toValue(col, at.color);
+    }
     return true;
   };
-  return { prims, clips, mats, tint, surfaceHeight, google3D, bboxRing, buildings: nb, taxiways: k, aprons: surfaces.rings.length, plane: F.plane };
+  return { prims, clips, mats, tint, surfaceHeight, google3D, bboxRing, buildings: nb, taxiways: k, aprons: surfaces.rings.length, plane: F.plane, frame: { ...F, fromXY }, detail };
 }
