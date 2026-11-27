@@ -498,8 +498,10 @@ export const LIVERIES = [
       f.draw(0.45, 0.5, (c) => {
         const s = Math.min(f.h, f.midChord) * 0.33; c.fillStyle = '#FFB500';
         c.beginPath(); c.moveTo(-s * 0.8, s); c.quadraticCurveTo(0, s * 1.25, s * 0.8, s); c.lineTo(s * 0.8, -s * 0.1); c.quadraticCurveTo(s * 0.7, -s * 0.8, 0, -s * 1.1); c.quadraticCurveTo(-s * 0.7, -s * 0.8, -s * 0.8, -s * 0.1); c.closePath(); c.fill();
-        c.fillStyle = '#351C15'; c.font = `900 ${s * 0.7}px Arial`; c.save(); c.scale(1, -1); c.textAlign = 'center'; c.fillText('ups', 0, s * 0.25); c.restore();
       });
+      // text via f.text so it is not mirrored on the right side
+      const s = Math.min(f.h, f.midChord) * 0.33;
+      f.text('ups', 0.45, 0.5 + (s * 0.02) / f.h, s * 0.42, '#351C15', { weight: 900, maxW: s * 1.4 });
     },
   },
   {
