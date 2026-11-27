@@ -125,11 +125,53 @@ function loading(on, text, frac) {
 $('helpTable').innerHTML = KEY_HELP.map(([a, k]) => `<tr><td>${a}</td><td>${k}</td></tr>`).join('');
 
 // ------------------------------------------------------------------ settings form
+function updateTokenStatus() {
+  const entered = $('tokenInput').value.trim();
+  const saved = String(settings.ionToken || '').trim();
+  const changed = entered !== saved;
+  const state = $('tokenState');
+  const help = $('tokenHelp');
+  state.classList.remove('is-ready', 'is-pending');
+  if (!entered && changed) {
+    state.textContent = 'Removal pending';
+    state.classList.add('is-pending');
+    help.textContent = 'The saved token will be removed when you choose Save & reload.';
+  } else if (!entered) {
+    state.textContent = 'No token saved';
+    help.innerHTML = 'A token is needed for photorealistic cities and streamed terrain. It stays in this browser, not in the game files. <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">Get a free token</a>.';
+  } else if (changed) {
+    state.textContent = 'Unsaved token';
+    state.classList.add('is-pending');
+    help.textContent = 'Token entered. Select your scenery and choose Save & reload to store it in this browser.';
+  } else {
+    state.textContent = 'Token configured';
+    state.classList.add('is-ready');
+    help.textContent = 'A token is configured. Cesium checks its permissions when the selected 3D scenery loads.';
+  }
+}
 function loadSettingsForm() {
-  $('tokenInput').value = settings.ionToken; $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
+  $('tokenInput').value = settings.ionToken;
+  $('tokenInput').type = 'password';
+  $('toggleToken').textContent = 'Show';
+  $('toggleToken').setAttribute('aria-pressed', 'false');
+  $('scenerySel').value = settings.scenery; $('qualitySel').value = settings.quality;
   $('shadowsChk').checked = settings.shadows; $('assistSel').value = settings.assist; $('invertChk').checked = settings.invertPitch; $('volSel').value = settings.volume;
   $('musicChk').checked = settings.music !== false;
+  updateTokenStatus();
 }
+$('tokenInput').addEventListener('input', updateTokenStatus);
+$('toggleToken').addEventListener('click', () => {
+  const reveal = $('tokenInput').type === 'password';
+  $('tokenInput').type = reveal ? 'text' : 'password';
+  $('toggleToken').textContent = reveal ? 'Hide' : 'Show';
+  $('toggleToken').setAttribute('aria-pressed', String(reveal));
+  $('tokenInput').focus();
+});
+$('clearToken').addEventListener('click', () => {
+  $('tokenInput').value = '';
+  updateTokenStatus();
+  $('tokenInput').focus();
+});
 $('saveSettings').onclick = () => {
   settings.ionToken = $('tokenInput').value.trim(); settings.scenery = $('scenerySel').value; settings.quality = $('qualitySel').value;
   settings.shadows = $('shadowsChk').checked; settings.assist = $('assistSel').value; settings.invertPitch = $('invertChk').checked; settings.volume = +$('volSel').value; settings.music = $('musicChk').checked;
@@ -808,7 +850,13 @@ async function boot() {
     try { app.map = new MiniMap($('minimap'), { airports: allAirports, onSetDest: (a, ident) => setDestination(a, ident) }); } catch (e) { console.warn('map failed', e); }
     loading(true, 'Loading scenery…', 0.5);
     const mode = await world.setScenery(settings.scenery, (t) => loading(true, t, 0.6));
-    if (mode !== settings.scenery && settings.scenery !== 'lite') $('tokenNote').textContent = settings.ionToken ? 'Could not load 3D scenery with this token — using Lite scenery.' : $('tokenNote').textContent;
+    if (mode !== settings.scenery && settings.scenery !== 'lite') {
+      $('tokenNote').textContent = settings.ionToken
+        ? '3D scenery did not load. Check the Cesium token permissions and your connection in Settings.'
+        : 'Add your free Cesium ion token in Settings to unlock photorealistic 3D cities and terrain.';
+    } else if (mode === 'photoreal') {
+      $('tokenNote').textContent = 'Photorealistic 3D scenery is ready.';
+    }
     world.setWeather(plan.weather);
     const a = getAirport(plan.airport) || getAirport('KDAL');
     world.setTimeOfDay(plan.hour, a.lo * D2R);

@@ -63,10 +63,11 @@ In the repository, go to **Settings → Pages**. Choose **Deploy from a branch**
 ## Get the best scenery (free)
 
 1. Create a free account at <https://ion.cesium.com/signup>.
-2. Copy your **Default token** from <https://ion.cesium.com/tokens>.
-3. In the game, open **Settings**, paste the token and choose **Photorealistic 3D** scenery.
+2. Copy a browser-appropriate token from <https://ion.cesium.com/tokens>. Restrict the token to the domains where you host the game when possible.
+3. In the game, open **Settings → 3D scenery**, paste the token, select **Photorealistic 3D cities**, and choose **Save & reload**.
+4. The Settings screen shows whether a token is saved locally. A saved token is not necessarily valid; Cesium checks its permissions when the 3D scenery loads.
 
-The token is only stored in your own browser (localStorage). It is never put into the repository.
+The token is saved in this browser's local storage. It is not written into the source files or repository. Because browser-based Cesium must send the token with asset requests, treat it as a browser token and restrict its allowed origins in Cesium ion.
 
 ## Controls
 

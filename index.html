@@ -106,25 +106,46 @@
   <!-- ============================== SETTINGS -->
   <section id="settings" class="screen hidden">
     <div class="panel settings-panel">
-      <header><h2>Settings</h2><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
-      <div class="field"><label for="tokenInput">Cesium ion access token</label>
-        <input id="tokenInput" type="password" placeholder="Paste your free token from ion.cesium.com/tokens" autocomplete="off" />
-        <p class="muted small">Stored only in this browser (localStorage). Get one free at <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">ion.cesium.com/tokens</a>. Without a token the sim uses free satellite imagery on a flat globe.</p></div>
-      <div class="field"><label for="scenerySel">Scenery</label>
-        <select id="scenerySel">
-          <option value="photoreal">Photorealistic 3D cities (Google tiles via Cesium ion)</option>
-          <option value="terrain">World terrain + aerial imagery + 3D buildings</option>
-          <option value="lite">Lite: satellite imagery, flat ground (no token)</option>
-        </select></div>
-      <div class="field"><label for="qualitySel">Graphics quality</label>
-        <select id="qualitySel"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low (laptops)</option></select></div>
-      <div class="field"><label><input type="checkbox" id="shadowsChk" /> Shadows</label></div>
-      <div class="field"><label for="assistSel">Flight model</label>
-        <select id="assistSel"><option value="assisted">Assisted (fly-by-wire: attitude hold, protections)</option><option value="realistic">Realistic (direct control, manual trim)</option></select></div>
-      <div class="field"><label><input type="checkbox" id="invertChk" /> Invert pitch (↑ = nose up)</label></div>
-      <div class="field"><label for="volSel">Volume</label><input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7" /></div>
-      <div class="field"><label><input type="checkbox" id="musicChk" checked /> Menu &amp; loading music</label></div>
-      <footer><span class="muted small">Scenery and quality changes apply on reload.</span><button class="btn primary" id="saveSettings">Save &amp; reload</button></footer>
+      <header><div><span class="settings-kicker">WORLD &amp; PERFORMANCE</span><h2>Settings</h2></div><button class="icon-btn" data-go="back" aria-label="Back">✕</button></header>
+      <div class="settings-intro">
+        <span class="settings-intro-icon">◈</span>
+        <div><strong>Build your world</strong><p>Choose detailed 3D scenery and tune the simulator to your device.</p></div>
+      </div>
+      <section class="settings-section" aria-labelledby="sceneryHeading">
+        <div class="settings-section-title"><h3 id="sceneryHeading">3D scenery</h3><span id="tokenState" class="token-state">No token saved</span></div>
+        <div class="field token-field">
+          <label for="tokenInput">Cesium ion access token</label>
+          <div class="token-control">
+            <input id="tokenInput" type="password" placeholder="Paste your Cesium ion token" autocomplete="off" autocapitalize="off" spellcheck="false" />
+            <button class="btn small token-action" id="toggleToken" type="button" aria-controls="tokenInput" aria-pressed="false">Show</button>
+            <button class="btn small token-action" id="clearToken" type="button">Clear</button>
+          </div>
+          <p id="tokenHelp" class="muted small" aria-live="polite">Saved only in this browser. It is not written into the game files or repository. <a href="https://ion.cesium.com/tokens" target="_blank" rel="noopener">Get a free token</a>.</p>
+        </div>
+        <div class="field"><label for="scenerySel">World detail</label>
+          <select id="scenerySel">
+            <option value="photoreal">Photorealistic 3D cities — Google 3D Tiles</option>
+            <option value="terrain">3D terrain, aerial imagery &amp; buildings</option>
+            <option value="lite">Lite satellite globe — no token required</option>
+          </select>
+          <p class="settings-footnote">Photorealistic cities and streamed terrain require a working Cesium ion token and an internet connection.</p>
+        </div>
+      </section>
+      <section class="settings-section">
+        <div class="settings-section-title"><h3>Visual quality</h3><span class="settings-section-note">Adaptive performance</span></div>
+        <div class="field"><label for="qualitySel">Graphics preset</label>
+          <select id="qualitySel"><option value="high">High — sharper detail, richer shadows</option><option value="medium" selected>Balanced — recommended</option><option value="low">Performance — lighter rendering</option></select></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="shadowsChk" /> Enable shadows in Balanced / Performance presets</label></div>
+      </section>
+      <section class="settings-section settings-section-compact">
+        <h3>Flight &amp; sound</h3>
+        <div class="field"><label for="assistSel">Flight model</label>
+          <select id="assistSel"><option value="assisted">Assisted — flight protections</option><option value="realistic">Realistic — direct control, manual trim</option></select></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="invertChk" /> Invert pitch (↑ = nose up)</label></div>
+        <div class="field"><label for="volSel">Volume</label><input type="range" id="volSel" min="0" max="1" step="0.05" value="0.7" /></div>
+        <div class="field checkbox-field"><label><input type="checkbox" id="musicChk" checked /> Menu &amp; loading music</label></div>
+      </section>
+      <footer><span class="muted small">World and quality changes apply after reload.</span><button class="btn primary" id="saveSettings">Save &amp; reload</button></footer>
     </div>
   </section>
 
