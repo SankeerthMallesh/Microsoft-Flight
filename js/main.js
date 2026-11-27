@@ -1,4 +1,5 @@
 // OpenSkies Flight Simulator — application controller.
+import { FACTS, GENERAL_FACTS } from './data/facts.js';
 import { brandSVG } from './brands.js';
 import { AIRCRAFT, MAKERS, getAircraft, deriveAero } from './data/aircraft.js';
 import { LIVERIES, liveriesFor, getLivery } from './data/liveries.js';
@@ -55,8 +56,31 @@ function toast(text, kind = '') {
   setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 450); }, 3200);
   while ($('toasts').children.length > 4) $('toasts').firstChild.remove();
 }
+// rotating "Did you know?" facts: the selected aircraft first, then others in the game
+let factTimer = null, factQueue = [];
+function nextFact() {
+  if (!factQueue.length) {
+    const ids = Object.keys(FACTS).filter((id) => id !== plan.acId).sort(() => Math.random() - 0.5);
+    factQueue = ids.map((id) => ['ac', id]).slice(0, 10);
+    factQueue.splice(3, 0, ['gen', GENERAL_FACTS[Math.floor(Math.random() * GENERAL_FACTS.length)]]);
+  }
+  const [kind, v] = factQueue.shift();
+  let title, text;
+  if (kind === 'ac') { const a = getAircraft(v); title = a ? `${a.maker} ${a.name}` : v; text = FACTS[v]; } else { title = 'Flying tip'; text = v; }
+  const card = $('factCard');
+  card.classList.add('fade');
+  setTimeout(() => { $('factTitle').textContent = title; $('factText').textContent = text; card.classList.remove('fade'); }, factTimer ? 450 : 0);
+}
+function startFacts() {
+  if (factTimer) return;
+  factQueue = FACTS[plan.acId] ? [['ac', plan.acId]] : [];
+  $('factCard').classList.remove('off');
+  nextFact(); factTimer = setInterval(nextFact, 8000);
+}
+function stopFacts() { clearInterval(factTimer); factTimer = null; $('factCard').classList.add('off'); }
 function loading(on, text, frac) {
   $('loading').classList.toggle('hidden', !on);
+  if (on && app.screen !== 'menu' && !$('loading').dataset.boot) startFacts(); else if (!on) stopFacts();
   if (text) $('loadingText').textContent = text;
   if (frac != null) $('loadingBar').style.width = Math.round(frac * 100) + '%';
 }
