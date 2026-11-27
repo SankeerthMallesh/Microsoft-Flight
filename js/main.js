@@ -879,7 +879,7 @@ async function boot() {
     app.world = world;
     input.attachMouse(world.viewer.canvas);
     world.viewer.scene.preUpdate.addEventListener(tick);
-    app.traffic = new Traffic(world, { enabled: settings.traffic !== false, labels: settings.trafficLabels !== false, proxy: settings.trafficProxy });
+    app.traffic = new Traffic(world, { enabled: settings.traffic !== false, labels: settings.trafficLabels !== false, proxy: settings.trafficProxy || (/^(localhost|127\.|0\.0\.0\.0)/.test(location.hostname) || location.protocol === 'file:' ? '' : location.origin + '/api/feed?url=') });
     app.traffic.onStatus = (txt, st) => { if (app.flying) toast(st === 'live' ? `Live traffic: ${txt.replace('live · ', '')}` : st === 'ai' ? 'Live traffic unavailable — showing AI traffic' : txt, st === 'live' ? 'good' : 'warn'); };
     world.excludeExtra = () => app.traffic.primitives();
     loading(true, 'Loading airports…', 0.3);
