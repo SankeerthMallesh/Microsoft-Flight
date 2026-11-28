@@ -102,9 +102,15 @@ export class ATC {
     // callsign
     const lv = getLivery(plan.liveryId) || {};
     const tel = TELEPHONY[lv.id];
-    const seed = hash(plan.acId + plan.liveryId + Date.now());
+    const seed = Math.abs(hash(plan.acId + plan.liveryId + Date.now()));
     const heavy = ac.id && /a380/.test(ac.id) ? ' super' : ac.mtow > 136000 ? ' heavy' : '';
-    if (tel) {
+    const DIG = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+    if (ac.category === 'Military') {
+      // tactical callsign: name + flight number + position ("Viper one-one")
+      const name = { f15c: 'Eagle', f16c: 'Viper', f14d: 'Bounty', fa18ef: 'Rhino' }[ac.id] || 'Falcon';
+      const a = 1 + (seed % 4), b = 1 + ((seed >> 3) % 4);
+      this.cs = { text: `${name} ${a}${b}`, speech: `${name} ${DIG[a]} ${DIG[b]}`, short: `${name} ${DIG[a]} ${DIG[b]}` };
+    } else if (tel) {
       const num = tel[0] === 'Airbus' || tel[0] === 'Boeing' || tel[0] === 'Embraer' ? 1 + (seed % 9) * 11 : 10 + (seed % 2980);
       this.cs = { text: `${tel[0]} ${num}${heavy}`, speech: `${tel[0]} ${flightWords(num)}${heavy}`, short: `${tel[0]} ${flightWords(num)}${heavy}` };
     } else {

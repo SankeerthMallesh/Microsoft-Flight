@@ -1,0 +1,8 @@
+{ "exterior": "Models/f-14b.ac", "extNames": "^(Radome|Fuselage)", "xcg": 11.6,
+  "keep": "^Models/(f-14b\\.ac|Cockpit/)",
+  "drop": "(/mm_stores-model|/mm_f14-fx|/convexhull|/Ladder|LandingLight-on|Open$|/Reheat[LR]$|lights$|gear-indexer|/grip$)|^Models/Cockpit/.*(-lit$|_on$|_lit$)",
+  "decimate": { "^Models/Cockpit/": 0.25 },
+  "gear": { "gearN": "/(UC-N/|FwdNsGrDoor|MidNsGrDoor)", "gearL": "/UC-L/", "gearR": "/UC-R/" },
+  "tires": { "gearN": "/NsWheel$", "gearL": "/MainWheelL$", "gearR": "/MainWheelR$" },
+  "glass": "/tex-glass/", "glassColor": [0.05, 0.06, 0.07], "glassAlpha": 0.22,
+  "maxTex": 2048 }

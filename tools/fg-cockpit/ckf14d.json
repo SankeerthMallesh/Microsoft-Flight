@@ -1,0 +1,11 @@
+{ "exterior": "Models/f-14b.ac", "extNames": "^(Radome|Fuselage)", "xcg": 11.6,
+  "keep": "^Models/(Cockpit/|f-14b\\.ac)",
+  "dropPaths": "(/mm_stores-model|/mm_f14-fx|/convexhull|/Ladder|/UC-[NLR]/|NsGrDoor|LandingLight|Open$|/Reheat[LR]$|lights$|gear-indexer|/Nozzles-group|/Fan[LR]$|Inlet-Guide)",
+  "dropNames": "-lit$|_on$|_lit$|[Ll]ight[Cc]one|halo",
+  "dropAftOf": { "Cockpit/": -4.75 },
+  "decimateOver": 1500, "decimateMin": 0.12,
+  "addQuads": { "hudQuad": [[-6.15, -0.15, 0.42], [-6.15, 0.15, 0.42], [-6.15, 0.15, 0.12], [-6.15, -0.15, 0.12]] },
+  "glass": "/(tex-glass/.*|hudQuad)$", "glassAlpha": 0.1,
+  "darkScreens": true,
+  "screens": { "pfd": ["screen-bkg-off"], "nd": ["screen-bkg"], "hud": ["hudQuad"] },
+  "eyeFG": [-5.3, 0, 0.35], "pitchDeg": -10 }
