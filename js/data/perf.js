@@ -25,7 +25,7 @@ const AB_AIRBUS = { LO: 1.7, MED: 3.0, MAX: 4.6 };
 
 const FAMILY = {
   // F-35A: bulkier body (internal bays, big single engine) -> higher wave drag, M1.6 limit in afterburner
-  'F-35': { clmaxClean: 1.4, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.07, cd0: 0.022, e: 0.78, mcrit: 0.88, cdw: 0.1, ab: null, spool: 4.5, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25 },
+  'F-35': { clmaxClean: 1.4, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.07, cd0: 0.022, e: 0.78, mcrit: 0.88, cdw: 0.052, ab: null, spool: 4.5, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25 },
   // F-22A: area-ruled, internal weapons -> low wave drag (supercruise ~M1.5-1.7 on dry thrust); thrust vectoring keeps lift to high alpha
   'F-22': { clmaxClean: 1.45, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.06, cd0: 0.018, e: 0.8, mcrit: 0.9, cdw: 0.019, ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25 },
   // Airbus narrow-bodies: double-slotted / Fowler flaps, full-span slats -> low VLS

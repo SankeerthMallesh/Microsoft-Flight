@@ -1,0 +1,10 @@
+{ "exterior": "Models/F-35B.ac", "extNames": "^fuselage$", "xcg": 9.028,
+  "groundFG": -1.998, "groundZ": -1.998,
+  "keep": "^Models/(F-35B|Cockpit)\\.ac$",
+  "dropNames": "^(fan|pylons|antennas|ReheatL|lights)$",
+  "glass": "/canopy$", "glassAlpha": 0.1,
+  "darkScreens": true,
+  "screens": { "pfd": ["panel"], "nd": ["panel"], "eicas": ["panel"] },
+  "screenCrop": { "pfd": [0.0, 0.375, 0, 1], "nd": [0.395, 0.77, 0, 1], "eicas": [0.79, 0.98, 0.22, 0.72] },
+  "screenQuadsFG": { "hud": [[-5.72, -0.17, 1.32], [-5.72, 0.17, 1.32], [-5.72, 0.17, 0.98], [-5.72, -0.17, 0.98]] },
+  "eyeFG": [-4.70, 0, 1.15], "pitchDeg": -7.5 }

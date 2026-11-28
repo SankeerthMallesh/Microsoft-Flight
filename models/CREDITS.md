@@ -93,6 +93,7 @@ onto the HUD combiner and live displays onto the VSD, MPCD and TEWS. The afterbu
 | File | Original | Authors | License |
 | --- | --- | --- | --- |
 | `f35a.glb` | F-35B Lightning II for [FlightGear](https://www.flightgear.org/) (exterior, landing gear, control surfaces, nozzle, cockpit interior), from the official FlightGear aircraft download mirror | Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+| `f35a-cockpit.glb` | F-35B Lightning II for FlightGear (cockpit tub, panoramic display panel, glareshield, ejection seat, side-stick, throttle, canopy, with the airframe seen from the cockpit) | Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
 
 Converted the same way and presented as the conventional-take-off F-35A: the lift fan and external pylons were removed and the
 flight-test nose boom clipped; uses the model's low-visibility grey (VM-11) texture. Flaperons, split all-moving stabilators and

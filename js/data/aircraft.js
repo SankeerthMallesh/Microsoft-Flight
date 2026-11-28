@@ -637,6 +637,7 @@ export const AIRCRAFT = [
   {
     id: 'f35a', maker: 'Lockheed Martin', name: 'F-35A Lightning II', family: 'F-35', category: 'Military',
     detailed: { glb: 'models/f35a.glb', meta: 'models/f35a.meta.json', credit: 'FlightGear F-35 Lightning II by Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown, GPL v2 — modified (shown as the conventional F-35A)' },
+    cockpit: { glb: 'models/f35a-cockpit.glb', meta: 'models/f35a-cockpit.meta.json', credit: 'FlightGear F-35 cockpit (GPL v2)' },
     length: 15.67, span: 10.7, height: 4.38, wingArea: 42.7, mtow: 31800, oew: 13290, fuel: 8278,
     // one P&W F135-PW-100: ~28,000 lbf dry / ~43,000 lbf in afterburner
     engines: { count: 1, type: 'turbofan', thrust: 125, thrustAB: 191, name: 'P&W F135-PW-100' },
