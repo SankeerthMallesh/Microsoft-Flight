@@ -90,6 +90,13 @@ const MD11_FLAPS = [
   { label: '50', flap: 1, slat: 1 },
 ];
 
+// fighters: plain manoeuvre / landing flaps (leading edges are scheduled automatically)
+const FIGHTER_FLAPS = [
+  { label: 'UP', flap: 0, slat: 0 },
+  { label: 'HALF', flap: 0.5, slat: 0.5 },
+  { label: 'DN', flap: 1, slat: 1 },
+];
+
 // Helper to describe wing engine positions as fraction of semi-span.
 const twinWing = (y = 0.34) => [{ mount: 'wing', y }];
 const quadWing = (y1, y2) => [{ mount: 'wing', y: y1 }, { mount: 'wing', y: y2 }];
@@ -600,6 +607,16 @@ export const AIRCRAFT = [
     geo: { d: 1.12, dh: 1.3, nose: 'c172', wingX: 0.3, wingZ: 'low', sweep: 0, dihedral: 7, taper: 0.75, tip: 'none', gc: 0.3,
       eng: [{ mount: 'nose' }], fixedGear: true, vt: { h: 1.1, x: 0.8 }, mainWheels: 1, noseLen: 1.4, tailLen: 3.3, boxy: true },
   },
+  // ---------------------------------------------------------------- MILITARY (afterburning fighters)
+  {
+    id: 'f15c', maker: 'McDonnell Douglas', name: 'F-15C Eagle', family: 'F-15', category: 'Military',
+    length: 19.43, span: 13.05, height: 5.63, wingArea: 56.5, mtow: 30845, oew: 12700, fuel: 6100,
+    engines: { count: 2, type: 'turbofan', thrust: 64.9, thrustAB: 105.7, name: 'P&W F100-PW-220 (afterburning)' },
+    perf: { mmo: 2.5, vmo: 800, cruiseMach: 0.9, ceiling: 65000, range: 3450, seats: '1', gMax: 9, gMin: -3, rollRate: 220, alphaMax: 30 },
+    flaps: FIGHTER_FLAPS,
+    geo: { d: 2.2, dh: 2.0, nose: 'bizjet', noseLen: 4.6, wingX: 0.5, sweep: 45, dihedral: -2, taper: 0.25, tip: 'none', gc: 0.75,
+      eng: [{ mount: 'tail' }], nacD: 1.25, vt: { h: 2.9, x: 0.86 }, mainWheels: 1, tailLen: 2.2, fighter: true },
+  },
 ];
 
 export const MAKERS = [...new Set(AIRCRAFT.map((a) => a.maker))];
@@ -625,7 +642,7 @@ export function deriveAero(ac) {
   // Inertia from empirical radii of gyration (Roskam).
   const kx = 0.13 * b, ky = 0.19 * L, kz = 0.22 * Math.max(L, b * 0.9);
   const sweepRad = (g.sweep * Math.PI) / 180;
-  const mcrit = isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
+  const mcrit = tune.mcrit ? tune.mcrit : isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
   return {
     AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps,
     clAlpha: (2 * Math.PI * AR) / (2 + Math.sqrt(4 + AR * AR * (1 + Math.tan(sweepRad) ** 2))) * 1.05,

@@ -1,0 +1,9 @@
+{ "exterior": "Models/f15c.ac", "extNames": "^(Fuselage|Radome)", "xcg": 11.2,
+  "keep": "^Models/(f15c\\.ac|nozzle[LR]\\.ac|Cockpit/)",
+  "drop": "(/f15d-canopy|/aim-|/mk-84|/rails|/tanks|/CFT|aircraft-ladder|HighSpeed|/convexhull|/Holes$|Lamp|Bulb)|^Models/Cockpit/.*(_on|_lit|[Ll]ight[Cc]one|halo)",
+  "decimate": { "Fasteners": 0.08, "^Models/Cockpit/": 0.25 },
+  "gear": { "gearN": "/(Nose wheel|Upper FWD oleo|Lower FWD oleo|fwd retract strut|nosegear retraction linkage|Nose door 1\\.00[12]|Nose door 2|Landing light|Taxi light)",
+            "gearL": "/Left Main (wheel|Upper|lower|retract|door)", "gearR": "/Right Main (wheel|Upper|lower|retract|door)" },
+  "tires": { "gearN": "/Nose wheel", "gearL": "/Left Main wheel", "gearR": "/Right Main wheel" },
+  "glass": "/(Canopy|Windscreen)Glass", "glassColor": [0.05, 0.06, 0.07], "glassAlpha": 0.22,
+  "maxTex": 2048 }

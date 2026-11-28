@@ -16,6 +16,8 @@ export class Engine {
     this.n2Idle = this.type === 'turbofan' ? 60 : this.type === 'turboprop' ? 66 : this.idle;
     this.n1 = this.idle; this.n2 = this.n2Idle; this.running = true;
     this.thrust = 0; this.ff = 0; this.egt = 400; this.reverse = 0;
+    // afterburning (reheat) engines: throttle above 95 % lights the afterburner
+    this.maxAB = (ac.engines.thrustAB || 0) * 1000; this.ab = 0;
     this.revK = tune.revK ?? 0.3; this.sfc = tune.sfc ?? 1;
     this.spoolK = Engine.spoolScale(this, tune.spool ?? (this.type === 'piston' ? 1 : this.type === 'turboprop' ? 3 : 7));
   }
@@ -44,6 +46,7 @@ export class FlightModel {
     this.S = ac.wingArea; this.b = ac.span; this.c = this.aero.mac;
     this.isGA = ac.category === 'General aviation';
     this.isJet = ac.engines.type === 'turbofan';
+    this.fighter = ac.category === 'Military';
     // model (x fwd, y left, z up) -> body (x fwd, y right, z down)
     const toBody = (p) => [p[0], -p[1], -p[2]];
     this.gear = phys.gear.map((g) => ({ ...g, rb: toBody([g.x, g.y, g.z]), comp: 0, onGround: false }));
@@ -73,8 +76,8 @@ export class FlightModel {
     this.vel = o.vel || [0, 0, 0]; // NED m/s
     this.q = o.q || eulerToQuat(o.heading || 0, o.pitch || 0, 0);
     this.w = [0, 0, 0];
-    this.fuel = o.fuel ?? this.ac.fuel * 0.4;
-    this.payload = o.payload ?? (this.ac.mtow - this.ac.oew - this.ac.fuel * 0.4) * 0.6;
+    this.fuel = o.fuel ?? this.ac.fuel * (this.fighter ? 0.85 : 0.4);
+    this.payload = o.payload ?? (this.fighter ? 1200 : (this.ac.mtow - this.ac.oew - this.ac.fuel * 0.4) * 0.6); // fighters: pilot + air-to-air missiles
     this.updateMass();
     this.ctl = { pitch: 0, roll: 0, yaw: 0, throttle: o.throttle ?? 0, brakeL: 0, brakeR: 0, tiller: 0 };
     this.surf = { de: 0, da: 0, dr: 0 };
@@ -90,7 +93,7 @@ export class FlightModel {
     this.crashed = null; this.events = [];
     this.fbwRef = { pitch: null, roll: 0 };
     this.lastVs = 0; this.nz = 1; this.maxComp = 0;
-    for (const e of this.engines) { e.n1 = o.n1 ?? e.idle; e.n2 = e.n2Idle; e.running = true; e.reverse = 0; }
+    for (const e of this.engines) { e.n1 = o.n1 ?? e.idle; e.n2 = e.n2Idle; e.running = true; e.reverse = 0; e.ab = 0; }
     this.autoBrake = 0; this.runwayWet = !!o.wet; this.gearJam = false; this.gearAltExt = false; this.buffet = 0; this.wingDrop = 0;
     this.calcOutputs(isa(this.h - this.geoid, this.dT, this.pRatio), [0, 0, 0]);
   }
@@ -187,7 +190,13 @@ export class FlightModel {
     CL -= 0.55 * this.spoiler * Math.max(0, CL) / Math.max(1, clmax) * 1.6;
     // ----- drag
     const Mcrit = A.mcrit;
-    const wave = M > Mcrit ? 25 * (M - Mcrit) ** 3 + 0.6 * Math.max(0, M - Mcrit - 0.08) ** 2 : 0;
+    let wave;
+    if (this.fighter) {
+      // supersonic drag rise: steep transonic rise peaking just above Mach 1, then easing off (area-ruled fighter)
+      const cdw = this.tune.cdw ?? 0.026;
+      const rise = clamp((M - Mcrit) / (1.08 - Mcrit), 0, 1);
+      wave = cdw * rise * rise * (3 - 2 * rise) / (1 + 0.55 * Math.max(0, M - 1.12));
+    } else wave = M > Mcrit ? 25 * (M - Mcrit) ** 3 + 0.6 * Math.max(0, M - Mcrit - 0.08) ** 2 : 0;
     const CD = A.cd0 + (CL * CL) / (Math.PI * A.e * A.AR) * ge + 0.075 * flap + 0.012 * slat + (ac.geo.fixedGear ? 0 : 0.02) * this.gearPos + 0.07 * this.spoiler + wave + 1.2 * Math.sin(alpha) ** 2 * stall + 0.3 * Math.abs(Math.sin(beta));
     const CY = d.CYb * beta;
     const Lf = qbar * this.S * CL, Df = qbar * this.S * CD, Yf = qbar * this.S * CY;
@@ -268,7 +277,9 @@ export class FlightModel {
       this.fbwRef.pitch = euler.pitch; this.fbwRef.roll = euler.roll;
     } else {
       // --- pitch: commanded Euler pitch rate -> body q via NDI
-      const thMax = (this.isGA ? 12 : 6) * D2R;
+      const fz = this.fighter, pf = this.ac.perf;
+      // fighters: pitch rate limited by the structural g limit (q = (n - 1) g / V)
+      const thMax = fz ? clamp(((pf.gMax || 7.5) - 1) * G0 / Math.max(s.V, 60), 8 * D2R, 28 * D2R) : (this.isGA ? 12 : 6) * D2R;
       let thDot;
       if (apCmd && Math.abs(c.pitch) < 0.4) {
         thDot = clamp(1.2 * (apCmd.pitch - euler.pitch), -2.5 * D2R, (this.isGA ? 5 : 2.5) * D2R);
@@ -288,29 +299,30 @@ export class FlightModel {
       if (this.lawType === 'airbus' && !this.lawDegraded) { const aP = s.aStall - 3.5 * D2R, aM = s.aStall - 1 * D2R; aLim = aP + clamp(c.pitch, 0, 1) * (aM - aP); }
       else if (this.lawType === 'boeing-fbw' && !this.lawDegraded && this.assist === 'realistic') aLim = s.aStall + (c.pitch > 0.9 ? 2 : -1.5) * D2R;
       else if (assisted) aLim = s.aStall - 2.5 * D2R;
+      if (fz) aLim = Math.min(aLim ?? 99, s.aStall - 1 * D2R); // fighter FBW / assist: alpha limiter just below the stall
       this.alphaLim = aLim;
       if (aLim != null && s.alpha > aLim) thDot = Math.min(thDot, -(s.alpha - aLim) * 3);
-      if (euler.pitch > 30 * D2R) thDot = Math.min(thDot, -(euler.pitch - 30 * D2R));
-      if (euler.pitch < -15 * D2R) thDot = Math.max(thDot, -(euler.pitch + 15 * D2R));
-      const phi = clamp(euler.roll, -1.2, 1.2);
+      if (!fz && euler.pitch > 30 * D2R) thDot = Math.min(thDot, -(euler.pitch - 30 * D2R));
+      if (!fz && euler.pitch < -15 * D2R) thDot = Math.max(thDot, -(euler.pitch + 15 * D2R));
+      const phi = clamp(euler.roll, fz ? -1.45 : -1.2, fz ? 1.45 : 1.2);
       const qd = (thDot + this.w[2] * Math.sin(phi)) / Math.cos(phi);
       const kq = this.isGA ? 4 : 2.5;
       const cmOther = d.Cma * (s.alpha - d.a0) + d.Cmq * s.qh + d.Cmflap * this.flap;
       const cmReq = (this.Iyy * kq * (qd - this.w[1])) / (qS * this.c) - cmOther;
       de = clamp(cmReq / d.Cmde, -1, 1);
       // --- roll
-      const pMax = (this.isGA ? 45 : 22) * D2R;
+      const pMax = (fz ? pf.rollRate || 180 : this.isGA ? 45 : 22) * D2R;
       let pd;
       if (apCmd && Math.abs(c.roll) < 0.4) { pd = clamp(1.0 * (apCmd.roll - euler.roll), -5 * D2R, 5 * D2R); this.fbwRef.roll = euler.roll; }
       else if (Math.abs(c.roll) > 0.02) { pd = c.roll * pMax; this.fbwRef.roll = euler.roll; if (apCmd && Math.abs(c.roll) > 0.4) this.ap.disconnect('pilot input'); }
       else {
-        const lim = 33 * D2R;
+        const lim = fz ? Math.PI : 33 * D2R; // fighters hold any bank angle
         if (Math.abs(this.fbwRef.roll) < 5 * D2R && Math.abs(euler.roll) < 5 * D2R) this.fbwRef.roll = 0;
         if (Math.abs(this.fbwRef.roll) > lim) this.fbwRef.roll = Math.sign(this.fbwRef.roll) * lim;
         pd = 1.2 * (this.fbwRef.roll - euler.roll);
       }
-      if (Math.abs(euler.roll) > 67 * D2R) pd = Math.min(Math.abs(pd), 0) * Math.sign(pd) - (euler.roll - Math.sign(euler.roll) * 67 * D2R) * 2;
-      const kp = this.isGA ? 5 : 3;
+      if (!fz && Math.abs(euler.roll) > 67 * D2R) pd = Math.min(Math.abs(pd), 0) * Math.sign(pd) - (euler.roll - Math.sign(euler.roll) * 67 * D2R) * 2;
+      const kp = fz ? 6 : this.isGA ? 5 : 3;
       const clOther = d.Clb * s.beta + d.Clp * s.ph + d.Clr * s.rh;
       const clReq = (this.Ixx * kp * (pd - this.w[0])) / (qS * this.b) - clOther;
       da = clamp(clReq / d.Clda, -1, 1);
@@ -349,14 +361,27 @@ export class FlightModel {
       e.reverse += clamp(revTarget - e.reverse, -dt / 2, dt / 2);
       const maxN1 = 100;
       const idle = e.idle + (e.type === 'piston' ? 0 : airIdle);
-      const target = idle + thr * (maxN1 - idle);
+      const thrDry = e.maxAB ? Math.min(1, thr / 0.95) : thr;
+      const target = idle + thrDry * (maxN1 - idle);
       e.n1 = clamp(e.n1 + Engine.rate(e.type, e.n1, target, e.idle) * e.spoolK * dt, 0, 104);
       // core follows the fan (N2 leads N1 a little on acceleration)
       const fN = clamp((e.n1 - e.idle) / (maxN1 - e.idle), -0.3, 1.05);
       e.n2 = e.type === 'piston' ? e.n1 : e.n2Idle + fN * (100 - e.n2Idle) * (e.type === 'turbofan' ? 0.97 : 1);
       const f = Math.pow(clamp(fN, 0, 1), e.type === 'turbofan' ? 2.0 : 1.3);
       let T;
-      if (e.type === 'turbofan') {
+      if (e.maxAB) {
+        // low-bypass afterburning turbofan: ram recovery holds thrust up with Mach; reheat lights in ~1 s
+        const abCmd = thr > 0.955 && e.n1 > 94 && e.reverse < 0.01 ? clamp((thr - 0.955) / 0.045, 0.35, 1) : 0;
+        e.ab += clamp(abCmd - e.ab, -dt * 2.5, dt * (e.ab < 0.05 ? 1.2 : 1.8));
+        const sl = Math.pow(atm.sigma, 0.78);
+        const Tdry = e.maxThrust * sl * (1 + 0.22 * M) * (0.04 + 0.96 * f);
+        const Twet = e.maxAB * sl * (1 + 0.5 * M - 0.12 * M * M);
+        T = Tdry + Math.max(0, Twet - Tdry) * e.ab;
+        // TSFC ~0.75 lb/lbf/h dry, ~2 lb/lbf/h in full reheat
+        e.ff = (Tdry * 2.1e-5 * (1 + 0.3 * M) + (T - Tdry) * 6.2e-5 + 0.06 * (atm.p / 101325)) * e.sfc;
+        const egtTarget = 400 + 450 * Math.pow(e.n1 / 100, 2.2) + 250 * e.ab + (atm.T - 288) * 0.9;
+        e.egt += (egtTarget - e.egt) * Math.min(1, dt * 0.8);
+      } else if (e.type === 'turbofan') {
         // high-bypass lapse: ~0.8 of static at rotation, ~0.2 at FL350 / M0.78 (max cruise)
         const ml = this.tune.machLapse ?? 0.9; // very high bypass ratio (GE90 / GE9X): steeper Mach lapse
         const lapse = Math.pow(atm.sigma, 0.85) * (1 - ml * M + (0.52 + (ml - 0.9) * 0.4) * M * M);

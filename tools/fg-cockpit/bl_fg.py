@@ -74,7 +74,7 @@ def load_ac(path, M, tag):
         def get(key, n):
             k = t.index(key); return [float(x) for x in t[k + 1:k + 1 + n]]
         mats.append({'name': name, 'rgb': get('rgb', 3), 'emis': get('emis', 3), 'shi': get('shi', 1)[0], 'trans': get('trans', 1)[0]})
-    def read_object(parentM):
+    def read_object(parentM, gpath=''):
         l = nxt()
         assert l.startswith('OBJECT'), l
         kind = l.split()[1]
@@ -126,8 +126,8 @@ def load_ac(path, M, tag):
                 f.smooth = bool(flags & 0x10)
                 for lp, r in zip(f.loops, refs): lp[uvl].uv = (r[1] * texrep[0] + texoff[0], r[2] * texrep[1] + texoff[1])
             bm.to_mesh(me); bm.free()
-            ob = bpy.data.objects.new(name or 'poly', me); ob['src'] = tag; coll.objects.link(ob)
-        for _ in range(kids): read_object(Mw)
+            ob = bpy.data.objects.new(name or 'poly', me); ob['src'] = tag; ob['path'] = gpath; coll.objects.link(ob)
+        for _ in range(kids): read_object(Mw, gpath + '/' + (name or kind))
     def i_inc():
         nonlocal i; i += 1
     try:
