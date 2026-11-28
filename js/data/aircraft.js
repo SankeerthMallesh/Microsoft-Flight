@@ -624,6 +624,7 @@ export const AIRCRAFT = [
   {
     id: 'f22a', maker: 'Lockheed Martin', name: 'F-22A Raptor', family: 'F-22', category: 'Military',
     detailed: { glb: 'models/f22a.glb', meta: 'models/f22a.meta.json', credit: 'FlightGear Lockheed-Martin FA-22A Raptor by Fabrizio Fracaroli (AeroFab), GPL v2 — modified' },
+    cockpit: { glb: 'models/f22a-cockpit.glb', meta: 'models/f22a-cockpit.meta.json', credit: 'FlightGear FA-22A Raptor cockpit (GPL v2)' },
     length: 18.92, span: 13.56, height: 5.08, wingArea: 78.04, mtow: 38000, oew: 19700, fuel: 8200,
     // two P&W F119-PW-100, 2D thrust-vectoring nozzles (±20° pitch): ~26,000 lbf dry / ~35,000 lbf in afterburner each
     engines: { count: 2, type: 'turbofan', thrust: 116, thrustAB: 156, name: 'P&W F119-PW-100 (thrust vectoring)' },

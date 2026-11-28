@@ -75,6 +75,7 @@ live engine display; the live PFD and ND sit on the EADI/EHSI tubes. The ATR 42-
 | File | Original | Authors | License |
 | --- | --- | --- | --- |
 | `f22a.glb` | Lockheed-Martin FA-22A Raptor for [FlightGear](https://www.flightgear.org/) (exterior, landing gear, control surfaces, thrust-vectoring nozzles, cockpit interior), from the official FlightGear aircraft download mirror | Fabrizio Fracaroli (AeroFab, 2010) | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+| `f22a-cockpit.glb` | Lockheed-Martin FA-22A Raptor for FlightGear (cockpit tub, instrument panel, ICP, HUD, side consoles, seat, stick and throttle, with the airframe seen from the cockpit) | Fabrizio Fracaroli (AeroFab, 2010) | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
 
 Converted from AC3D to glTF and aligned to the sim's model axes; landing gear grouped per leg (hidden when retracted),
 flaperons, ailerons, all-moving stabilators, twin rudders and the 2D thrust-vectoring nozzle flaps exported as hinged parts
