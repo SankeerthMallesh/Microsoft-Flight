@@ -499,6 +499,18 @@ export class World {
     this.cloudsCenter = null;
   }
 
+  // live weather (js/weather.js): explicit cloud layers [{ n, base, top, size, dark }], heights in metres above the ellipsoid
+  setCloudLayers(layers, fogDensity) {
+    this.weather = 'live';
+    if (fogDensity) this.viewer.scene.fog.density = fogDensity;
+    const cq = { high: 1, medium: 0.6, low: 0.35 }[this.quality] ?? 0.6;
+    const L = layers.map((l) => ({ ...l, n: Math.max(4, Math.round(l.n * cq)) }));
+    this.cloudCfg = { n: L.reduce((a, l) => a + l.n, 0), layers: L };
+    this.cloudCollection.removeAll();
+    this.clouds = [];
+    this.cloudsCenter = null;
+  }
+
   updateClouds(latR, lonR, alt) {
     const Cesium = C();
     const cfg = this.cloudCfg; if (!cfg || !cfg.n) return;
@@ -531,6 +543,7 @@ export class World {
 
   spawnCloud(cfg, lat, lon) {
     const Cesium = C();
+    if (cfg.layers) { let r = Math.random() * cfg.n; cfg = cfg.layers.find((l) => (r -= l.n) < 0) || cfg.layers[0]; }
     const h = cfg.base + Math.random() * (cfg.top - cfg.base) * 0.4 + (this.cloudBaseOffset || 0);
     const s = (700 + Math.random() * 1100) * cfg.size;
     const c = this.cloudCollection.add({

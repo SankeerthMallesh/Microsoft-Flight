@@ -85,14 +85,14 @@ export class FlightModel {
     this.reversers = false; this.parkingBrake = !!o.parkingBrake;
     this.groundH = o.groundH ?? 0; this.geoid = o.geoid ?? 0;
     this.wind = o.wind || [0, 0, 0]; this.turb = o.turbulence || 0; this.gust = [0, 0, 0];
-    this.dT = o.dT || 0;
+    this.dT = o.dT || 0; this.pRatio = o.pRatio || 1;
     this.onGround = false; this.wow = 0; this.airTime = 0; this.groundTime = 0; this.time = 0;
     this.crashed = null; this.events = [];
     this.fbwRef = { pitch: null, roll: 0 };
     this.lastVs = 0; this.nz = 1; this.maxComp = 0;
     for (const e of this.engines) { e.n1 = o.n1 ?? e.idle; e.n2 = e.n2Idle; e.running = true; e.reverse = 0; }
     this.autoBrake = 0; this.runwayWet = !!o.wet; this.gearJam = false; this.gearAltExt = false; this.buffet = 0; this.wingDrop = 0;
-    this.calcOutputs(isa(this.h - this.geoid, this.dT), [0, 0, 0]);
+    this.calcOutputs(isa(this.h - this.geoid, this.dT, this.pRatio), [0, 0, 0]);
   }
 
   updateMass() { this.mass = this.ac.oew + this.payload + this.fuel; }
@@ -113,7 +113,7 @@ export class FlightModel {
     if (this.crashed) return;
     this.time += dt;
     const ac = this.ac, A = this.aero, d = this.d;
-    const atm = isa(this.h - this.geoid, this.dT);
+    const atm = isa(this.h - this.geoid, this.dT, this.pRatio);
     const euler = quatToEuler(this.q);
     this.euler = euler;
 

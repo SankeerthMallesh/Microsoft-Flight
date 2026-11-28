@@ -79,11 +79,12 @@ export function destination(lat, lon, brg, dist) {
 }
 
 // ISA atmosphere with temperature deviation (K). h in metres MSL.
-export function isa(h, dT = 0) {
+// pRatio scales the whole pressure profile (sea-level pressure / 1013.25 hPa, i.e. the real QNH)
+export function isa(h, dT = 0, pRatio = 1) {
   let T, p;
   if (h < 11000) { T = 288.15 - 0.0065 * h; p = 101325 * Math.pow(T / 288.15, 5.25588); }
   else { T = 216.65; p = 22632.1 * Math.exp((-G0 * (h - 11000)) / (287.053 * T)); }
-  T += dT;
+  T += dT; p *= pRatio;
   const rho = p / (287.053 * T);
   return { T, p, rho, a: Math.sqrt(1.4 * 287.053 * T), sigma: rho / 1.225 };
 }
