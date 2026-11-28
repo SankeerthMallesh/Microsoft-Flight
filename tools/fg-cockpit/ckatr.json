@@ -1,0 +1,90 @@
+{
+ "exterior": "Models/ATR-72-500.ac",
+ "extNames": "^Fuselage$",
+ "xcg": 12.2843,
+ "groundFG": -3.8,
+ "groundZ": -2.135,
+ "keep": "^Models/(Flightdeck/|Instruments/(?!Engines/))",
+ "dropSrcNames": "(EADI/eadi\\.ac:(?!(Background(\\.001)?|Border(\\.001)?)$)|EHSI/ehsi\\.ac:(?!(EHSI\\.screen(\\.001)?|EHSI\\.bezel(\\.001)?)$))",
+ "dropNames": "_lit$|_on$|halo|^hud|^HUD|[Ll]ight[Cc]one",
+ "addQuads": {
+  "ewd": [
+   [
+    -12.07,
+    -0.194,
+    -1.537
+   ],
+   [
+    -12.07,
+    0.134,
+    -1.537
+   ],
+   [
+    -12.07,
+    0.134,
+    -1.949
+   ],
+   [
+    -12.07,
+    -0.194,
+    -1.949
+   ]
+  ]
+ },
+ "darkScreens": true,
+ "screens": {
+  "pfd": [
+   "Background"
+  ],
+  "nd": [
+   "EHSI.screen"
+  ],
+  "pfd2": [
+   "Background.001"
+  ],
+  "nd2": [
+   "EHSI.screen.001"
+  ],
+  "eicas": [
+   "ewd"
+  ]
+ },
+ "screenCrop": {
+  "pfd": [
+   0.127,
+   0.873,
+   0,
+   1
+  ],
+  "pfd2": [
+   0.127,
+   0.873,
+   0,
+   1
+  ],
+  "nd": [
+   0.13,
+   0.87,
+   0,
+   1
+  ],
+  "nd2": [
+   0.13,
+   0.87,
+   0,
+   1
+  ],
+  "eicas": [
+   0,
+   1,
+   0.2,
+   1
+  ]
+ },
+ "eyeFG": [
+  -11.0,
+  -0.6,
+  -1.15
+ ],
+ "pitchDeg": -9
+}
