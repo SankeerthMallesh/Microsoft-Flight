@@ -56,7 +56,7 @@ Aircraft zips: `https://mirrors.ibiblio.org/flightgear/ftp/Aircraft-2020/<Name>.
   `decimateOver`/`decimateMin` collapse over-dense parts, a screen given as `["+", a, b]` is the union of objects a and b,
   and `screenCrop` {key: [u0, u1, v0, v1]} keeps a square sub-rectangle (the live canvases are square). Only pfd, nd, eicas,
   pfd2, nd2 and isis are drawn by the game; eicas2 is metadata only. `dropSrcNames` matches '<src.ac>:<object>', `darkScreens`/`darkNames` turn display units
-  into dark glass, `keepNames` keeps named exterior objects (e.g. an A380 pedestal body), `addQuads` caps holes (FG coords).
+  into dark glass, `keepNames` keeps named exterior objects (e.g. an A380 pedestal body), `addQuads` caps holes (FG coords), `screenQuadsFG` gives a screen as four explicit FG corners (TL, TR, BR, BL from the pilot; used for the curved F-22 HUD combiner).
   `bl_fg.py` resolves `alias="/params/..."` offsets (CRJ700 display positions). `gltfpack -si 0.7` was used for the 777 to stay under 7 MB.
 - Procedural exterior types: the cockpit appears only in cockpit view (the exterior is hidden), but the eye height above the
   wheels must look right, so compare `meta.eye[2]` with the procedural `physics.groundZ`.

@@ -1,0 +1,9 @@
+{ "exterior": "Models/Lockheed-Martin-FA-22A-Raptor.ac", "extNames": "^fuselage$", "xcg": 11.2161,
+  "groundFG": -2.589, "groundZ": -2.589,
+  "keep": "^Models/(Lockheed-Martin-FA-22A-Raptor\\.ac|Instruments/)",
+  "dropNames": "^(canopy|pilot-view|landing-lights|F119-PW-1|reheat-box|.*(wheel|gear|strut|shock|scissor|axl|door|vector).*)$",
+  "glass": "/hud-screen$", "glassColor": [0.12, 0.2, 0.14], "glassAlpha": 0.07,
+  "darkScreens": true,
+  "screens": { "pfd": ["screen3"], "nd": ["screen4"], "eicas": ["screen5"], "isis": ["screen6"], "hud": ["hud-screen"] },
+  "screenQuadsFG": { "hud": [[-5.84, -0.125, 0.56], [-5.84, 0.125, 0.56], [-5.97, 0.125, 0.325], [-5.97, -0.125, 0.325]] },
+  "eyeFG": [-5.05, 0, 0.47], "pitchDeg": -8 }

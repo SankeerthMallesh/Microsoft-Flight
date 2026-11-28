@@ -81,6 +81,9 @@ for key, names in cfg['screens'].items():
                 v0, v1 = v0 + (v1 - v0) * cr[2], v0 + (v1 - v0) * cr[3]; u0, u1 = U0, U1
             corner = lambda a, b: list(c + u * a + v * b)
             screens[key] = [corner(u1, v1), corner(u0, v1), corner(u0, v0), corner(u1, v0)]  # TL TR BR BL
+# explicit screen quads (FG coords, TL TR BR BL as seen by the pilot), e.g. a curved HUD combiner whose mesh gives no clean plane
+for key, qp in cfg.get('screenQuadsFG', {}).items():
+    screens[key] = [list(A @ Vector(p)) for p in qp]
 # screen objects become plain dark glass (the live canvas covers them; cropped margins must not show FG page textures)
 if cfg.get('darkScreens'):
     glass = bpy.data.materials.new('screenGlass'); glass.use_nodes = True
