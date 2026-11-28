@@ -50,7 +50,7 @@ const FAMILY = {
   'E-Jet E2': { clmaxClean: 1.42, dclFlaps: 0.78, dclSlats: 0.4, ab: AB_BOEING, law: 'boeing-fbw' },
   CRJ: { clmaxClean: 1.4, dclFlaps: 0.48, dclSlats: 0.3, ab: null },
   // turboprops: big Fowler flaps, no slats, no autobrake, beta-range reverse
-  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, flapLin: 0.8, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
+  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, flapLin: 0.9, flapExp: 0.5, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
   'Dash 8': { clmaxClean: 1.6, dclFlaps: 1.2, flapLin: 0.9, dclSlats: 0, ab: null, spool: 3, revK: 0.32 },
   'King Air': { clmaxClean: 1.5, dclFlaps: 0.55, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },
   'PC-12': { clmaxClean: 1.6, dclFlaps: 0.6, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },

@@ -109,7 +109,7 @@ function landing(id, ref, opts = {}) {
   fm.reset({ lat: la, lon: lo, h: altMsl, groundH: ELEV, heading: 0, flapIndex: ac.flaps.length - 1 - (ref.ldgFlapFromFull || 0), gearDown: true, fuel: m.fuel, payload: m.payload });
   sys.setState('air');
   if (opts.autobrake) sys.autobrake = opts.autobrake;
-  if (opts.wet) sys.runwayWet = true;
+  if (opts.wet) fm.runwayWet = true;
   if (opts.wind) fm.wind = opts.wind;
   const vs = fm.vspeeds();
   const ias = vs.vref + (fm.isGA ? 5 : 5);
@@ -131,11 +131,13 @@ function landing(id, ref, opts = {}) {
       fm.ctl.yaw = clamp(-hdgErr * 0.2, -1, 1);
     }
     fm.step(DT); time += DT;
+    if (process.env.TRACE && !fm.onGround && fm.out.agl < 60 && Math.round(time * 60) % 20 === 0) console.log(`   x ${along(fm).toFixed(0)} agl ${fm.out.agl.toFixed(1)} ias ${fm.out.ias.toFixed(1)} vs ${fm.out.vs.toFixed(0)} pitch ${fm.out.pitch.toFixed(1)} thr ${fm.ctl.throttle.toFixed(2)} flare ${ap.flare}`);
     for (const e of fm.events.splice(0)) if (e.type === 'touchdown') { tdX = along(fm); tdV = fm.out.ias; tdFpm = e.fpm; }
     const x = along(fm);
     if (x50 == null && fm.out.agl < 50) x50 = x;
     const gs = fm.out.gs;
     if (vPrev != null && fm.onGround) maxDecel = Math.max(maxDecel, (vPrev - gs) * KT / DT / G0);
+    if (process.env.TRACE && fm.onGround && Math.round(time * 60) % 30 === 0) console.log(`   roll x ${(x - (tdX ?? x)).toFixed(0)} gs ${gs.toFixed(0)} dec ${((vPrev - gs) * KT / DT / G0).toFixed(2)} wow ${fm.wow} CL ${fm.air.CL.toFixed(2)} L/W ${(fm.air.qbar * fm.S * fm.air.CL / fm.mass / G0).toFixed(2)} rev ${fm.engines[0].reverse.toFixed(2)} T ${(fm.engines[0].thrust / 1000).toFixed(1)} sp ${fm.spoiler.toFixed(2)} pitch ${fm.out.pitch.toFixed(1)}`);
     vPrev = gs;
     if (tdX != null && gs < 2) { stopX = x; break; }
   }
@@ -149,7 +151,7 @@ function trimAir(fm, altMsl, ias, gamma, approach) {
   const A = fm.aero;
   fm.flap = fm.flapLevels[fm.flapIndex].flap; fm.slat = fm.flapLevels[fm.flapIndex].slat;
   const CL = (fm.mass * G0 * Math.cos(gamma)) / (0.5 * atm.rho * V * V * fm.S);
-  const alpha = (CL - A.cl0 - A.flapLin * fm.flap) / A.clAlpha;
+  const alpha = (CL - A.cl0 - A.flapLin * Math.pow(fm.flap, A.flapExp)) / A.clAlpha;
   const hdg = 0;
   fm.q = eulerToQuat(hdg, alpha + gamma, 0);
   fm.vel = [V * Math.cos(gamma), 0, -V * Math.sin(gamma)];
