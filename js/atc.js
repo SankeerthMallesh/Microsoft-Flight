@@ -213,7 +213,7 @@ export class ATC {
           return digits(a) + (b ? (this.usStyle ? ' point ' : ' decimal ') + digits(b) : '');
         }
         case 'sq': return sp ? digits(v) : v;
-        case 'ph': return sp ? PHON[v] : v;
+        case 'ph': return PHON[v] || v;
         case 'spd': return sp ? digits(Math.round(+v)) + ' knots' : Math.round(+v) + ' kt';
         case 'wind': {
           const p = this.plan, d = String(Math.round(wrap360(p.windDir) / 10) * 10 % 360 || 360).padStart(3, '0'), s2 = Math.round(p.windSpd);
