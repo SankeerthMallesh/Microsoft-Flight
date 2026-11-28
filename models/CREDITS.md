@@ -43,3 +43,22 @@ decimated, baked ambient occlusion, web-optimised). The 777-200ER, 777F and 777-
 
 Converted the same way; the FlightGear display pages were removed and the display units turned into dark glass for OpenSkies' live
 PFD, ND, EICAS and standby displays. The 787-8 and 787-10 reuse this flight deck, repositioned to their noses.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `a380-800-cockpit.glb` | Airbus A380 for [FlightGear](https://www.flightgear.org/) (flight deck, front panel, glareshield, overhead, pedestal), from the official FlightGear aircraft download mirror | K. Ampere, I. Cunningham, F. Dalvi, S. Hamilton and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way; FlightGear's own PFD/EWD needle objects were removed so OpenSkies' live displays sit on the portrait
+display units, and a missing lower-display face was capped.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `b747-8i-cockpit.glb` | Boeing 747-8i for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, cockpit shell), from the official FlightGear aircraft download mirror | John Williams; original cockpit by Gijs de Rooy (with Ivan Ngeow, Jentron, Syd Adams, Torsten Dreyer, Markus Bulik); Grupo FGBr (Aurino das Neves, Isaias Prestes, Rick Britto, Wagner Silva) | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way. The 747-8F and 747-400 reuse this flight deck, repositioned to their noses.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `crj700-cockpit.glb` | CRJ700 family for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, CDUs, standby), from the official FlightGear aircraft download mirror | Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way; OpenSkies draws its live PFD, ND, EICAS and standby onto the six display units. The CRJ900 reuses it.

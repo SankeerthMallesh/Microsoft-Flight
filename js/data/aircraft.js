@@ -181,6 +181,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'a380-800', maker: 'Airbus', name: 'A380-800', family: 'A380', category: 'Wide-body',
+    cockpit: { glb: 'models/a380-800-cockpit.glb', meta: 'models/a380-800-cockpit.meta.json', credit: 'FlightGear Airbus A380 flight deck (GPL v2)' },
     length: 72.72, span: 79.75, height: 24.09, wingArea: 845, mtow: 575000, oew: 277000, fuel: 254000,
     engines: { count: 4, type: 'turbofan', thrust: 334, name: 'RR Trent 900 / EA GP7200' },
     perf: { mmo: 0.89, vmo: 340, cruiseMach: 0.85, ceiling: 43000, range: 14800, seats: '525–853' },
@@ -232,6 +233,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-400', maker: 'Boeing', name: '747-400', family: '747', category: 'Wide-body',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', offset: [-2.7241, 0, 0], credit: 'FlightGear Boeing 747-8 flight deck (GPL v2), used for the 747-400 (same six-display layout)' },
     length: 70.6, span: 64.4, height: 19.4, wingArea: 525, mtow: 396900, oew: 178756, fuel: 174000,
     engines: { count: 4, type: 'turbofan', thrust: 252, name: 'P&W PW4056 / GE CF6-80C2 / RB211' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.85, ceiling: 45100, range: 13450, seats: '416–524' },
@@ -241,6 +243,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-8i', maker: 'Boeing', name: '747-8 Intercontinental', family: '747', category: 'Wide-body',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', credit: 'FlightGear Boeing 747-8 flight deck (GPL v2)' },
     length: 76.3, span: 68.4, height: 19.4, wingArea: 554, mtow: 447700, oew: 220128, fuel: 194000,
     engines: { count: 4, type: 'turbofan', thrust: 296, name: 'GE GEnx-2B67' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.855, ceiling: 43100, range: 14320, seats: '410–467' },
@@ -377,6 +380,7 @@ export const AIRCRAFT = [
   // ---------------------------------------------------- BOMBARDIER / MHI
   {
     id: 'crj900', maker: 'Bombardier', name: 'CRJ900', family: 'CRJ', category: 'Regional jet',
+    cockpit: { glb: 'models/crj700-cockpit.glb', meta: 'models/crj700-cockpit.meta.json', offset: [1.875, 0, 0], credit: 'FlightGear CRJ700 family flight deck (GPL v2), adapted for the CRJ900' },
     length: 36.2, span: 24.9, height: 7.5, wingArea: 70.6, mtow: 38330, oew: 21845, fuel: 8820,
     engines: { count: 2, type: 'turbofan', thrust: 64.5, name: 'GE CF34-8C5' },
     perf: { mmo: 0.85, vmo: 335, cruiseMach: 0.78, ceiling: 41000, range: 2956, seats: '76–90' },
@@ -506,6 +510,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'b747-8f', maker: 'Boeing', name: '747-8 Freighter', family: '747', category: 'Cargo',
+    cockpit: { glb: 'models/b747-8i-cockpit.glb', meta: 'models/b747-8i-cockpit.meta.json', offset: [-0.0165, 0, 0.5], credit: 'FlightGear Boeing 747-8 flight deck (GPL v2), adapted for the 747-8F' },
     length: 76.25, span: 68.4, height: 19.35, wingArea: 554, mtow: 447700, oew: 197131, fuel: 181600,
     engines: { count: 4, type: 'turbofan', thrust: 296, name: 'GE GEnx-2B67' },
     perf: { mmo: 0.92, vmo: 365, cruiseMach: 0.845, ceiling: 43100, range: 8130, seats: 'Cargo 137.7 t' },
@@ -533,6 +538,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'crj700', maker: 'Bombardier', name: 'CRJ700', family: 'CRJ', category: 'Regional jet',
+    cockpit: { glb: 'models/crj700-cockpit.glb', meta: 'models/crj700-cockpit.meta.json', credit: 'FlightGear CRJ700 family flight deck (GPL v2)' },
     length: 32.51, span: 23.24, height: 7.57, wingArea: 70.6, mtow: 34019, oew: 19731, fuel: 8820,
     engines: { count: 2, type: 'turbofan', thrust: 61.3, name: 'GE CF34-8C5B1' },
     perf: { mmo: 0.85, vmo: 335, cruiseMach: 0.78, ceiling: 41000, range: 2593, seats: '66–78' },
