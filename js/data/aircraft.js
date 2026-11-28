@@ -621,6 +621,17 @@ export const AIRCRAFT = [
     geo: { d: 2.2, dh: 2.0, nose: 'bizjet', noseLen: 4.6, wingX: 0.5, sweep: 45, dihedral: -2, taper: 0.25, tip: 'none', gc: 0.75,
       eng: [{ mount: 'tail' }], nacD: 1.25, vt: { h: 2.9, x: 0.86 }, mainWheels: 1, tailLen: 2.2, fighter: true },
   },
+  {
+    id: 'f16c', maker: 'Lockheed Martin', name: 'F-16C Fighting Falcon', family: 'F-16', category: 'Military', fbw: true,
+    detailed: { glb: 'models/f16c.glb', meta: 'models/f16c.meta.json', credit: 'FlightGear F-16 by Erik Hofman, Nikolai V. Chr., J Maverick 16 and contributors (GPL v2)' },
+    cockpit: { glb: 'models/f16c-cockpit.glb', meta: 'models/f16c-cockpit.meta.json', credit: 'FlightGear F-16 cockpit (GPL v2)' },
+    length: 15.06, span: 9.96, height: 4.88, wingArea: 27.87, mtow: 19187, oew: 8570, fuel: 3175,
+    engines: { count: 1, type: 'turbofan', thrust: 76.3, thrustAB: 131.6, name: 'GE F110-GE-129 (afterburning)' },
+    perf: { mmo: 2.05, vmo: 800, cruiseMach: 0.9, ceiling: 50000, range: 2280, seats: '1', gMax: 9, gMin: -3, rollRate: 280, alphaMax: 25 },
+    flaps: FIGHTER_FLAPS, afterburner: { nozzles: [[-5.41, 0, -0.12, 0.45]] },
+    geo: { d: 1.6, dh: 1.7, nose: 'bizjet', noseLen: 3.6, wingX: 0.5, sweep: 40, dihedral: 0, taper: 0.23, tip: 'none', gc: 0.75,
+      eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.6, x: 0.84 }, mainWheels: 1, tailLen: 2.0, fighter: true },
+  },
 ];
 
 export const MAKERS = [...new Set(AIRCRAFT.map((a) => a.maker))];
