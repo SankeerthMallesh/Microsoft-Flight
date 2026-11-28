@@ -1,5 +1,6 @@
 // "Did you know?" facts shown while scenery loads, keyed by aircraft id.
 export const FACTS = {
+  'f15c': 'The F-15 Eagle has a combat record of more than 100 air-to-air victories and no losses in air combat.',
   'b737-700': 'Southwest Airlines has flown nothing but Boeing 737s since its first flight in 1971, making it the largest 737 operator in the world.',
   'b737-800': 'The 737 is the best-selling jetliner family in history. More than 11,000 have been delivered since the first one flew in 1967.',
   'b737-900er': 'The 737-900ER added an extra pair of exit doors so it could legally carry up to 220 passengers in a single-aisle cabin.',

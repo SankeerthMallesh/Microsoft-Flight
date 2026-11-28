@@ -82,6 +82,11 @@ function finStripes(f, bands, a0 = 0, a1 = 1, wave = 0.05) {
 // ======================================================================= LIVERIES
 export const LIVERIES = [
   {
+    // military types: the detailed models keep their own (FlightGear) paint; this drives the procedural fallback
+    id: 'military-grey', name: 'Air Superiority Grey', subtitle: 'Standard military paint', country: '—', fleet: ['f15c', 'f16c', 'fa18ef', 'f14d'],
+    base: '#8a9199', engine: '#5d636a', finBase: '#8a9199', wing: '#848b93', wingUnder: '#9aa1a8', stab: '#848b93', belly: '#9aa1a8', reg: false, metallic: 0.05, roughness: 0.6,
+  },
+  {
     id: 'southwest', name: 'Southwest Airlines', subtitle: 'Heart (2014)', country: 'US',
     fleet: ['b737-700', 'b737-800', 'b737-max8', 'b737-max7'],
     base: '#304CB2', wing: '#c4c8ce', engine: '#304CB2', engineLip: '#c9cdd3', pylon: '#304CB2', stab: '#304CB2', finBase: '#304CB2',

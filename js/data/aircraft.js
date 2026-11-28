@@ -90,11 +90,11 @@ const MD11_FLAPS = [
   { label: '50', flap: 1, slat: 1 },
 ];
 
-// fighters: plain flaperons / leading-edge flaps scheduled by the flight-control computer
-const MIL_FLAPS = [
-  { label: 'AUTO', flap: 0, slat: 0 },
-  { label: 'TO', flap: 0.35, slat: 0.5 },
-  { label: 'LDG', flap: 0.7, slat: 1 },
+// fighters: plain manoeuvre / landing flaps (leading edges are scheduled automatically)
+const FIGHTER_FLAPS = [
+  { label: 'UP', flap: 0, slat: 0 },
+  { label: 'HALF', flap: 0.5, slat: 0.5 },
+  { label: 'DN', flap: 1, slat: 1 },
 ];
 
 // Helper to describe wing engine positions as fraction of semi-span.
@@ -406,6 +406,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'atr72-600', maker: 'ATR', name: 'ATR 72-600', family: 'ATR', category: 'Turboprop',
+    cockpit: { glb: 'models/atr72-600-cockpit.glb', meta: 'models/atr72-600-cockpit.meta.json', credit: 'FlightGear ATR 72-500 flight deck (GPL v2), centre engine display added' },
     length: 27.17, span: 27.05, height: 7.65, wingArea: 61, mtow: 23000, oew: 13311, fuel: 5000,
     engines: { count: 2, type: 'turboprop', power: 2051, name: 'P&W Canada PW127M', propD: 3.93, blades: 6 },
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 275, ceiling: 25000, range: 1528, seats: '70–78' },
@@ -555,6 +556,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'atr42-600', maker: 'ATR', name: 'ATR 42-600', family: 'ATR', category: 'Turboprop',
+    cockpit: { glb: 'models/atr72-600-cockpit.glb', meta: 'models/atr72-600-cockpit.meta.json', offset: [-2.131, 0, 0], credit: 'FlightGear ATR 72-500 flight deck (GPL v2), centre engine display added, adapted for the ATR 42' },
     length: 22.67, span: 24.57, height: 7.59, wingArea: 54.5, mtow: 18600, oew: 11550, fuel: 4500,
     engines: { count: 2, type: 'turboprop', power: 1611, name: 'P&W Canada PW127M', propD: 3.93, blades: 6 },
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 300, ceiling: 25000, range: 1326, seats: '48–50' },
@@ -607,30 +609,39 @@ export const AIRCRAFT = [
     geo: { d: 1.12, dh: 1.3, nose: 'c172', wingX: 0.3, wingZ: 'low', sweep: 0, dihedral: 7, taper: 0.75, tip: 'none', gc: 0.3,
       eng: [{ mount: 'nose' }], fixedGear: true, vt: { h: 1.1, x: 0.8 }, mainWheels: 1, noseLen: 1.4, tailLen: 3.3, boxy: true },
   },
-
-  // ---------------------------------------------------------------- MILITARY / SUPERSONIC
+  // ---------------------------------------------------------------- MILITARY (afterburning fighters)
+  {
+    id: 'f15c', maker: 'McDonnell Douglas', name: 'F-15C Eagle', family: 'F-15', category: 'Military',
+    detailed: { glb: 'models/f15c.glb', meta: 'models/f15c.meta.json', credit: 'FlightGear F-15 Eagle by Enrique Laso, Richard Harrison and contributors (GPL v2)' },
+    length: 19.43, span: 13.05, height: 5.63, wingArea: 56.5, mtow: 30845, oew: 12700, fuel: 6100,
+    engines: { count: 2, type: 'turbofan', thrust: 64.9, thrustAB: 105.7, name: 'P&W F100-PW-220 (afterburning)' },
+    perf: { mmo: 2.5, vmo: 800, cruiseMach: 0.9, ceiling: 65000, range: 3450, seats: '1', gMax: 9, gMin: -3, rollRate: 220, alphaMax: 30 },
+    flaps: FIGHTER_FLAPS, afterburner: { nozzles: [[-6.04, 0.71, -0.37, 0.5], [-6.04, -0.71, -0.37, 0.5]] },
+    geo: { d: 2.2, dh: 2.0, nose: 'bizjet', noseLen: 4.6, wingX: 0.5, sweep: 45, dihedral: -2, taper: 0.25, tip: 'none', gc: 0.75,
+      eng: [{ mount: 'tail' }], nacD: 1.25, vt: { h: 2.9, x: 0.86 }, mainWheels: 1, tailLen: 2.2, fighter: true },
+  },
   {
     id: 'f22a', maker: 'Lockheed Martin', name: 'F-22A Raptor', family: 'F-22', category: 'Military',
     detailed: { glb: 'models/f22a.glb', meta: 'models/f22a.meta.json', credit: 'FlightGear Lockheed-Martin FA-22A Raptor by Fabrizio Fracaroli (AeroFab), GPL v2 — modified' },
     length: 18.92, span: 13.56, height: 5.08, wingArea: 78.04, mtow: 38000, oew: 19700, fuel: 8200,
     // two P&W F119-PW-100, 2D thrust-vectoring nozzles (±20° pitch): ~26,000 lbf dry / ~35,000 lbf in afterburner each
-    engines: { count: 2, type: 'turbofan', thrust: 116, thrustAB: 156, afterburner: true, bypass: 0.3, name: 'P&W F119-PW-100 (thrust vectoring)' },
+    engines: { count: 2, type: 'turbofan', thrust: 116, thrustAB: 156, name: 'P&W F119-PW-100 (thrust vectoring)' },
     perf: { mmo: 2.25, vmo: 800, cruiseMach: 1.5, supercruise: 1.5, maxMach: 2.25, ceiling: 65000, range: 2960, seats: '1',
-      gLimit: 9, thrustVectoring: true, pitchAgility: 1.6 },
-    flaps: MIL_FLAPS, fbw: true,
+      gMax: 9, gMin: -3, rollRate: 240, alphaMax: 60, thrustVectoring: true },
+    flaps: FIGHTER_FLAPS, fbw: true, afterburner: { nozzles: [[-5.56, 0.62, -0.74, 0.42], [-5.56, -0.61, -0.74, 0.42]] },
     geo: { d: 2.3, dh: 1.6, nose: 'bizjet', noseLen: 2.6, tailLen: 1.6, wingX: 0.367, sweep: 42, dihedral: -3.25, taper: 0.17, tip: 'none', gc: 0.75,
-      eng: [{ mount: 'tail' }], nacD: 1.15, vt: { h: 2.6, x: 0.78 }, mainWheels: 1 },
+      eng: [{ mount: 'tail' }], nacD: 1.15, vt: { h: 2.6, x: 0.78 }, mainWheels: 1, fighter: true },
   },
   {
     id: 'f35a', maker: 'Lockheed Martin', name: 'F-35A Lightning II', family: 'F-35', category: 'Military',
     detailed: { glb: 'models/f35a.glb', meta: 'models/f35a.meta.json', credit: 'FlightGear F-35 Lightning II by Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown, GPL v2 — modified (shown as the conventional F-35A)' },
     length: 15.67, span: 10.7, height: 4.38, wingArea: 42.7, mtow: 31800, oew: 13290, fuel: 8278,
     // one P&W F135-PW-100: ~28,000 lbf dry / ~43,000 lbf in afterburner
-    engines: { count: 1, type: 'turbofan', thrust: 125, thrustAB: 191, afterburner: true, bypass: 0.57, name: 'P&W F135-PW-100' },
-    perf: { mmo: 1.6, vmo: 700, cruiseMach: 0.9, maxMach: 1.6, ceiling: 50000, range: 2200, seats: '1', gLimit: 9 },
-    flaps: MIL_FLAPS, fbw: true,
+    engines: { count: 1, type: 'turbofan', thrust: 125, thrustAB: 191, name: 'P&W F135-PW-100' },
+    perf: { mmo: 1.6, vmo: 700, cruiseMach: 0.9, maxMach: 1.6, ceiling: 50000, range: 2200, seats: '1', gMax: 9, gMin: -3, rollRate: 220, alphaMax: 50 },
+    flaps: FIGHTER_FLAPS, fbw: true, afterburner: { nozzles: [[-4.87, 0, 0.22, 0.58]] },
     geo: { d: 2.2, dh: 1.6, nose: 'bizjet', noseLen: 2.4, tailLen: 1.6, wingX: 0.393, sweep: 35, dihedral: -2, taper: 0.2, tip: 'none', gc: 0.75,
-      eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.3, x: 0.8 }, mainWheels: 1 },
+      eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.3, x: 0.8 }, mainWheels: 1, fighter: true },
   },
 ];
 
@@ -657,9 +668,9 @@ export function deriveAero(ac) {
   // Inertia from empirical radii of gyration (Roskam).
   const kx = 0.13 * b, ky = 0.19 * L, kz = 0.22 * Math.max(L, b * 0.9);
   const sweepRad = (g.sweep * Math.PI) / 180;
-  const mcrit = isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
+  const mcrit = tune.mcrit ? tune.mcrit : isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
   return {
-    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps,
+    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps, flapExp: tune.flapExp ?? 1,
     clAlpha: (2 * Math.PI * AR) / (2 + Math.sqrt(4 + AR * AR * (1 + Math.tan(sweepRad) ** 2))) * 1.05,
     cl0: tune.cl0 ?? (isGA ? 0.34 : ac.engines.type === 'turboprop' ? 0.32 : 0.4), // camber + wing incidence: ~2-2.5 deg body attitude in cruise
     kx, ky, kz,

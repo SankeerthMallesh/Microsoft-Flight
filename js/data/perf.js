@@ -24,10 +24,10 @@ const AB_BOEING = { LO: 1.5, MED: 2.2, MAX: 4.0 }; // ~ autobrake 2 / 3 / MAX (5
 const AB_AIRBUS = { LO: 1.7, MED: 3.0, MAX: 4.6 };
 
 const FAMILY = {
-  // F-35A: F135 idle -> MIL ~4.5 s; CLmax ~1.6 (alpha limit ~50 deg in the real FCS, lift peaks well before)
-  'F-35': { clmaxClean: 1.6, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4.5, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.022, e: 0.78, sfc: 1.45 },
-  // F-22A: F119 spool-up idle -> MIL ~4 s; chined LERX-less blended body, CLmax ~1.7 at ~28 deg alpha (FCS limited)
-  'F-22': { clmaxClean: 1.7, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.019, e: 0.8, sfc: 1.5 },
+  // F-35A: bulkier body (internal bays, big single engine) -> higher wave drag, M1.6 limit in afterburner
+  'F-35': { clmaxClean: 1.4, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.07, cd0: 0.022, e: 0.78, mcrit: 0.88, cdw: 0.1, ab: null, spool: 4.5, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25 },
+  // F-22A: area-ruled, internal weapons -> low wave drag (supercruise ~M1.5-1.7 on dry thrust); thrust vectoring keeps lift to high alpha
+  'F-22': { clmaxClean: 1.45, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.06, cd0: 0.018, e: 0.8, mcrit: 0.9, cdw: 0.019, ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25 },
   // Airbus narrow-bodies: double-slotted / Fowler flaps, full-span slats -> low VLS
   A320: { clmaxClean: 1.5, dclFlaps: 0.88, dclSlats: 0.45, law: 'airbus', ab: AB_AIRBUS, landFlap: 0 },
   A220: { clmaxClean: 1.48, dclFlaps: 0.8, dclSlats: 0.42, law: 'airbus', ab: AB_AIRBUS },
@@ -54,7 +54,7 @@ const FAMILY = {
   'E-Jet E2': { clmaxClean: 1.42, dclFlaps: 0.78, dclSlats: 0.4, ab: AB_BOEING, law: 'boeing-fbw' },
   CRJ: { clmaxClean: 1.4, dclFlaps: 0.48, dclSlats: 0.3, ab: null },
   // turboprops: big Fowler flaps, no slats, no autobrake, beta-range reverse
-  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, flapLin: 0.8, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
+  ATR: { clmaxClean: 1.65, dclFlaps: 1.07, flapLin: 0.9, flapExp: 0.5, dclSlats: 0, ab: null, spool: 3, revK: 0.32, vrefK: 1.23 },
   'Dash 8': { clmaxClean: 1.6, dclFlaps: 1.2, flapLin: 0.9, dclSlats: 0, ab: null, spool: 3, revK: 0.32 },
   'King Air': { clmaxClean: 1.5, dclFlaps: 0.55, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },
   'PC-12': { clmaxClean: 1.6, dclFlaps: 0.6, dclSlats: 0, ab: null, spool: 2.5, revK: 0.3, vrefK: 1.3 },
@@ -68,15 +68,14 @@ const FAMILY = {
   Cherokee: { clmaxClean: 1.6, dclFlaps: 0.6, dclSlats: 0, ab: null, vrK: 1.06, v2K: 1.4, vrefK: 1.3, spool: 1 },
 };
 const CATEGORY = {
-  // fighters: low-aspect-ratio wings with leading-edge flaps reach a high CLmax at high alpha; no reversers
-  Military: { clmaxClean: 1.6, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.021, e: 0.78, sfc: 1.5 },
-  Supersonic: { clmaxClean: 1.3, dclFlaps: 0, dclSlats: 0, law: 'conv', ab: AB_AIRBUS, spool: 6, revK: 0.2, vrK: 1.1, v2K: 1.18, vrefK: 1.25, cd0: 0.012, e: 0.7, sfc: 1.4 },
   'Narrow-body': { clmaxClean: 1.42, dclFlaps: 0.7, dclSlats: 0.42, ab: AB_BOEING },
   'Wide-body': { clmaxClean: 1.42, dclFlaps: 0.58, dclSlats: 0.4, ab: AB_BOEING, spool: 7.5 },
   Cargo: { clmaxClean: 1.42, dclFlaps: 0.58, dclSlats: 0.4, ab: AB_BOEING, spool: 7.5 },
   'Regional jet': { clmaxClean: 1.4, dclFlaps: 0.7, dclSlats: 0.4, ab: AB_BOEING },
   'Business jet': { clmaxClean: 1.32, dclFlaps: 0.48, dclSlats: 0, ab: null },
   Turboprop: { clmaxClean: 1.6, dclFlaps: 0.95, dclSlats: 0, ab: null, spool: 3, revK: 0.3 },
+  // afterburning fighters: thin low-aspect wings (low CL slope, high stall alpha), no reversers, quick spool
+  Military: { clmaxClean: 1.3, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.08, cd0: 0.021, e: 0.8, mcrit: 0.88, cdw: 0.026, ab: null, spool: 4, revK: 0, vrK: 1.12, v2K: 1.22, vrefK: 1.25 },
   'General aviation': { clmaxClean: 1.58, dclFlaps: 0.56, dclSlats: 0, ab: null, vrK: 1.06, v2K: 1.4, vrefK: 1.3, spool: 1 },
 };
 const BY_ID = {
@@ -87,6 +86,7 @@ const BY_ID = {
   'b777-300er': { cd0: 0.0172, e: 0.9, sfc: 0.9 },
   'a380-800': { sfc: 0.86 },
   'atr72-600': { cd0: 0.027, e: 0.82 },
+  f15c: { cd0: 0.02, cdw: 0.02 },
 };
 const DEFAULTS = { vrK: 1.06, v2K: 1.13, vrefK: 1.23, landFlap: 0, law: 'conv', ab: null, spool: 7, revK: 0.35, sfc: 1 };
 

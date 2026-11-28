@@ -4,6 +4,7 @@ import { paintLivery } from './painter.js';
 import { writeGLB, patchDetailedGLB } from './glb.js';
 import { getAircraft } from '../data/aircraft.js';
 import { getLivery } from '../data/liveries.js';
+import { addFlames } from './afterburner.js';
 
 const geoCache = new Map();
 const glbCache = new Map();
@@ -40,7 +41,6 @@ function detailedPhysics(phys, meta) {
   if (tail && p.tailAngle) tail.z = gz + Math.tan(p.tailAngle * Math.PI / 180) * (mx - tail.x);
   // optional animated control surfaces / thrust-vectoring nozzles exported with the model (hinge lines in model space)
   p.anim = { surfaces: meta.surfaces || [], gear: ['gearN', 'gearL', 'gearR'].filter((k) => c[k]).map((k) => ({ node: k, kind: 'hide', pivot: c[k] })) };
-  if (meta.nozzles) p.nozzles = meta.nozzles; // exhaust exits (afterburner flame / heat haze anchors)
   p.detailed = true;
   return p;
 }
@@ -68,6 +68,7 @@ export async function getAircraftGLB(acId, liveryId) {
     const glb = writeGLB(geo.nodes, bytes, { metallic: livery.metallic ?? 0.12, roughness: livery.roughness ?? 0.38 });
     out = { glb, layout: geo.layout, physics: geo.physics };
   }
+  if (ac0.afterburner) out.glb = addFlames(out.glb, ac0.afterburner.nozzles);
   glbCache.set(key, out);
   if (glbCache.size > 12) glbCache.delete(glbCache.keys().next().value);
   return out;

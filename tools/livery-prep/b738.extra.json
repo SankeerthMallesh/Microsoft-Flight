@@ -1,0 +1,4 @@
+{ "fwd": "-Y", "up": "+Z",
+  "fuselage": ["Cylinder_Material.005"], "fin": ["Cylinder.010__0", "Cylinder.013__0"],
+  "wing": ["Cylinder.004_Material.030", "Cylinder.004_Material.032", "Cylinder.004_Material.031"],
+  "engineMats": ["Material.012"], "wingMats": ["Material.030"] }
