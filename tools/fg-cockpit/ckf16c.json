@@ -1,0 +1,9 @@
+{ "exterior": "Models/f16.ac", "extNames": "^RadarDomeTop$", "xcg": 7.66,
+  "keep": "^Models/(Cockpit/|f16\\.ac)",
+  "dropPaths": "(/Afetrburner/|/Lights/|/LandingGear/|GearDoor|MainDoor|HighSpeed|/Chute$|F-16-FS-B10|mfd-ext|/block-15/|/Fan|Turbine|exhaust|NozzleRing|Poly\\.001$)",
+  "dropNames": "_on$|_lit$|[Ll]ight[Cc]one|halo",
+  "decimateOver": 1500, "decimateMin": 0.12,
+  "glass": "/(Glass/.*|HUDImage2)$", "glassColor": [0.16, 0.13, 0.05], "glassAlpha": 0.12,
+  "darkScreens": true,
+  "screens": { "pfd": ["MFDimage1"], "nd": ["MFDimage2"], "hud": ["HUDImage2"] },
+  "eyeFG": [-4.1, 0, 0.86], "pitchDeg": -10 }

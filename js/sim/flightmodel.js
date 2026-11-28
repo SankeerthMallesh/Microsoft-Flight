@@ -51,7 +51,9 @@ export class FlightModel {
     const toBody = (p) => [p[0], -p[1], -p[2]];
     this.gear = phys.gear.map((g) => ({ ...g, rb: toBody([g.x, g.y, g.z]), comp: 0, onGround: false }));
     this.strikes = phys.strikes.map((s) => ({ ...s, rb: toBody([s.x, s.y, s.z]) }));
-    const engPos = phys.engines.length ? phys.engines : [{ x: 0, y: 0, z: 0 }];
+    let engPos = phys.engines.length ? phys.engines : [{ x: 0, y: 0, z: 0 }];
+    // single-engine jets drawn by the procedural builder as a pair of rear nacelles: one engine on the centreline
+    if (ac.engines.count === 1 && engPos.length === 2) engPos = [{ x: (engPos[0].x + engPos[1].x) / 2, y: 0, z: (engPos[0].z + engPos[1].z) / 2 }];
     this.tune = this.aero.tune || {};
     this.engines = engPos.map((e) => new Engine(ac, toBody([e.x, e.y, e.z]), this.tune));
     // A380: thrust reversers on the inboard engines only
