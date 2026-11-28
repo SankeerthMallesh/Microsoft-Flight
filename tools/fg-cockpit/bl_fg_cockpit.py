@@ -19,10 +19,19 @@ xcg = cfg['xcg']
 # FG (x aft, y right, z up) -> sim (x fwd, y left, z up), nose aligned
 A = Matrix(((-1, 0, 0, xcg + noseFG), (0, -1, 0, 0), (0, 0, 1, -czFG), (0, 0, 0, 1)))
 keep = re.compile(cfg['keep']); drop = re.compile(cfg.get('dropNames', '^$'))
-dropsn = re.compile(cfg.get('dropSrcNames', '^$'))  # matched against '<src .ac>:<object name>'
+dropsn = re.compile(cfg.get('dropSrcNames', '^$'))  # matched against '<src.ac>:<object name>'
+dropp = re.compile(cfg.get('dropPaths', '^$'))  # matched against '<src.ac>:<AC3D group path>/<object name>' (variant groups)
+dropx = cfg.get('dropAftOf')  # {src regex: FG x}: drop objects of that source centred aft of x (e.g. a rear cockpit)
+def aft(o):
+    if not dropx: return False
+    for rx, x0 in dropx.items():
+        if re.search(rx, o.get('src', '')):
+            vs = o.data.vertices
+            if vs and sum((o.matrix_world @ v.co).x for v in vs) / len(vs) > x0: return True
+    return False
 for o in list(objs):
     kept = o.get('src') == 'added' or keep.search(o.get('src', '')) or (cfg.get('keepNames') and o.get('src') == cfg['exterior'] and re.search(cfg['keepNames'], o.name))
-    if not kept or drop.search(o.name) or dropsn.search(o.get('src', '') + ':' + o.name):
+    if not kept or drop.search(o.name) or dropsn.search(o.get('src', '') + ':' + o.name) or dropp.search(o.get('src', '') + ':' + o.get('path', '') + '/' + o.name) or aft(o):
         bpy.data.objects.remove(o, do_unlink=True)
 # optional: extra flat quads (FG coords, 4 corners) to cap holes, e.g. a display unit missing its screen face
 for qn, qp in cfg.get('addQuads', {}).items():
@@ -76,19 +85,31 @@ for key, names in cfg['screens'].items():
 if cfg.get('darkScreens'):
     glass = bpy.data.materials.new('screenGlass'); glass.use_nodes = True
     gb = glass.node_tree.nodes['Principled BSDF']; gb.inputs['Base Color'].default_value = (0.012, 0.013, 0.015, 1); gb.inputs['Roughness'].default_value = 0.55
-    for names in cfg['screens'].values():
+    for key, names in cfg['screens'].items():
+        if key == 'hud': continue  # the HUD combiner stays clear glass
         for nm in names:
             if nm in byname: byname[nm].data.materials.clear(); byname[nm].data.materials.append(glass)
     if cfg.get('darkNames'):  # other blank display surfaces (e.g. MFDs with no live page)
         for o in objs:
             if re.search(cfg['darkNames'], o.name): o.data.materials.clear(); o.data.materials.append(glass)
+# canopy / windscreen glass: one tinted transparent material, kept out of the AO bake
+glassObjs = []
+if cfg.get('glass'):
+    gm = bpy.data.materials.new('GLASS'); gm.use_nodes = True
+    gb2 = gm.node_tree.nodes['Principled BSDF']
+    gb2.inputs['Base Color'].default_value = (*cfg.get('glassColor', [0.05, 0.06, 0.07]), 1); gb2.inputs['Alpha'].default_value = cfg.get('glassAlpha', 0.12)
+    gb2.inputs['Roughness'].default_value = 0.05
+    try: gm.surface_render_method = 'BLENDED'
+    except Exception: pass
+    for o in objs:
+        if re.search(cfg['glass'], o.get('path', '') + '/' + o.name): o.data.materials.clear(); o.data.materials.append(gm); glassObjs.append(o)
 eyeFG = Vector(cfg['eyeFG'])
 eye = list(A @ eyeFG)
 # untextured pure-white faces are placeholders for external FG instrument packs: make them dark glass/bezel
 for m in bpy.data.materials:
     if not m.node_tree: continue
     b = m.node_tree.nodes.get('Principled BSDF')
-    if b and not any(n.type == 'TEX_IMAGE' for n in m.node_tree.nodes) and min(b.inputs['Base Color'].default_value[:3]) > 0.9:
+    if b and m.name != 'GLASS' and not any(n.type == 'TEX_IMAGE' for n in m.node_tree.nodes) and min(b.inputs['Base Color'].default_value[:3]) > 0.9:
         b.inputs['Base Color'].default_value = (0.035, 0.037, 0.04, 1); b.inputs['Roughness'].default_value = 0.35
 for m in bpy.data.materials:
     b = m.node_tree.nodes.get('Principled BSDF') if m.node_tree else None
@@ -103,7 +124,7 @@ print('META', json.dumps(meta)[:600])
 if os.environ.get('AOBAKE'):
     import time; t0 = time.time()
     res = int(os.environ.get('AOBAKE'))
-    meshes = [o for o in bpy.data.objects if o.type == 'MESH']
+    meshes = [o for o in bpy.data.objects if o.type == 'MESH' and o not in glassObjs]
     for o in bpy.data.objects: o.select_set(o in meshes)
     bpy.context.view_layer.objects.active = meshes[0]
     bpy.ops.object.join()

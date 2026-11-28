@@ -20,6 +20,7 @@ import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
 import { ATC } from './atc.js';
 import { drawPFD, drawND, drawEICAS } from './cockpit/instruments.js';
+import { drawHUD } from './cockpit/hud.js';
 import { panelStyleFor, drawAirbusPFD, drawECAM, drawSixPack, drawEngineStrip } from './cockpit/panels.js';
 import { D2R, R2D, KT, FT, NM, G0, clamp, isa, destination, eulerToQuat, wrap360, wrap180, distance, bearing } from './sim/math.js';
 
@@ -843,7 +844,7 @@ function instrumentState() {
   };
 }
 // live displays projected onto the 3D cockpit's screens (CSS homography of the canvas onto the screen quad)
-const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND], ['isis', drawPFD]];
+const CK_SCREENS = [['pfd', drawPFD], ['nd', drawND], ['eicas', drawEICAS], ['pfd2', drawPFD], ['nd2', drawND], ['isis', drawPFD], ['hud', drawHUD]];
 const CK_PX = 320;
 function homography(q) {
   // maps unit square (0,0),(1,0),(1,1),(0,1) -> quad q (TL,TR,BR,BL)
@@ -867,6 +868,7 @@ function drawCockpit3D(s) {
     // first officer's side and standby refresh at half rate (they are usually off to the side)
     if (/2$|isis/.test(k) && app.ckTick % 2 && c.width) continue;
     CK_SCREENS.find((e) => e[0] === k)[1](c, s);
+    if (k === 'hud') continue; // HUD: transparent collimated symbology, no display glass effects
     // cover glass: soft diagonal glare + slight edge falloff, like a real display unit
     const g = c.getContext('2d'), w = c.width, h = c.height;
     g.save(); g.setTransform(1, 0, 0, 1, 0, 0);

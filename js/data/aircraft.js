@@ -620,6 +620,7 @@ export const AIRCRAFT = [
   {
     id: 'f15c', maker: 'McDonnell Douglas', name: 'F-15C Eagle', family: 'F-15', category: 'Military',
     detailed: { glb: 'models/f15c.glb', meta: 'models/f15c.meta.json', credit: 'FlightGear F-15 Eagle by Enrique Laso, Richard Harrison and contributors (GPL v2)' },
+    cockpit: { glb: 'models/f15c-cockpit.glb', meta: 'models/f15c-cockpit.meta.json', credit: 'FlightGear F-15 cockpit (GPL v2)' },
     length: 19.43, span: 13.05, height: 5.63, wingArea: 56.5, mtow: 30845, oew: 12700, fuel: 6100,
     engines: { count: 2, type: 'turbofan', thrust: 64.9, thrustAB: 105.7, name: 'P&W F100-PW-220 (afterburning)' },
     perf: { mmo: 2.5, vmo: 800, cruiseMach: 0.9, ceiling: 65000, range: 3450, seats: '1', gMax: 9, gMin: -3, rollRate: 220, alphaMax: 30 },

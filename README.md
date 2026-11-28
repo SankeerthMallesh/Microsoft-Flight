@@ -124,6 +124,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The detailed F-22A Raptor exterior comes from the [FlightGear](https://www.flightgear.org/) Lockheed-Martin FA-22A Raptor by Fabrizio Fracaroli (AeroFab), GPL v2, converted for this sim (glTF, sim axes, animated gear, control surfaces and thrust-vectoring nozzles).
 - The 3D CRJ700/CRJ900 flight deck comes from the [FlightGear](https://www.flightgear.org/) CRJ700 family (Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and contributors), GPL v2.
 - The 3D ATR 72/42 flight deck comes from the [FlightGear](https://www.flightgear.org/) ATR 72-500 (Ryan Miller and contributors), GPL v2.
+- The F-15C Eagle (exterior and 3D cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-15 (3D model by Enrique Laso; systems, cockpit and FDM by Richard Harrison and contributors), GPL v2.
 
 ### License
 
