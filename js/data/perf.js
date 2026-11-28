@@ -24,6 +24,8 @@ const AB_BOEING = { LO: 1.5, MED: 2.2, MAX: 4.0 }; // ~ autobrake 2 / 3 / MAX (5
 const AB_AIRBUS = { LO: 1.7, MED: 3.0, MAX: 4.6 };
 
 const FAMILY = {
+  // F-35A: F135 idle -> MIL ~4.5 s; CLmax ~1.6 (alpha limit ~50 deg in the real FCS, lift peaks well before)
+  'F-35': { clmaxClean: 1.6, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4.5, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.022, e: 0.78, sfc: 1.45 },
   // F-22A: F119 spool-up idle -> MIL ~4 s; chined LERX-less blended body, CLmax ~1.7 at ~28 deg alpha (FCS limited)
   'F-22': { clmaxClean: 1.7, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.019, e: 0.8, sfc: 1.5 },
   // Airbus narrow-bodies: double-slotted / Fowler flaps, full-span slats -> low VLS

@@ -72,3 +72,11 @@ Converted the same way; OpenSkies draws its live PFD, ND, EICAS and standby onto
 Converted from AC3D to glTF and aligned to the sim's model axes; landing gear grouped per leg (hidden when retracted),
 flaperons, ailerons, all-moving stabilators, twin rudders and the 2D thrust-vectoring nozzle flaps exported as hinged parts
 animated by the flight controls (hinge lines in `f22a.meta.json`). Uses the model's own grey USAF scheme; meshoptimizer-compressed.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `f35a.glb` | F-35B Lightning II for [FlightGear](https://www.flightgear.org/) (exterior, landing gear, control surfaces, nozzle, cockpit interior), from the official FlightGear aircraft download mirror | Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way and presented as the conventional-take-off F-35A: the lift fan and external pylons were removed and the
+flight-test nose boom clipped; uses the model's low-visibility grey (VM-11) texture. Flaperons, split all-moving stabilators and
+twin rudders are hinged parts animated by the flight controls.
