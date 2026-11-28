@@ -26,8 +26,8 @@ export class World {
     const viewer = new Cesium.Viewer(this.containerId, {
       animation: false, timeline: false, baseLayerPicker: false, geocoder: false, homeButton: false, sceneModePicker: false,
       navigationHelpButton: false, fullscreenButton: false, infoBox: false, selectionIndicator: false, vrButton: false,
-      baseLayer: false, shadows: false, msaaSamples: settings.quality === 'high' ? 4 : 1, requestRenderMode: false,
-      useBrowserRecommendedResolution: false, // render at the display's real pixel density (sharp on Retina)
+      baseLayer: false, shadows: false, msaaSamples: settings.quality === 'high' ? 2 : 1, requestRenderMode: false,
+      useBrowserRecommendedResolution: false, // resolutionScale below explicitly budgets device-pixel work
       contextOptions: { webgl: { powerPreference: 'high-performance', preserveDrawingBuffer: !!settings.preserveBuffer } },
     });
     this.viewer = viewer;
@@ -35,7 +35,9 @@ export class World {
     scene.globe.enableLighting = true;
     scene.globe.depthTestAgainstTerrain = true;
     scene.globe.showGroundAtmosphere = true;
-    scene.fog.enabled = true; scene.fog.density = 1.0e-4; scene.fog.minimumBrightness = 0.05; scene.fog.screenSpaceErrorFactor = 0.5;
+    // Keep enough atmospheric depth for the horizon, but don't wash out cities from cruise altitude.
+    scene.fog.enabled = true; scene.fog.density = 2.5e-5; scene.fog.minimumBrightness = 0.14; scene.fog.screenSpaceErrorFactor = 0.25;
+    if ('visualDensityScalar' in scene.fog) scene.fog.visualDensityScalar = 0.08;
     scene.skyAtmosphere.show = true;
     this.applyGraphics(settings.quality || 'medium');
     scene.screenSpaceCameraController.enableCollisionDetection = true;
@@ -63,7 +65,8 @@ export class World {
     try { scene.atmosphere.dynamicLighting = Cesium.DynamicAtmosphereLightingType.OFF; } catch (e) { /* */ } // our own day/night tint handles darkness; sun-driven atmosphere turned tiles red
     // bloom: gentle glow on sun glare, bright paint and lights
     const bloom = pp.bloom;
-    bloom.enabled = q === 'high'; // full-screen passes are expensive at Retina resolution
+    bloom.enabled = q === 'high'; // full-screen passes are expensive at high pixel counts
+    this._wantedBloom = !!bloom.enabled;
     bloom.uniforms.glowOnly = false; bloom.uniforms.contrast = 118; bloom.uniforms.brightness = -0.45; bloom.uniforms.delta = 1.0; bloom.uniforms.sigma = 2.6; bloom.uniforms.stepSize = 1.2;
     // ambient occlusion: contact shadows between parts and on buildings (high only, it is expensive)
     const ao = pp.ambientOcclusion;
@@ -72,7 +75,8 @@ export class World {
     // sun shadows (aircraft onto itself / runway / buildings)
     viewer.shadows = q === 'high' || !!this.settings.shadows;
     const sm = scene.shadowMap;
-    if (sm) { sm.softShadows = true; sm.size = q === 'high' ? 4096 : 2048; sm.maximumDistance = 600; sm.darkness = 0.35; sm.fadingEnabled = true; }
+    // 4096px shadow maps are disproportionately expensive on mid-range integrated GPUs.
+    if (sm) { sm.softShadows = true; sm.size = q === 'high' ? 2048 : 1024; sm.maximumDistance = 900; sm.darkness = 0.35; sm.fadingEnabled = true; }
     viewer.terrainShadows = Cesium.ShadowMode.RECEIVE_ONLY;
   }
 
@@ -92,18 +96,26 @@ export class World {
         onStatus('Loading photorealistic 3D tiles…');
         scene.setTerrain(Cesium.Terrain.fromWorldTerrain());
         viewer.imageryLayers.add(Cesium.ImageryLayer.fromWorldImagery());
-        const sse = { high: 4, medium: 8, low: 14 }[this.settings.quality] ?? 8;
+        // A flight camera spends much of its time several thousand feet up. The previous
+        // settings relaxed distant/peripheral tiles too aggressively, so cities and towers
+        // stayed soft even after the camera had settled. Keep a tighter LOD target and let
+        // the adaptive controller below trade detail only when the frame budget is exceeded.
+        const q = this.settings.quality || 'medium';
+        const sse = { high: 3.5, medium: 5.5, low: 9 }[q] ?? 5.5;
         this.baseSSE = sse;
+        this._adaptiveSSELimit = sse + (q === 'low' ? 3 : 4);
         const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
           maximumScreenSpaceError: sse,
-          cacheBytes: ({ high: 1024, medium: 768, low: 512 }[this.settings.quality] ?? 768) * 1024 * 1024,
-          maximumCacheOverflowBytes: ({ high: 512, medium: 384, low: 256 }[this.settings.quality] ?? 384) * 1024 * 1024,
-          preloadFlightDestinations: true, foveatedScreenSpaceError: true,
-          // a flight sim's camera never stops: Cesium's default skips detailed tiles while the camera moves,
-          // which left the ground permanently blurry. Always request them.
-          cullRequestsWhileMoving: false,
-          // lower detail toward the horizon (big saving at low altitude, barely visible)
-          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 1.0e-4, dynamicScreenSpaceErrorFactor: 6, dynamicScreenSpaceErrorHeightFalloff: 0.25,
+          cacheBytes: ({ high: 1024, medium: 768, low: 512 }[q] ?? 768) * 1024 * 1024,
+          maximumCacheOverflowBytes: ({ high: 512, medium: 384, low: 256 }[q] ?? 384) * 1024 * 1024,
+          preloadFlightDestinations: true,
+          // Flight views move continuously. Do not defer requested tiles just because the camera is moving,
+          // and do not intentionally soften the edge of the screen where distant skylines often sit.
+          cullRequestsWhileMoving: false, foveatedScreenSpaceError: false,
+          // Keep distance-based LOD relaxation very mild. At higher altitudes the view already spans
+          // a large area; a strong dynamic error turns whole city blocks and skyscrapers into blobs.
+          dynamicScreenSpaceError: true, dynamicScreenSpaceErrorDensity: 2.0e-5,
+          dynamicScreenSpaceErrorFactor: 1.5, dynamicScreenSpaceErrorHeightFalloff: 0.75,
         });
         ts.shadows = Cesium.ShadowMode.RECEIVE_ONLY;
         this.tileset = scene.primitives.add(ts);
@@ -155,31 +167,69 @@ export class World {
   }
 
   // ---------------------------------------------------------------- render budget + adaptive quality
-  // Resolution is budgeted in "pixels per CSS pixel" (RPR) instead of the raw device pixel ratio: a Retina
-  // MacBook would otherwise render 4x the pixels of a normal screen. Never drops below 1.0 (no blurry upscaling).
+  // Pixels per CSS pixel (RPR) is independent of monitor DPR. A 0.65 floor lets a weak GPU
+  // recover from single-digit FPS instead of being trapped at native resolution.
   setRenderBudget(q) {
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
-    this.rprTarget = Math.min(dpr, { high: 2, medium: 1.35, low: 1 }[q] ?? 1.35);
-    this.rprMin = Math.min(dpr, 1);
+    this.rprTarget = Math.min(dpr, { high: 1.4, medium: 1.0, low: 0.85 }[q] ?? 1.0);
+    this.rprMin = Math.min(dpr, 0.65);
     this.rpr = this.rprTarget;
     this.viewer.resolutionScale = this.rpr / dpr;
+    this._adaptiveShadowsOff = false;
+    this._wantedShadows = !!this.viewer.shadows;
   }
-  // Keeps the frame rate smooth: first trims resolution toward 1.15x, then distant 3D-tile detail (mildly),
-  // then resolution down to 1.0x; restores in reverse when there's headroom.
+  // Fast, tiered governor. At very low FPS it reduces pixel cost immediately, then relaxes
+  // tile detail only after the resolution floor is reached. It restores quality gradually
+  // after sustained headroom, avoiding oscillation while the aircraft is moving.
   adaptQuality(fps) {
-    const v = this.viewer, ts = this.tileset, base = this.baseSSE || 10;
+    const v = this.viewer, ts = this.tileset, base = this.baseSSE || 8;
     if (!this.rpr) this.setRenderBudget(this.quality || 'medium');
-    const setR = (r) => { this.rpr = Math.max(this.rprMin, Math.min(this.rprTarget, +r.toFixed(2))); v.resolutionScale = this.rpr / this.dpr; };
-    const mid = Math.max(this.rprMin, Math.min(this.rprTarget, 1.15));
-    if (fps < 28) {
-      if (this.rpr > mid + 0.01) setR(this.rpr - 0.1);
-      else if (ts && ts.maximumScreenSpaceError < base * 1.35) ts.maximumScreenSpaceError = Math.min(base * 1.35, ts.maximumScreenSpaceError + 1);
-      else setR(this.rpr - 0.05);
-    } else if (fps > 50) {
-      if (this.rpr < mid - 0.01) setR(this.rpr + 0.05);
-      else if (ts && ts.maximumScreenSpaceError > base) ts.maximumScreenSpaceError = Math.max(base, ts.maximumScreenSpaceError - 1);
-      else if (this.rpr < this.rprTarget) setR(this.rpr + 0.05);
+    const setR = (r) => {
+      this.rpr = Math.max(this.rprMin, Math.min(this.rprTarget, +r.toFixed(2)));
+      v.resolutionScale = this.rpr / this.dpr;
+    };
+    const atFloor = this.rpr <= this.rprMin + 0.025;
+    if (fps < 32 && this._wantedBloom && !this._adaptiveBloomOff) {
+      v.scene.postProcessStages.bloom.enabled = false;
+      this._adaptiveBloomOff = true;
+    }
+    if (fps < 20) {
+      setR(this.rpr - 0.12);
+      if (atFloor && ts && ts.maximumScreenSpaceError < (this._adaptiveSSELimit || base + 4)) {
+        ts.maximumScreenSpaceError = Math.min(this._adaptiveSSELimit || base + 4, ts.maximumScreenSpaceError + 1.25);
+      } else if (atFloor && this._wantedShadows && !this._adaptiveShadowsOff) {
+        v.shadows = false;
+        if (ts) ts.shadows = C().ShadowMode.DISABLED;
+        this._adaptiveShadowsOff = true;
+      }
+      this._goodFrameWindows = 0;
+    } else if (fps < 32) {
+      setR(this.rpr - 0.07);
+      if (atFloor && ts && ts.maximumScreenSpaceError < (this._adaptiveSSELimit || base + 4)) {
+        ts.maximumScreenSpaceError = Math.min(this._adaptiveSSELimit || base + 4, ts.maximumScreenSpaceError + 0.5);
+      }
+      this._goodFrameWindows = 0;
+    } else if (fps > 54) {
+      this._goodFrameWindows = (this._goodFrameWindows || 0) + 1;
+      // Restore distant geometry first, then pixel density, then optional shadows.
+      if (ts && ts.maximumScreenSpaceError > base) {
+        ts.maximumScreenSpaceError = Math.max(base, ts.maximumScreenSpaceError - 0.8);
+      } else if (this.rpr < this.rprTarget) {
+        setR(this.rpr + 0.06);
+      } else if ((this._adaptiveShadowsOff || this._adaptiveBloomOff) && this._goodFrameWindows >= 3) {
+        if (this._adaptiveShadowsOff) {
+          v.shadows = this._wantedShadows;
+          if (ts) ts.shadows = C().ShadowMode.RECEIVE_ONLY;
+          this._adaptiveShadowsOff = false;
+        }
+        if (this._adaptiveBloomOff) {
+          v.scene.postProcessStages.bloom.enabled = this._wantedBloom;
+          this._adaptiveBloomOff = false;
+        }
+      }
+    } else {
+      this._goodFrameWindows = 0;
     }
   }
 
@@ -486,7 +536,8 @@ export class World {
   setWeather(preset) {
     this.weather = preset;
     const scene = this.viewer.scene;
-    const fog = { clear: 0.6e-4, few: 0.8e-4, scattered: 1.0e-4, broken: 1.8e-4, overcast: 3.5e-4, storm: 6e-4 }[preset] || 1e-4;
+    // Keep weather haze, but avoid turning the city skyline into a low-contrast blur at cruise altitude.
+    const fog = { clear: 0.8e-5, few: 1.2e-5, scattered: 1.8e-5, broken: 3.0e-5, overcast: 5.0e-5, storm: 8.0e-5 }[preset] || 1.8e-5;
     scene.fog.density = fog;
     this.cloudCfg = {
       clear: { n: 0 }, few: { n: 22, base: 1400, top: 2200, size: 1.3 }, scattered: { n: 45, base: 1500, top: 2600, size: 1.6 },

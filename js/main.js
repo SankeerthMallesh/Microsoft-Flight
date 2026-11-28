@@ -688,7 +688,10 @@ let frame = 0, groundTimer = 0, tileTimer = 0, cloudTimer = 0, lastIas = 0, tren
 function tick() {
   if (!app.flying) return;
   const now = performance.now();
-  let dt = Math.min(0.1, (now - (app.lastT || now)) / 1000); app.lastT = now;
+  // Keep the flight-model step capped for stability, but measure real elapsed time separately.
+  // Previously the 0.1s simulation cap also capped the FPS calculation at 10 FPS, hiding worse slowdowns.
+  const elapsed = Math.max(0.001, (now - (app.lastT || now)) / 1000); app.lastT = now;
+  const dt = Math.min(0.1, elapsed);
   const fm = app.fm, world = app.world, ap = app.ap;
   if (!fm) return;
   frame++;
@@ -791,9 +794,16 @@ function tick() {
   // speed trend (kt per second, smoothed)
   const o = fm.out;
   if (dt > 0) trend += ((o.ias - lastIas) / dt - trend) * Math.min(1, dt * 2); lastIas = o.ias;
-  // frame-rate tracking + adaptive quality
-  app.fps = app.fps ? app.fps + ((1 / Math.max(dt, 1e-3)) - app.fps) * 0.05 : 60;
-  if (now - (app.lastAdapt || 0) > 2000) { app.lastAdapt = now; if (settings.autoQuality !== false) world.adaptQuality(app.fps); $('fpsVal').textContent = Math.round(app.fps) + ' FPS'; }
+  // Frame-rate tracking + adaptive quality. Use uncapped elapsed time so the governor sees
+  // true low frame rates, and react roughly once per second instead of taking many seconds per step.
+  const instantFps = 1 / elapsed;
+  const fpsAlpha = 1 - Math.exp(-elapsed / 0.7);
+  app.fps = app.fps ? app.fps + (instantFps - app.fps) * fpsAlpha : instantFps;
+  if (now - (app.lastAdapt || 0) > 900) {
+    app.lastAdapt = now;
+    if (settings.autoQuality !== false) world.adaptQuality(app.fps);
+    $('fpsVal').textContent = Math.round(app.fps) + ' FPS';
+  }
   if (now - (app.lastInst || 0) > 50) { app.lastInst = now; drawInstruments(); }
   if (now - (app.lastHud || 0) > 100) { app.lastHud = now; updateHud(); }
 }

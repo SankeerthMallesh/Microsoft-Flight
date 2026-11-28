@@ -271,8 +271,13 @@ export class Traffic {
       const gz = phys ? -phys.groundZ : 2.5;
       if (p.ground) p.h = gnd + gz;
       else {
-        const g = this.world.localGeoid(p.lat, p.lon) ?? this.ctx?.geoid ?? 0;
-        p.h = Math.max(gnd + gz, p.altFt * FT + g + tg.off[2]);
+        // The geoid offset changes slowly over distance. Re-scanning the full airport database
+        // for every traffic target on every render frame was needless CPU work; cache it briefly.
+        if (tg.geoid === undefined || t - (tg.geoidT || 0) > 30) {
+          tg.geoid = this.world.localGeoid(p.lat, p.lon) ?? this.ctx?.geoid ?? 0;
+          tg.geoidT = t;
+        }
+        p.h = Math.max(gnd + gz, p.altFt * FT + tg.geoid + tg.off[2]);
         if (p.h - gnd < 15 && p.gs < 90) p.ground = true; // on the runway in the feed's eyes but reported airborne
       }
       p.agl = (p.h - gnd) / FT;
