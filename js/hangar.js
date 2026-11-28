@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 import { getAircraftGLB } from './model/factory.js';
 
 export class Hangar {
@@ -19,6 +20,13 @@ export class Hangar {
     scene.fog = new THREE.Fog('#1a1e24', 120, 320);
     const pmrem = new THREE.PMREMGenerator(r);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    // real sky lighting + reflections: CC0 HDRI from Poly Haven (kloofendal_48d_partly_cloudy_puresky)
+    new RGBELoader().load(new URL('../images/textures/sky-partly-cloudy-1k.hdr', import.meta.url).href, (hdr) => {
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      scene.environment = pmrem.fromEquirectangular(hdr).texture;
+      scene.environmentIntensity = 0.9;
+      hdr.dispose();
+    }, undefined, () => { /* keep the studio environment */ });
     this.scene = scene;
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.5, 2000);
     this.controls = new OrbitControls(this.camera, canvas);

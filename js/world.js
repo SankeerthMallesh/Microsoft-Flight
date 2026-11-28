@@ -103,7 +103,7 @@ export class World {
         const q = this.settings.quality || 'medium';
         const sse = { high: 3.5, medium: 5.5, low: 9 }[q] ?? 5.5;
         this.baseSSE = sse;
-        this._adaptiveSSELimit = sse + (q === 'low' ? 3 : 4);
+        this._adaptiveSSELimit = sse + (q === 'low' ? 8 : 7); // room to trade distant tile detail instead of pixels
         const ts = await Cesium.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, {
           maximumScreenSpaceError: sse,
           cacheBytes: ({ high: 1024, medium: 768, low: 512 }[q] ?? 768) * 1024 * 1024,
@@ -172,8 +172,10 @@ export class World {
   setRenderBudget(q) {
     const dpr = window.devicePixelRatio || 1;
     this.dpr = dpr;
-    this.rprTarget = Math.min(dpr, { high: 1.4, medium: 1.0, low: 0.85 }[q] ?? 1.0);
-    this.rprMin = Math.min(dpr, 0.65);
+    // Never render below 1 pixel per CSS pixel: below that the image visibly turns blocky/pixelated
+    // (especially on Retina, where 0.65 meant ~1/3 of native sharpness). Trade scenery detail instead.
+    this.rprTarget = Math.min(dpr, { high: 1.6, medium: 1.3, low: 1.0 }[q] ?? 1.3);
+    this.rprMin = Math.min(dpr, 1.0);
     this.rpr = this.rprTarget;
     this.viewer.resolutionScale = this.rpr / dpr;
     this._adaptiveShadowsOff = false;
@@ -194,29 +196,26 @@ export class World {
       v.scene.postProcessStages.bloom.enabled = false;
       this._adaptiveBloomOff = true;
     }
-    if (fps < 20) {
-      setR(this.rpr - 0.12);
-      if (atFloor && ts && ts.maximumScreenSpaceError < (this._adaptiveSSELimit || base + 4)) {
-        ts.maximumScreenSpaceError = Math.min(this._adaptiveSSELimit || base + 4, ts.maximumScreenSpaceError + 1.25);
-      } else if (atFloor && this._wantedShadows && !this._adaptiveShadowsOff) {
+    if (fps < 32) {
+      // cheapest-to-lose first: shadows, then distant tile detail, then (down to 1.0x only) resolution
+      const lim = this._adaptiveSSELimit || base + 6;
+      if (this._wantedShadows && !this._adaptiveShadowsOff) {
         v.shadows = false;
         if (ts) ts.shadows = C().ShadowMode.DISABLED;
         this._adaptiveShadowsOff = true;
-      }
-      this._goodFrameWindows = 0;
-    } else if (fps < 32) {
-      setR(this.rpr - 0.07);
-      if (atFloor && ts && ts.maximumScreenSpaceError < (this._adaptiveSSELimit || base + 4)) {
-        ts.maximumScreenSpaceError = Math.min(this._adaptiveSSELimit || base + 4, ts.maximumScreenSpaceError + 0.5);
+      } else if (ts && ts.maximumScreenSpaceError < lim) {
+        ts.maximumScreenSpaceError = Math.min(lim, ts.maximumScreenSpaceError + (fps < 20 ? 1.5 : 0.75));
+      } else {
+        setR(this.rpr - (fps < 20 ? 0.1 : 0.05));
       }
       this._goodFrameWindows = 0;
     } else if (fps > 54) {
       this._goodFrameWindows = (this._goodFrameWindows || 0) + 1;
       // Restore distant geometry first, then pixel density, then optional shadows.
-      if (ts && ts.maximumScreenSpaceError > base) {
-        ts.maximumScreenSpaceError = Math.max(base, ts.maximumScreenSpaceError - 0.8);
-      } else if (this.rpr < this.rprTarget) {
+      if (this.rpr < this.rprTarget) {
         setR(this.rpr + 0.06);
+      } else if (ts && ts.maximumScreenSpaceError > base) {
+        ts.maximumScreenSpaceError = Math.max(base, ts.maximumScreenSpaceError - 0.8);
       } else if ((this._adaptiveShadowsOff || this._adaptiveBloomOff) && this._goodFrameWindows >= 3) {
         if (this._adaptiveShadowsOff) {
           v.shadows = this._wantedShadows;

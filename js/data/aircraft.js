@@ -406,6 +406,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'atr72-600', maker: 'ATR', name: 'ATR 72-600', family: 'ATR', category: 'Turboprop',
+    cockpit: { glb: 'models/atr72-600-cockpit.glb', meta: 'models/atr72-600-cockpit.meta.json', credit: 'FlightGear ATR 72-500 flight deck (GPL v2), centre engine display added' },
     length: 27.17, span: 27.05, height: 7.65, wingArea: 61, mtow: 23000, oew: 13311, fuel: 5000,
     engines: { count: 2, type: 'turboprop', power: 2051, name: 'P&W Canada PW127M', propD: 3.93, blades: 6 },
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 275, ceiling: 25000, range: 1528, seats: '70–78' },
@@ -555,6 +556,7 @@ export const AIRCRAFT = [
   },
   {
     id: 'atr42-600', maker: 'ATR', name: 'ATR 42-600', family: 'ATR', category: 'Turboprop',
+    cockpit: { glb: 'models/atr72-600-cockpit.glb', meta: 'models/atr72-600-cockpit.meta.json', offset: [-2.131, 0, 0], credit: 'FlightGear ATR 72-500 flight deck (GPL v2), centre engine display added, adapted for the ATR 42' },
     length: 22.67, span: 24.57, height: 7.59, wingArea: 54.5, mtow: 18600, oew: 11550, fuel: 4500,
     engines: { count: 2, type: 'turboprop', power: 1611, name: 'P&W Canada PW127M', propD: 3.93, blades: 6 },
     perf: { mmo: 0.55, vmo: 250, cruiseKtas: 300, ceiling: 25000, range: 1326, seats: '48–50' },
@@ -644,7 +646,7 @@ export function deriveAero(ac) {
   const sweepRad = (g.sweep * Math.PI) / 180;
   const mcrit = tune.mcrit ? tune.mcrit : isJet ? Math.min(0.9, 0.67 + 0.35 * Math.sin(sweepRad) + (ac.perf.mmo - 0.82) * 0.6) : 0.6;
   return {
-    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps,
+    AR, mac, e, cd0, clmaxClean, dclFlaps, dclSlats, mcrit, tune, flapLin: tune.flapLin ?? dclFlaps, flapExp: tune.flapExp ?? 1,
     clAlpha: (2 * Math.PI * AR) / (2 + Math.sqrt(4 + AR * AR * (1 + Math.tan(sweepRad) ** 2))) * 1.05,
     cl0: tune.cl0 ?? (isGA ? 0.34 : ac.engines.type === 'turboprop' ? 0.32 : 0.4), // camber + wing incidence: ~2-2.5 deg body attitude in cruise
     kx, ky, kz,

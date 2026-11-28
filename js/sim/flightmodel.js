@@ -161,7 +161,9 @@ export class FlightModel {
 
     // ----- lift
     const flap = this.flap, slat = this.slat;
-    const clLin0 = A.cl0 + A.flapLin * flap; // flaps shift the lift curve (camber) as well as raising CLmax
+    // flaps shift the lift curve (camber + Fowler area) as well as raising CLmax; with flapExp < 1 the
+    // first detents give most of the lift (Fowler travel) and the last mainly add drag
+    const clLin0 = A.cl0 + A.flapLin * Math.pow(flap, A.flapExp);
     const clmax = A.clmaxClean + A.dclFlaps * flap + A.dclSlats * slat;
     const aStall = (clmax - clLin0) / A.clAlpha;
     const aStallNeg = -(clmax * 0.75 + clLin0) / A.clAlpha;
@@ -188,6 +190,9 @@ export class FlightModel {
     const ge = hge < this.b ? (16 * hge / this.b) ** 2 / (1 + (16 * hge / this.b) ** 2) : 1;
     if (hge < this.b) CL *= 1 + 0.08 * (1 - hge / this.b);
     CL -= 0.55 * this.spoiler * Math.max(0, CL) / Math.max(1, clmax) * 1.6;
+    // turboprop on the ground at idle: propellers in ground-fine pitch blank the wing behind them
+    // (the ATR / Dash 8 'lift dump' without spoilers)
+    if (this.onGround && this.groundTime > 0.5 && ac.engines.type === 'turboprop' && (this.ctl.throttle < 0.1 || this.reversers) && this.engines.some((e) => e.running)) CL *= 0.6;
     // ----- drag
     const Mcrit = A.mcrit;
     let wave;
@@ -400,6 +405,8 @@ export class FlightModel {
         T = Math.min(Tstatic, (eta * P) / Math.max(V, 1));
         // at flight idle a propeller windmills: net drag that bleeds speed quickly in the flare
         T -= e.maxPower * (e.type === 'piston' ? 0.004 : 0.0035) * lapse * (1 - clamp(f * 3, 0, 1)) * clamp(V / 45, 0, 1);
+        // ground-fine pitch (turboprop power levers at ground idle): large disc drag on the landing roll
+        if (e.type === 'turboprop' && this.onGround && thr < 0.1 && !this.reversers) T -= e.maxPower * 0.006 * lapse * clamp(V / 30, 0, 1);
         // BSFC: piston ~0.245 kg/kWh (best-economy mixture), PW127 ~0.29 kg/kWh
         e.ff = (P * (e.type === 'piston' ? 0.245 : 0.29) / 3.6e6 + (e.type === 'piston' ? 0.0006 : 0.004)) * e.sfc;
         const egtTarget = 450 + 400 * f + (atm.T - 288) * 0.8;

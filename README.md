@@ -122,6 +122,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The 3D Airbus A380 flight deck comes from the [FlightGear](https://www.flightgear.org/) Airbus A380 (K. Ampere, I. Cunningham, F. Dalvi, S. Hamilton and contributors), GPL v2.
 - The 3D Boeing 747 flight deck (747-8i, also used on the 747-8F and 747-400) comes from the [FlightGear](https://www.flightgear.org/) 747-8i (John Williams; original cockpit by Gijs de Rooy with Ivan Ngeow, Jentron, Syd Adams, Torsten Dreyer, Markus Bulik; Grupo FGBr), GPL v2.
 - The 3D CRJ700/CRJ900 flight deck comes from the [FlightGear](https://www.flightgear.org/) CRJ700 family (Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and contributors), GPL v2.
+- The 3D ATR 72/42 flight deck comes from the [FlightGear](https://www.flightgear.org/) ATR 72-500 (Ryan Miller and contributors), GPL v2.
 
 ### License
 
@@ -129,6 +130,7 @@ Because it includes GPL-licensed FlightGear content, OpenSkies is distributed un
 
 - [CesiumJS](https://cesium.com) (Apache 2.0) and [three.js](https://threejs.org) (MIT) load from the jsDelivr CDN.
 - Taxiways, aprons and airport/city buildings come from [OpenStreetMap](https://www.openstreetmap.org/copyright) (© OpenStreetMap contributors, ODbL), fetched via the Overpass API; global 3D buildings use Cesium OSM Buildings.
+- Runway, taxiway and apron surface photos are CC0 textures from [ambientCG](https://ambientcg.com) (Asphalt031, Asphalt026C, Concrete034, Concrete044B); the hangar sky lighting is the CC0 HDRI "Kloofendal 48d Partly Cloudy (Pure Sky)" from [Poly Haven](https://polyhaven.com).
 - Airport and runway data comes from [OurAirports](https://ourairports.com/data/) (public domain).
 - Aircraft specifications are taken from manufacturers' public data.
 - This is an independent hobby project. It isn't affiliated with Microsoft, any aircraft manufacturer or any airline. Airline names, logos and liveries are trademarks of their owners. They're recreated here only for personal, non-commercial simulation.

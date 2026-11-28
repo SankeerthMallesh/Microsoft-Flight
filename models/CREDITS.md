@@ -62,3 +62,10 @@ Converted the same way. The 747-8F and 747-400 reuse this flight deck, repositio
 | `crj700-cockpit.glb` | CRJ700 family for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, CDUs, standby), from the official FlightGear aircraft download mirror | Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
 
 Converted the same way; OpenSkies draws its live PFD, ND, EICAS and standby onto the six display units. The CRJ900 reuses it.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `atr72-600-cockpit.glb` | ATR 72-500 for [FlightGear](https://www.flightgear.org/) (flight deck, overhead, glareshield, pedestal, standby gauges), from the official FlightGear aircraft download mirror | Ryan Miller (3D and FDM) and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way. The -500's analog engine gauges were replaced by a centre display unit (as on the -600) carrying OpenSkies'
+live engine display; the live PFD and ND sit on the EADI/EHSI tubes. The ATR 42-600 reuses this flight deck.
