@@ -90,6 +90,13 @@ const MD11_FLAPS = [
   { label: '50', flap: 1, slat: 1 },
 ];
 
+// fighters: plain flaperons / leading-edge flaps scheduled by the flight-control computer
+const MIL_FLAPS = [
+  { label: 'AUTO', flap: 0, slat: 0 },
+  { label: 'TO', flap: 0.35, slat: 0.5 },
+  { label: 'LDG', flap: 0.7, slat: 1 },
+];
+
 // Helper to describe wing engine positions as fraction of semi-span.
 const twinWing = (y = 0.34) => [{ mount: 'wing', y }];
 const quadWing = (y1, y2) => [{ mount: 'wing', y: y1 }, { mount: 'wing', y: y2 }];
@@ -599,6 +606,20 @@ export const AIRCRAFT = [
     flaps: [{ label: '0°', flap: 0, slat: 0 }, { label: '10°', flap: 0.25, slat: 0 }, { label: '25°', flap: 0.62, slat: 0 }, { label: '40°', flap: 1, slat: 0 }],
     geo: { d: 1.12, dh: 1.3, nose: 'c172', wingX: 0.3, wingZ: 'low', sweep: 0, dihedral: 7, taper: 0.75, tip: 'none', gc: 0.3,
       eng: [{ mount: 'nose' }], fixedGear: true, vt: { h: 1.1, x: 0.8 }, mainWheels: 1, noseLen: 1.4, tailLen: 3.3, boxy: true },
+  },
+
+  // ---------------------------------------------------------------- MILITARY / SUPERSONIC
+  {
+    id: 'f22a', maker: 'Lockheed Martin', name: 'F-22A Raptor', family: 'F-22', category: 'Military',
+    detailed: { glb: 'models/f22a.glb', meta: 'models/f22a.meta.json', credit: 'FlightGear Lockheed-Martin FA-22A Raptor by Fabrizio Fracaroli (AeroFab), GPL v2 — modified' },
+    length: 18.92, span: 13.56, height: 5.08, wingArea: 78.04, mtow: 38000, oew: 19700, fuel: 8200,
+    // two P&W F119-PW-100, 2D thrust-vectoring nozzles (±20° pitch): ~26,000 lbf dry / ~35,000 lbf in afterburner each
+    engines: { count: 2, type: 'turbofan', thrust: 116, thrustAB: 156, afterburner: true, bypass: 0.3, name: 'P&W F119-PW-100 (thrust vectoring)' },
+    perf: { mmo: 2.25, vmo: 800, cruiseMach: 1.5, supercruise: 1.5, maxMach: 2.25, ceiling: 65000, range: 2960, seats: '1',
+      gLimit: 9, thrustVectoring: true, pitchAgility: 1.6 },
+    flaps: MIL_FLAPS, fbw: true,
+    geo: { d: 2.3, dh: 1.6, nose: 'bizjet', noseLen: 2.6, tailLen: 1.6, wingX: 0.367, sweep: 42, dihedral: -3.25, taper: 0.17, tip: 'none', gc: 0.75,
+      eng: [{ mount: 'tail' }], nacD: 1.15, vt: { h: 2.6, x: 0.78 }, mainWheels: 1 },
   },
 ];
 

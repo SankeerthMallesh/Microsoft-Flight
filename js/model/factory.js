@@ -38,7 +38,9 @@ function detailedPhysics(phys, meta) {
   p.groundZ = gz;
   const tail = p.strikes.find((s) => s.kind === 'tail');
   if (tail && p.tailAngle) tail.z = gz + Math.tan(p.tailAngle * Math.PI / 180) * (mx - tail.x);
-  p.anim = { surfaces: [], gear: ['gearN', 'gearL', 'gearR'].filter((k) => c[k]).map((k) => ({ node: k, kind: 'hide', pivot: c[k] })) };
+  // optional animated control surfaces / thrust-vectoring nozzles exported with the model (hinge lines in model space)
+  p.anim = { surfaces: meta.surfaces || [], gear: ['gearN', 'gearL', 'gearR'].filter((k) => c[k]).map((k) => ({ node: k, kind: 'hide', pivot: c[k] })) };
+  if (meta.nozzles) p.nozzles = meta.nozzles; // exhaust exits (afterburner flame / heat haze anchors)
   p.detailed = true;
   return p;
 }

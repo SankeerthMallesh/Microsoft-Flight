@@ -24,6 +24,8 @@ const AB_BOEING = { LO: 1.5, MED: 2.2, MAX: 4.0 }; // ~ autobrake 2 / 3 / MAX (5
 const AB_AIRBUS = { LO: 1.7, MED: 3.0, MAX: 4.6 };
 
 const FAMILY = {
+  // F-22A: F119 spool-up idle -> MIL ~4 s; chined LERX-less blended body, CLmax ~1.7 at ~28 deg alpha (FCS limited)
+  'F-22': { clmaxClean: 1.7, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.019, e: 0.8, sfc: 1.5 },
   // Airbus narrow-bodies: double-slotted / Fowler flaps, full-span slats -> low VLS
   A320: { clmaxClean: 1.5, dclFlaps: 0.88, dclSlats: 0.45, law: 'airbus', ab: AB_AIRBUS, landFlap: 0 },
   A220: { clmaxClean: 1.48, dclFlaps: 0.8, dclSlats: 0.42, law: 'airbus', ab: AB_AIRBUS },
@@ -64,6 +66,9 @@ const FAMILY = {
   Cherokee: { clmaxClean: 1.6, dclFlaps: 0.6, dclSlats: 0, ab: null, vrK: 1.06, v2K: 1.4, vrefK: 1.3, spool: 1 },
 };
 const CATEGORY = {
+  // fighters: low-aspect-ratio wings with leading-edge flaps reach a high CLmax at high alpha; no reversers
+  Military: { clmaxClean: 1.6, dclFlaps: 0.3, dclSlats: 0.25, law: 'boeing-fbw', ab: null, spool: 4, revK: 0, vrK: 1.1, v2K: 1.2, vrefK: 1.25, cd0: 0.021, e: 0.78, sfc: 1.5 },
+  Supersonic: { clmaxClean: 1.3, dclFlaps: 0, dclSlats: 0, law: 'conv', ab: AB_AIRBUS, spool: 6, revK: 0.2, vrK: 1.1, v2K: 1.18, vrefK: 1.25, cd0: 0.012, e: 0.7, sfc: 1.4 },
   'Narrow-body': { clmaxClean: 1.42, dclFlaps: 0.7, dclSlats: 0.42, ab: AB_BOEING },
   'Wide-body': { clmaxClean: 1.42, dclFlaps: 0.58, dclSlats: 0.4, ab: AB_BOEING, spool: 7.5 },
   Cargo: { clmaxClean: 1.42, dclFlaps: 0.58, dclSlats: 0.4, ab: AB_BOEING, spool: 7.5 },
