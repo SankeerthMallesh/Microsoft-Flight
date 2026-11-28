@@ -354,7 +354,8 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     const n = Math.max(0, Math.min(1, (0.7 - v) / 0.5));
     for (const [id, c, glow] of bldColors) {
       const at = bldPrim.getGeometryInstanceAttributes(id); if (!at) continue;
-      const col = glow ? new Cesium.Color(c.red * v + 0.95 * n, c.green * v + 0.78 * n, c.blue * v * 1.04 + 0.5 * n, 1) : new Cesium.Color(c.red * v, c.green * v, c.blue * v * 1.04, 1);
+      const m1 = (x) => Math.min(1, x);
+      const col = glow ? new Cesium.Color(m1(c.red * v + 0.75 * n), m1(c.green * v + 0.58 * n), m1(c.blue * v * 1.04 + 0.3 * n), 1) : new Cesium.Color(c.red * v, c.green * v, c.blue * v * 1.04, 1);
       at.color = Cesium.ColorGeometryInstanceAttribute.toValue(col, at.color);
     }
     return true;

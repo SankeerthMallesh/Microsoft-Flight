@@ -262,17 +262,28 @@ export class AirportLights {
       if (lv === this.level[g]) continue;
       this.level[g] = lv;
       for (const c of cols) {
-        c.show = lv > 0.02 && c._faceShow !== false;
+        c.show = lv > 0.02 && c._faceShow !== false && !this.isFar(g);
         if (lv > 0.02) for (let i = 0; i < c.length; i++) { const b = c.get(i); if (b._c) b.color = C.Color.fromAlpha(b._c, b._c.alpha * lv, b.color); }
       }
     }
-    if (this.pools) { const v = this.levels.flood || 0; this.pools.show = v > 0.02; this.poolMat.uniforms.color = new C.Color(1, 1, 1, 0.42 * v); }
+    if (this.pools) { const v = this.levels.flood || 0; this.pools.show = v > 0.02 && !this.isFar('flood'); this.poolMat.uniforms.color = new C.Color(1, 1, 1, 0.2 * v); }
   }
   // ---------------------------------------------------------------- per frame: faces, flashers, PAPI, guards
+  // distance culling: taxiway lights / floods beyond 14 km and the whole airport beyond 50 km are hidden
+  isFar(g) { return this.far === 2 || (this.far === 1 && (g === 'taxi' || g === 'flood')); }
   frame() {
     const C = this.C, cam = this.scene.camera;
     if (!cam) return;
-    const t = performance.now() / 1000, rwyOn = this.level.rwy > 0.02;
+    const t = performance.now() / 1000;
+    if (t - (this._dt || 0) > 0.5) {
+      this._dt = t;
+      this._center = this._center || C.Cartesian3.fromDegrees(this.ap.lo, this.ap.la, 0);
+      const d = C.Cartesian3.distance(cam.positionWC, this._center);
+      const far = d > 50000 ? 2 : d > 14000 ? 1 : 0;
+      if (far !== this.far) { this.far = far; for (const k of Object.keys(this.level)) this.level[k] = -1; this.applyLevels(); }
+    }
+    if (this.far === 2) { for (const e of this.runways) for (const fl of e.flash) for (const b of fl) b.show = false; return; }
+    const rwyOn = this.level.rwy > 0.02;
     for (const e of this.runways) {
       const d = C.Cartesian3.dot(cam.directionWC, e.dir);
       const f = d > 0.08 ? 0 : d < -0.08 ? 1 : e.face;

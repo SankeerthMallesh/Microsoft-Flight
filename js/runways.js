@@ -28,7 +28,7 @@ export function runwayInfo(r) {
   const D = Math.PI / 180;
   const la1 = r[1] * D, lo1 = r[2] * D, la2 = r[5] * D, lo2 = r[6] * D;
   const L = dist(la1, lo1, la2, lo2);
-  return { la1, lo1, la2, lo2, L, hdg: bearing(la1, lo1, la2, lo2), w: Math.max(18, (r[9] || 150) * FT), e1: r[3] * FT, e2: r[7] * FT, id1: r[0], id2: r[4] };
+  return { la1, lo1, la2, lo2, L, hdg: bearing(la1, lo1, la2, lo2), w: Math.max(18, (r[9] || 150) * FT), e1: r[3] * FT, e2: r[7] * FT, id1: r[0], id2: r[4], d1: (r[10] || 0) * FT, d2: (r[11] || 0) * FT };
 }
 
 function paintRunway(info) {
@@ -73,8 +73,22 @@ function paintRunway(info) {
   // threshold piano keys + numbers + aiming point + touchdown zone, for both ends
   const half = info.w >= 58 ? 8 : info.w >= 43 ? 6 : info.w >= 28 ? 4 : 3, keyW = 1.8;
   const keyGap = Math.max(0.6, (info.w / 2 - 3 - 1.5 - half * keyW) / Math.max(1, half - 1));
+  const disp = info.d1 + info.d2 < info.L * 0.6 ? [info.d1, info.d2] : [0, 0];
   for (const end of [0, 1]) {
-    const A = (d, l) => (end ? info.L - d - l : d);    // metres from this end -> along coordinate
+    const ds = disp[end];
+    const A = (d, l) => (end ? info.L - d - ds - l : d + ds); // metres from this end's threshold -> along coordinate
+    if (ds > 20) {
+      // displaced threshold: white threshold bar, centreline arrows and arrowheads in the displaced area
+      rectM(-info.w / 2, A(0, 0) - (end ? 0 : 3), info.w, 3);
+      g.save(); g.fillStyle = white;
+      const head = (dm, x0) => { // arrowhead pointing toward the threshold
+        const tip = Y(end ? info.L - dm : dm), base = Y(end ? info.L - dm + 14 : dm - 14);
+        g.beginPath(); g.moveTo(X(x0), tip); g.lineTo(X(x0 - 1.6), base); g.lineTo(X(x0 + 1.6), base); g.closePath(); g.fill();
+      };
+      for (let dm = 40; dm < ds - 25; dm += 60) { rectM(-0.45, end ? info.L - dm : dm - 20, 0.9, 20); head(dm + 14, 0); }
+      for (const x0 of [-info.w / 4, 0, info.w / 4]) head(ds - 4, x0);
+      g.restore();
+    }
     for (const sgn of [-1, 1]) for (let k = 0; k < half; k++) {
       const x = sgn > 0 ? 1.5 + k * (keyW + keyGap) : -1.5 - keyW - k * (keyW + keyGap);
       rectM(x, A(6, 30), keyW, 30);
@@ -101,7 +115,7 @@ function paintRunway(info) {
     g.restore(); g.restore();
   }
   // centreline dashes (36 m dash / 24 m gap), between the designators
-  for (let d = 105; d < info.L - 105; d += 60) rectM(-0.45, d, 0.9, Math.min(36, info.L - 105 - d));
+  for (let d = 105 + disp[0]; d < info.L - 105 - disp[1]; d += 60) rectM(-0.45, d, 0.9, Math.min(36, info.L - 105 - disp[1] - d));
   return c;
 }
 
