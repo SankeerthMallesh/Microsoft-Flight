@@ -702,7 +702,8 @@ export function buildAircraft(ac) {
       const xn0 = (g.vt?.x || 0.78) * L - len * 0.62;
       const pr = profile(xn0 + len * 0.5);
       const zc = pr.cz + pr.ht * 0.3;
-      for (const side of [1, -1]) {
+      // single-engine fighters (F-35A): one engine on the centreline, buried in the aft fuselage
+      for (const side of (ac.engines.count === 1 ? [0] : [1, -1])) {
         const y = side * (pr.hw * 0.95 + 0.62 * D);
         turbofan(xn0, y, zc, D, ei++);
         const pc = body.piece(false); const [u, v] = swatchUV(SW.pylon);

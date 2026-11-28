@@ -135,7 +135,7 @@ export class Systems {
     const fm = this.fm;
     for (const h of this.hyd) {
       const failed = this.failures.hyd[h.id] || this.failures.hyd.all;
-      const pumping = !failed && h.pumps.some((p) => p.on && (p.type === 'edp' ? fm.engines[p.eng].n2 > 40 : this.elec.ac));
+      const pumping = !failed && h.pumps.some((p) => p.on && (p.type === 'edp' ? (fm.engines[p.eng] || fm.engines[0]).n2 > 40 : this.elec.ac));
       h.press += ((pumping ? 3000 : 0) - h.press) * Math.min(1, dt * (pumping ? 2 : 0.6));
     }
     if (this.kind === 'ga') { fm.hyd = { ctl: 1, gear: true, flaps: 1, brakes: 1, nws: true, spoilers: 1 }; return; }
