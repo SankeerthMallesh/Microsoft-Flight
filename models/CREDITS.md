@@ -82,6 +82,7 @@ flaperons, ailerons, all-moving stabilators, twin rudders and the 2D thrust-vect
 animated by the flight controls (hinge lines in `f22a.meta.json`). Uses the model's own grey USAF scheme; meshoptimizer-compressed.
 
 | `f15c.glb`, `f15c-cockpit.glb` | F-15 Eagle for [FlightGear](https://www.flightgear.org/) (exterior, canopy, landing gear, nozzles; front cockpit with HUD, VSD, MPCD and TEWS), from the official FlightGear aircraft download mirror | Enrique Laso "Flying toaster" (3D model), Richard Harrison (zaretto; systems, cockpit, FDM) and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+| `f16c.glb`, `f16c-cockpit.glb` | F-16 Fighting Falcon for [FlightGear](https://www.flightgear.org/) (exterior, gold-tinted canopy, gear, P&W nozzle; MLU cockpit with HUD, MFDs, ICP, consoles), from the official FlightGear aircraft download mirror | Erik Hofman (main author), Martin "Pegasus" Schmitt and Prohm "Rama" Snitwong (cockpit textures and layout), Nikolai V. Chr. "Leto"/"Necolatis", J Maverick 16, Pensacola (liveries) and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
 
 OpenSkies assembled the AC3D parts with `tools/fg-cockpit/bl_fg_exterior.py` (F-15C variant only: D-model canopy, stores, tanks
 and conformal tanks removed, canopy fasteners decimated, landing gear grouped for retraction, wheels levelled on one contact plane),

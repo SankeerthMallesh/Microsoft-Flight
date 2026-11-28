@@ -1,0 +1,8 @@
+{ "exterior": "Models/f16.ac", "extNames": "^RadarDomeTop$", "xcg": 7.66,
+  "keep": "^Models/(f16\\.ac|nozzle\\.ac|nozzle-section\\.ac|outlet\\.ac|InnerBrake|Cockpit/)",
+  "drop": "(/Afetrburner/|/Lights/|HighSpeed|/Chute$|F-16-FS-B10|mfd-ext|/block-15/|Fan\\.001)|^Models/Cockpit/.*(_on$|_lit$)",
+  "decimate": { "^Models/Cockpit/": 0.2 },
+  "gear": { "gearN": "/(FrontGear/|ExternalFrontGearDoor|InternalFrontGearDoor)", "gearL": "/(LeftGear/|ExternalLeftMainDoor)", "gearR": "/(RightGear/|ExternalRightMainDoor)" },
+  "tires": { "gearN": "/FrontTire", "gearL": "/LeftMainTire", "gearR": "/RightMainTire" },
+  "glass": "/Glass/", "glassColor": [0.16, 0.13, 0.05], "glassAlpha": 0.3,
+  "maxTex": 2048 }

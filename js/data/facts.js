@@ -1,5 +1,6 @@
 // "Did you know?" facts shown while scenery loads, keyed by aircraft id.
 export const FACTS = {
+  'f16c': 'The F-16 was the first fighter built around fly-by-wire controls, and its seat reclines 30 degrees to help the pilot withstand 9 g.',
   'f35a': 'The F-35\u2019s pilot helmet projects flight data and camera views onto the visor, letting the pilot \u201csee through\u201d the floor of the jet.',
   'f22a': 'The F-22 Raptor can \u201csupercruise\u201d: fly faster than sound without using its afterburners, saving fuel and staying stealthy.',
   'f15c': 'The F-15 Eagle has a combat record of more than 100 air-to-air victories and no losses in air combat.',

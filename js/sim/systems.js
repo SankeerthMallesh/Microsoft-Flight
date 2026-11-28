@@ -109,7 +109,11 @@ export class Systems {
     const n = this.fm.engines.length, id = this.fm.ac.id, fam = this.fm.ac.family;
     const edp = (e) => ({ type: 'edp', eng: e, on: true }), elec = () => ({ type: 'elec', on: true });
     if (this.kind === 'ga') { this.hyd = []; this.hydRole = {}; return; }
-    if (this.brand === 'airbus' && n === 2) {
+    if (n === 1) {
+      // single-engine jet (F-16): two engine-driven systems A and B, electric backup on B
+      this.hyd = [{ id: 'A', name: 'SYS A', pumps: [edp(0)] }, { id: 'B', name: 'SYS B', pumps: [edp(0), elec()] }];
+      this.hydRole = { gear: ['B'], flaps: ['A', 'B'], brakes: ['B'], altBrakes: ['A'], nws: ['B'] };
+    } else if (this.brand === 'airbus' && n === 2) {
       this.hyd = [{ id: 'G', name: 'GREEN', pumps: [edp(0)] }, { id: 'B', name: 'BLUE', pumps: [elec()] }, { id: 'Y', name: 'YELLOW', pumps: [edp(1), elec()] }];
       this.hydRole = { gear: ['G'], flaps: ['G', 'Y'], brakes: ['G'], altBrakes: ['Y'], nws: ['Y'] };
     } else if (n === 4) {
