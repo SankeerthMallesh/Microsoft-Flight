@@ -187,6 +187,8 @@ export class Audio {
       n.hiss = noise(E, 'bandpass', 3000, 0.5);
       n.roar = noise(E, 'lowpass', 800, 0.6, true);
       n.rumble = noise(E, 'lowpass', 110, 0.9, true);
+      // afterburning fighters: reheat roar (deep broadband crackle) + louder, harsher military-power jet noise
+      if (ac?.engines?.thrustAB) { n.ab = noise(E, 'lowpass', 600, 0.5, true); n.abCrackle = noise(E, 'bandpass', 2200, 0.8); this.mil = true; }
     } else {
       const blades = ac?.engines?.blades || (engineType === 'piston' ? 2 : 4);
       const D = ac?.engines?.propD || 2.5;
@@ -310,6 +312,13 @@ export class Audio {
       set(n.hiss.g.gain, (0.01 + 0.07 * pw) * k * front); set(n.hiss.fl.frequency, 1800 + pw * 2600);
       set(n.roar.g.gain, (0.03 + 0.42 * pw * pw) * aft * k * (inside ? 0.7 : 1)); set(n.roar.fl.frequency, 350 + pw * 1500);
       set(n.rumble.g.gain, (0.05 + 0.32 * pw) * k * (inside ? 1.1 : aft));
+      if (n.ab) {
+        const ab = e.reduce((acc, x) => acc + (x.ab || 0), 0) / e.length;
+        const flick = 0.85 + 0.15 * Math.random();
+        set(n.roar.g.gain, (0.05 + 0.6 * pw * pw) * aft * k * (inside ? 0.75 : 1)); // low-bypass core is far louder than a high-bypass fan
+        set(n.ab.g.gain, ab * (0.55 + 0.25 * pw) * flick * (inside ? 0.6 : aft * 1.2)); set(n.ab.fl.frequency, 380 + 500 * ab);
+        set(n.abCrackle.g.gain, ab * 0.1 * flick * (inside ? 0.25 : aft));
+      }
     } else {
       const f = pw;
       const np = this.type === 'piston' ? 0.27 + 0.73 * f : (fm.onGround ? 0.7 : 0.82) + (fm.onGround ? 0.25 : 0.18) * f;

@@ -1,5 +1,6 @@
 // CesiumJS world: globe/scenery, aircraft model, lights, clouds, sky and cameras.
 /* global Cesium */
+import { updateFlames } from './model/afterburner.js';
 import { D2R, R2D, clamp, lerp, qrot, quatToEuler, wrapPi } from './sim/math.js';
 
 import { buildAirportRunways, runwayInfo, offsetLL } from './runways.js';
@@ -781,6 +782,7 @@ export class World {
       }
     }
     this.animateParts(fm);
+    updateFlames(this, fm); // afterburner plumes (military types)
     // spin fans / props
     fm.engines.forEach((e, i) => {
       const pn = this.nodes.props[i]; if (!pn) return;
