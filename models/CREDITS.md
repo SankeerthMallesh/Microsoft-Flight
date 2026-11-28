@@ -70,7 +70,17 @@ Converted the same way; OpenSkies draws its live PFD, ND, EICAS and standby onto
 Converted the same way. The -500's analog engine gauges were replaced by a centre display unit (as on the -600) carrying OpenSkies'
 live engine display; the live PFD and ND sit on the EADI/EHSI tubes. The ATR 42-600 reuses this flight deck.
 
-## Military jets (FlightGear, GPL)
+## Military jets
+
+| File | Original model | Author | License |
+| --- | --- | --- | --- |
+| `fa18ef.glb`, `fa18ef-cockpit.glb` | [Boeing F/A-18E "Super Hornet"](https://sketchfab.com/3d-models/boeing-fa-18e-super-hornet-9e852037bf2141dcb3fda17013958131) | [ioai25312](https://sketchfab.com/ioai25312) | [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/) |
+
+OpenSkies rescaled the Super Hornet to real dimensions (18.3 m), re-aligned it to the flight-model axes, grouped the landing gear
+for retraction, made the canopy clear glass, split out the cockpit (baked ambient occlusion) and added display/HUD quads so its
+DDIs, UFCD, MPCD and HUD show OpenSkies' live displays.
+
+### FlightGear (GPL)
 
 | File | Original | Authors | License |
 | --- | --- | --- | --- |

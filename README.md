@@ -126,6 +126,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The F-15C Eagle (exterior and 3D cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-15 (3D model by Enrique Laso; systems, cockpit and FDM by Richard Harrison and contributors), GPL v2.
 - The F-16C Fighting Falcon (exterior and 3D cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-16 (Erik Hofman; Martin "Pegasus" Schmitt and Prohm "Rama" Snitwong cockpit; Nikolai V. Chr. "Leto"; J Maverick 16; Pensacola liveries and contributors), GPL v2.
 - The F-14D Tomcat (exterior and 3D pilot cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-14B (Richard Harrison, Enrique Laso, xiii and contributors; VF-2 "Bounty Hunters" livery from its livery pack), GPL v2.
+- The F/A-18E Super Hornet (exterior and cockpit) is "Boeing F/A-18E Super Hornet" by ioai25312 on [Sketchfab](https://sketchfab.com/3d-models/boeing-fa-18e-super-hornet-9e852037bf2141dcb3fda17013958131), licensed CC BY 4.0 and modified for this sim.
 
 ### License
 

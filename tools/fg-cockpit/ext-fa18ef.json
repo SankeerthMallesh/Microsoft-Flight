@@ -1,0 +1,6 @@
+{ "exterior": "Models/fa18e.glb", "extNames": "", "xcg": 10.43,
+  "keep": "^Models/fa18e\\.glb",
+  "gear": { "gearN": "/Meshpart19[1-5]_", "gearL": "/Meshpart(18[6-9]|190)_", "gearR": "/Meshpart18[1-5](\\.001)?_" },
+  "tires": { "gearN": "/Meshpart192_", "gearL": "/Meshpart189_", "gearR": "/Meshpart184_" },
+  "glass": "Material\\.013", "glassColor": [0.05, 0.06, 0.07], "glassAlpha": 0.25,
+  "metallic": 0.1, "maxTex": 1024 }

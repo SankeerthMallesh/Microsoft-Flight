@@ -643,6 +643,17 @@ export const AIRCRAFT = [
     geo: { d: 2.4, dh: 1.9, nose: 'bizjet', noseLen: 4.8, wingX: 0.45, sweep: 25, dihedral: 0, taper: 0.3, tip: 'none', gc: 0.9,
       eng: [{ mount: 'tail' }], nacD: 1.3, vt: { h: 2.9, x: 0.86 }, mainWheels: 1, tailLen: 2.4, fighter: true },
   },
+  {
+    id: 'fa18ef', maker: 'Boeing', name: 'F/A-18E Super Hornet', family: 'F/A-18E/F', category: 'Military', fbw: true,
+    detailed: { glb: 'models/fa18ef.glb', meta: 'models/fa18ef.meta.json', credit: '"Boeing F/A-18E Super Hornet" by ioai25312 (Sketchfab), CC BY 4.0 — modified' },
+    cockpit: { glb: 'models/fa18ef-cockpit.glb', meta: 'models/fa18ef-cockpit.meta.json', offset: [0, 0, 0.04], pitchDeg: -5, credit: '"Boeing F/A-18E Super Hornet" by ioai25312 (Sketchfab), CC BY 4.0 — cockpit' },
+    length: 18.31, span: 13.62, height: 4.88, wingArea: 46.45, mtow: 29937, oew: 14552, fuel: 6780,
+    engines: { count: 2, type: 'turbofan', thrust: 62.3, thrustAB: 97.9, name: 'GE F414-GE-400 (afterburning)' },
+    perf: { mmo: 1.8, vmo: 750, cruiseMach: 0.85, ceiling: 50000, range: 1250, seats: '1', gMax: 7.5, gMin: -3, rollRate: 220, alphaMax: 35 },
+    flaps: FIGHTER_FLAPS, afterburner: { nozzles: [[-6.79, 0.47, -0.34, 0.44], [-6.79, -0.47, -0.34, 0.44]] },
+    geo: { d: 2.0, dh: 1.9, nose: 'bizjet', noseLen: 4.4, wingX: 0.48, sweep: 28, dihedral: -3, taper: 0.3, tip: 'none', gc: 0.85,
+      eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.6, x: 0.82 }, mainWheels: 1, tailLen: 2.2, fighter: true },
+  },
 ];
 
 export const MAKERS = [...new Set(AIRCRAFT.map((a) => a.maker))];
