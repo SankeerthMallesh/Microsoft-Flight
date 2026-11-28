@@ -640,6 +640,17 @@ export const AIRCRAFT = [
     geo: { d: 2.3, dh: 1.6, nose: 'bizjet', noseLen: 2.6, tailLen: 1.6, wingX: 0.367, sweep: 42, dihedral: -3.25, taper: 0.17, tip: 'none', gc: 0.75,
       eng: [{ mount: 'tail' }], nacD: 1.15, vt: { h: 2.6, x: 0.78 }, mainWheels: 1 },
   },
+  {
+    id: 'f35a', maker: 'Lockheed Martin', name: 'F-35A Lightning II', family: 'F-35', category: 'Military',
+    detailed: { glb: 'models/f35a.glb', meta: 'models/f35a.meta.json', credit: 'FlightGear F-35 Lightning II by Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown, GPL v2 — modified (shown as the conventional F-35A)' },
+    length: 15.67, span: 10.7, height: 4.38, wingArea: 42.7, mtow: 31800, oew: 13290, fuel: 8278,
+    // one P&W F135-PW-100: ~28,000 lbf dry / ~43,000 lbf in afterburner
+    engines: { count: 1, type: 'turbofan', thrust: 125, thrustAB: 191, afterburner: true, bypass: 0.57, name: 'P&W F135-PW-100' },
+    perf: { mmo: 1.6, vmo: 700, cruiseMach: 0.9, maxMach: 1.6, ceiling: 50000, range: 2200, seats: '1', gLimit: 9 },
+    flaps: MIL_FLAPS, fbw: true,
+    geo: { d: 2.2, dh: 1.6, nose: 'bizjet', noseLen: 2.4, tailLen: 1.6, wingX: 0.393, sweep: 35, dihedral: -2, taper: 0.2, tip: 'none', gc: 0.75,
+      eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.3, x: 0.8 }, mainWheels: 1 },
+  },
 ];
 
 export const MAKERS = [...new Set(AIRCRAFT.map((a) => a.maker))];

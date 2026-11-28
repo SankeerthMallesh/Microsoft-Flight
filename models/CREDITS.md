@@ -86,3 +86,11 @@ OpenSkies assembled the AC3D parts with `tools/fg-cockpit/bl_fg_exterior.py` (F-
 and conformal tanks removed, canopy fasteners decimated, landing gear grouped for retraction, wheels levelled on one contact plane),
 converted the cockpit like the airliner flight decks (baked ambient occlusion, web-optimised) and projects its live HUD symbology
 onto the HUD combiner and live displays onto the VSD, MPCD and TEWS. The afterburner plumes are drawn by OpenSkies.
+
+| File | Original | Authors | License |
+| --- | --- | --- | --- |
+| `f35a.glb` | F-35B Lightning II for [FlightGear](https://www.flightgear.org/) (exterior, landing gear, control surfaces, nozzle, cockpit interior), from the official FlightGear aircraft download mirror | Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie and Gary Brown | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+Converted the same way and presented as the conventional-take-off F-35A: the lift fan and external pylons were removed and the
+flight-test nose boom clipped; uses the model's low-visibility grey (VM-11) texture. Flaperons, split all-moving stabilators and
+twin rudders are hinged parts animated by the flight controls.
