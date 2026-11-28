@@ -183,6 +183,7 @@ kbd { background: #222a33; border: 1px solid #3a4652; border-radius: 5px; paddin
 #ck3dScreens { position: fixed; left: 0; top: 0; width: 0; height: 0; pointer-events: none; display: none; }
 #flightUI.view-cockpit.ck3d #ck3dScreens { display: block; }
 #ck3dScreens canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; border-radius: 2px; filter: brightness(0.92); }
+#ck3dScreens canvas[data-k="hud"] { mix-blend-mode: screen; filter: none; opacity: 0.9; }
 #flightUI.ck3d .frame, #flightUI.ck3d .screen-bezel { display: none; }
 #flightUI.ck3d .instrument-panel { background: none; border: none; pointer-events: none; left: auto; right: 12px; bottom: 90px; height: auto; width: 150px; display: block; padding: 0; }
 #flightUI.ck3d .side-controls { background: rgba(10, 12, 15, 0.55); padding: 10px; border-radius: 10px; }

@@ -125,6 +125,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The detailed F-35A Lightning II exterior is converted from the [FlightGear](https://www.flightgear.org/) F-35B (Petar Jedvaj, Detlef Faber, F-GTUX, Stuart Cassie, Gary Brown), GPL v2, shown as the conventional F-35A (lift fan and external pylons removed, flight-test nose boom clipped, low-visibility grey scheme).
 - The 3D CRJ700/CRJ900 flight deck comes from the [FlightGear](https://www.flightgear.org/) CRJ700 family (Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and contributors), GPL v2.
 - The 3D ATR 72/42 flight deck comes from the [FlightGear](https://www.flightgear.org/) ATR 72-500 (Ryan Miller and contributors), GPL v2.
+- The F-15C Eagle (exterior and 3D cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-15 (3D model by Enrique Laso; systems, cockpit and FDM by Richard Harrison and contributors), GPL v2.
 
 ### License
 

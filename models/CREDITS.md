@@ -87,3 +87,10 @@ animated by the flight controls (hinge lines in `f22a.meta.json`). Uses the mode
 Converted the same way and presented as the conventional-take-off F-35A: the lift fan and external pylons were removed and the
 flight-test nose boom clipped; uses the model's low-visibility grey (VM-11) texture. Flaperons, split all-moving stabilators and
 twin rudders are hinged parts animated by the flight controls.
+
+| `f15c.glb`, `f15c-cockpit.glb` | F-15 Eagle for [FlightGear](https://www.flightgear.org/) (exterior, canopy, landing gear, nozzles; front cockpit with HUD, VSD, MPCD and TEWS), from the official FlightGear aircraft download mirror | Enrique Laso "Flying toaster" (3D model), Richard Harrison (zaretto; systems, cockpit, FDM) and other FlightGear contributors | [GNU GPL v2](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html) |
+
+OpenSkies assembled the AC3D parts with `tools/fg-cockpit/bl_fg_exterior.py` (F-15C variant only: D-model canopy, stores, tanks
+and conformal tanks removed, canopy fasteners decimated, landing gear grouped for retraction, wheels levelled on one contact plane),
+converted the cockpit like the airliner flight decks (baked ambient occlusion, web-optimised) and projects its live HUD symbology
+onto the HUD combiner and live displays onto the VSD, MPCD and TEWS. The afterburner plumes are drawn by OpenSkies.
