@@ -87,6 +87,7 @@ const BY_ID = {
   'a380-800': { sfc: 0.86 },
   'atr72-600': { cd0: 0.027, e: 0.82 },
   f15c: { cd0: 0.02, cdw: 0.02 },
+  f14d: { cd0: 0.022, cdw: 0.022, clmaxClean: 1.5 }, // variable-sweep wing: big lift at low speed (carrier approach)
   f16c: { cd0: 0.021, cdw: 0.026, law: 'fbw' }, // relaxed-stability fly-by-wire: always in normal (g / roll-rate command) law
 };
 const DEFAULTS = { vrK: 1.06, v2K: 1.13, vrefK: 1.23, landFlap: 0, law: 'conv', ab: null, spool: 7, revK: 0.35, sfc: 1 };

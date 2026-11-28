@@ -656,6 +656,17 @@ export const AIRCRAFT = [
     geo: { d: 1.6, dh: 1.7, nose: 'bizjet', noseLen: 3.6, wingX: 0.5, sweep: 40, dihedral: 0, taper: 0.23, tip: 'none', gc: 0.75,
       eng: [{ mount: 'tail' }], nacD: 1.1, vt: { h: 2.6, x: 0.84 }, mainWheels: 1, tailLen: 2.0, fighter: true },
   },
+  {
+    id: 'f14d', maker: 'Grumman', name: 'F-14D Super Tomcat', family: 'F-14', category: 'Military',
+    detailed: { glb: 'models/f14d.glb', meta: 'models/f14d.meta.json', credit: 'FlightGear F-14B Tomcat by Richard Harrison, Enrique Laso, xiii and contributors (GPL v2), shown in VF-2 F-14D paint' },
+    cockpit: { glb: 'models/f14d-cockpit.glb', meta: 'models/f14d-cockpit.meta.json', credit: 'FlightGear F-14 pilot cockpit (GPL v2)' },
+    length: 19.1, span: 19.55, height: 4.88, wingArea: 52.5, mtow: 33720, oew: 19838, fuel: 7348,
+    engines: { count: 2, type: 'turbofan', thrust: 71.2, thrustAB: 120.1, name: 'GE F110-GE-400 (afterburning)' },
+    perf: { mmo: 2.34, vmo: 800, cruiseMach: 0.85, ceiling: 53000, range: 1600, seats: '2', gMax: 7.5, gMin: -3, rollRate: 180, alphaMax: 30 },
+    flaps: FIGHTER_FLAPS, afterburner: { nozzles: [[-6.82, 1.48, -0.44, 0.5], [-6.82, -1.48, -0.44, 0.5]] },
+    geo: { d: 2.4, dh: 1.9, nose: 'bizjet', noseLen: 4.8, wingX: 0.45, sweep: 25, dihedral: 0, taper: 0.3, tip: 'none', gc: 0.9,
+      eng: [{ mount: 'tail' }], nacD: 1.3, vt: { h: 2.9, x: 0.86 }, mainWheels: 1, tailLen: 2.4, fighter: true },
+  },
 ];
 
 export const MAKERS = [...new Set(AIRCRAFT.map((a) => a.maker))];
