@@ -475,7 +475,7 @@ async function startFlight() {
       let [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
       if (gate) [la, lo] = destination(gate.lat, gate.lon, gate.hdg + Math.PI, built.physics.gear[0].x); // nose wheel on the stop bar
       let hg = gate ? world.groundFast(la, lo) : world.groundHeight(la, lo); if (hg === undefined || !isFinite(hg) || Math.abs(hg - (rwy.elevM + geoid)) > 15) hg = rwy.elevM + geoid;
-      spawn = { ...base, heading: gate ? gate.hdg : rwy.heading, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: gate ? 0 : Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
+      spawn = { ...base, heading: gate ? gate.hdg : rwy.heading, lat: la, lon: lo, h: hg - built.physics.groundZ - 0.1, groundH: hg, parkingBrake: true, flapIndex: gate ? 0 : ac.category === 'Military' ? 1 : Math.min(isGA ? 1 : 2, ac.flaps.length - 1), gearDown: true };
       fm.reset(spawn);
     } else {
       const approach = plan.start === 'approach';

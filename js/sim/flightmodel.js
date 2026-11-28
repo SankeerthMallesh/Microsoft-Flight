@@ -200,7 +200,7 @@ export class FlightModel {
     let wave;
     if (this.fighter) {
       // supersonic drag rise: steep transonic rise peaking just above Mach 1, then easing off (area-ruled fighter)
-      const cdw = this.tune.cdw ?? 0.026;
+      const cdw = this.tune.cdw ?? 0.03;
       const rise = clamp((M - Mcrit) / (1.08 - Mcrit), 0, 1);
       wave = cdw * rise * rise * (3 - 2 * rise) / (1 + 0.55 * Math.max(0, M - 1.12));
     } else wave = M > Mcrit ? 25 * (M - Mcrit) ** 3 + 0.6 * Math.max(0, M - Mcrit - 0.08) ** 2 : 0;
@@ -381,7 +381,7 @@ export class FlightModel {
         const abCmd = thr > 0.955 && e.n1 > 94 && e.reverse < 0.01 ? clamp((thr - 0.955) / 0.045, 0.35, 1) : 0;
         e.ab += clamp(abCmd - e.ab, -dt * 2.5, dt * (e.ab < 0.05 ? 1.2 : 1.8));
         const sl = Math.pow(atm.sigma, 0.78);
-        const Tdry = e.maxThrust * sl * (1 + 0.22 * M) * (0.04 + 0.96 * f);
+        const Tdry = e.maxThrust * Math.pow(atm.sigma, 0.85) * (1 + 0.08 * M) * (0.04 + 0.96 * f); // no supercruise for these types
         const Twet = e.maxAB * sl * (1 + 0.5 * M - 0.12 * M * M);
         T = Tdry + Math.max(0, Twet - Tdry) * e.ab;
         // TSFC ~0.75 lb/lbf/h dry, ~2 lb/lbf/h in full reheat

@@ -110,7 +110,7 @@ export class Autopilot {
         this.accF = (this.accF || 0) + (accel - (this.accF || 0)) * Math.min(1, dt * 1.5);
         const err = target - ias;
         this.thrI = clamp(this.thrI + dt * 0.004 * err, 0, 1);
-        const cmd = clamp(this.thrI + 0.025 * err - 0.06 * this.accF, 0, 1);
+        const cmd = clamp(this.thrI + 0.025 * err - 0.06 * this.accF, 0, fm.fighter ? 0.95 : 1); // autothrottle never selects reheat
         fm.ctl.throttle += clamp(cmd - fm.ctl.throttle, -dt * 0.15, dt * 0.15);
       }
     } else this.lastIas = null;

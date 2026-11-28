@@ -71,7 +71,7 @@ const CATEGORY = {
   'Business jet': { clmaxClean: 1.32, dclFlaps: 0.48, dclSlats: 0, ab: null },
   Turboprop: { clmaxClean: 1.6, dclFlaps: 0.95, dclSlats: 0, ab: null, spool: 3, revK: 0.3 },
   // afterburning fighters: thin low-aspect wings (low CL slope, high stall alpha), no reversers, quick spool
-  Military: { clmaxClean: 1.3, dclFlaps: 0.3, dclSlats: 0.2, cl0: 0.08, cd0: 0.021, e: 0.8, mcrit: 0.88, cdw: 0.026, ab: null, spool: 4, revK: 0, vrK: 1.12, v2K: 1.22, vrefK: 1.25 },
+  Military: { clmaxClean: 1.3, dclFlaps: 0.5, dclSlats: 0.3, cl0: 0.08, cd0: 0.021, e: 0.8, mcrit: 0.88, cdw: 0.03, ab: null, spool: 4, revK: 0, vrK: 1.12, v2K: 1.22, vrefK: 1.25 },
   'General aviation': { clmaxClean: 1.58, dclFlaps: 0.56, dclSlats: 0, ab: null, vrK: 1.06, v2K: 1.4, vrefK: 1.3, spool: 1 },
 };
 const BY_ID = {
@@ -83,9 +83,9 @@ const BY_ID = {
   'a380-800': { sfc: 0.86 },
   'atr72-600': { cd0: 0.027, e: 0.82 },
   f15c: { cd0: 0.02, cdw: 0.02 },
-  f14d: { cd0: 0.022, cdw: 0.022, clmaxClean: 1.5 }, // variable-sweep wing: big lift at low speed (carrier approach)
-  fa18ef: { cd0: 0.023, cdw: 0.032, clmaxClean: 1.55, law: 'fbw' }, // big LEX + flaps: slow carrier approach, draggy (M1.8)
-  f16c: { cd0: 0.021, cdw: 0.026, law: 'fbw' }, // relaxed-stability fly-by-wire: always in normal (g / roll-rate command) law
+  f14d: { cd0: 0.022, cdw: 0.022, clmaxClean: 1.6 }, // variable-sweep wing: big lift at low speed (carrier approach)
+  fa18ef: { cd0: 0.023, cdw: 0.036, clmaxClean: 1.55, law: 'fbw' }, // big LEX + flaps: slow carrier approach, draggy (M1.8)
+  f16c: { cd0: 0.021, cdw: 0.03, law: 'fbw' }, // relaxed-stability fly-by-wire: always in normal (g / roll-rate command) law
 };
 const DEFAULTS = { vrK: 1.06, v2K: 1.13, vrefK: 1.23, landFlap: 0, law: 'conv', ab: null, spool: 7, revK: 0.35, sfc: 1 };
 
