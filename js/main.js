@@ -12,6 +12,9 @@ import { Traffic } from './traffic.js';
 import { Pushback } from './airportgates.js';
 import { FlightModel } from './sim/flightmodel.js';
 import { Autopilot } from './sim/autopilot.js';
+import { Systems } from './sim/systems.js';
+import { SystemsUI } from './overhead.js';
+import { Checklist } from './checklist.js';
 import { Input, KEY_HELP } from './input.js';
 import { Audio } from './audio.js';
 import { ATC } from './atc.js';
@@ -37,6 +40,7 @@ if (fileToken && !settings.ionToken) settings.ionToken = fileToken;
 const plan = Object.assign({ acId: 'b737-800', liveryId: 'southwest', airport: 'KDAL', runway: null, start: 'runway', hour: 11, weather: 'scattered', windDir: 270, windSpd: 8, turb: 0.3, fuel: 40, payload: 60, dest: null, destRwy: '' }, store.get('plan', {}));
 const app = { screen: 'menu', history: [], world: null, hangar: null, fm: null, ap: null, rwy: null, paused: false, flying: false, view: 'chase', panel: true, ndRange: 20, nearby: [], lastNear: 0 };
 const input = new Input();
+const GROUND_STARTS = ['runway', 'gate', 'gate-cold']; // ground starts; the systems state differs
 const audio = new Audio();
 const atc = new ATC(audio); // air traffic control (js/atc.js): talks only, never moves the controls
 input.invertPitch = settings.invertPitch;
@@ -424,7 +428,7 @@ async function startFlight() {
     fm.assist = settings.assist;
     const apl = new Autopilot(fm);
     apl.on((msg, bad) => { toast(msg, /disconnect/i.test(msg) ? 'warn' : ''); if (/disconnected/i.test(msg)) audio.apDisconnect(); });
-    app.fm = fm; app.ap = apl;
+    app.fm = fm; app.ap = apl; app.sys = null;
     const isGA = ac.category === 'General aviation';
     const fuel = ac.fuel * (plan.fuel / 100);
     const payload = Math.max(0, ac.mtow - ac.oew - ac.fuel * 0.3) * (plan.payload / 100) * 0.55;
@@ -433,12 +437,12 @@ async function startFlight() {
     const base = { fuel, payload, geoid, wind, turbulence: plan.turb, heading: rwy.heading };
     let spawn, gate = null;
     app.push = null;
-    if (plan.start === 'gate') {
+    if (plan.start === 'gate' || plan.start === 'gate-cold') {
       loading(true, 'Finding a free gate…', 0.72);
       gate = await world.pickGate(ap, ac.span);
       if (!gate) toast('No gate data for this airport — starting on the runway', 'warn');
     }
-    const onGround = plan.start === 'runway' || plan.start === 'gate';
+    const onGround = GROUND_STARTS.includes(plan.start);
     app.gate = gate;
     if (onGround) {
       let [la, lo] = destination(rwy.lat, rwy.lon, rwy.heading, 35 + ac.length * 0.5);
@@ -510,8 +514,14 @@ async function startFlight() {
       if (app.cruiseStart) { apl.lat = 'NAV'; apl.vert = 'VNAV'; apl.engaged = true; apl.at = true; }
     }
     if (plan.start !== 'cruise' || !app.cruiseStart) world.setRunwayLights(rwy, geoid); else world.setRunwayLights(null);
+    // ---- aircraft systems state for the chosen start (cold & dark / ready to taxi / runway / air)
+    const sys = new Systems(fm); app.sys = sys; // created after the spawn so the tanks get the loaded fuel
+    sys.setState(plan.start === 'gate-cold' ? 'cold' : plan.start === 'gate' ? 'taxi' : plan.start === 'runway' ? 'runway' : 'air');
+    fm.runwayWet = plan.weather === 'storm'; // rain: wet-runway braking & cornering friction
+    if (!app.sysUI) { app.sysUI = new SystemsUI($('flightUI'), { toast, audio }); app.checklist = new Checklist($('flightUI')); }
+    app.sysUI.attach(sys); app.checklist.attach({ fm, sys, ap: apl });
     world.resetCamera();
-    app.view = plan.start === 'runway' ? 'chase' : 'chase';
+    app.view = GROUND_STARTS.includes(plan.start) ? 'chase' : 'chase';
     setView(app.view);
     // stream scenery at spawn point for air starts
     world.updateAircraft(fm, 0, true);
@@ -527,7 +537,8 @@ async function startFlight() {
     $('flightUI').classList.remove('hidden');
     loading(false);
     toast(`${ac.name} · ${getLivery(plan.liveryId).name} at ${ap.i} ${gate ? 'gate ' + (gate.ref || '') : 'RWY ' + rwy.ident}`, 'good');
-    if (gate) setTimeout(() => toast('At the gate — press J for pushback (A / D swing the tail)', 'warn'), 1500);
+    if (plan.start === 'gate-cold') setTimeout(() => toast('Cold & dark — O opens the systems panel, I the checklist, Ctrl+E auto-starts', 'warn'), 1500);
+    else if (gate) setTimeout(() => toast('At the gate — press J for pushback (A / D swing the tail)', 'warn'), 1500);
     else if (plan.start === 'runway') setTimeout(() => toast('Parking brake set — press N to release, W for thrust', 'warn'), 1500);
     if (world.mode === 'lite' && settings.scenery !== 'lite') toast('Using Lite scenery — add a Cesium ion token in Settings for 3D terrain', 'warn');
     app.lastT = performance.now();
@@ -577,6 +588,12 @@ const act = {
   map: () => { $('minimap').classList.toggle('hidden-map'); setTimeout(() => app.map?.map?.invalidateSize(), 50); },
   panel: togglePanel, mute: () => { audio.setMuted(!audio.muted); $('btnMute').textContent = audio.muted ? '🔇' : '🔊'; },
   resetView: () => { app.world.cam.lookYaw = 0; app.world.cam.lookPitch = app.view === 'cockpit' ? (app.world.ckMeta ? (app.world.ckMeta.pitchDeg ?? -13) : -6) * D2R : 0; app.world.cam.zoom = 1; },
+  systems: () => app.sysUI?.toggle(), checklist: () => app.checklist?.toggle(),
+  autostart: () => app.sys?.autoStart(), shutdown: () => app.sys?.autoShutdown(),
+  landingLights: () => { const s = app.sys; if (!s) return; s.set('landing'); toast('Landing lights ' + (s.lights.landing ? 'on' : 'off')); },
+  allLights: () => { const s = app.sys; if (!s) return; const v = !['nav', 'beacon', 'strobe', 'landing', 'taxi', 'logo'].every((k) => s.lights[k]); for (const k of ['nav', 'beacon', 'strobe', 'landing', 'taxi', 'logo']) s.lights[k] = v; toast('External lights ' + (v ? 'on' : 'off')); },
+  autobrake: () => { const s = app.sys; if (!s || !s.abAvail) { toast('No autobrake on this aircraft', 'warn'); return; } s.cycleAutobrake(); toast('Autobrake ' + s.abLabel()); },
+  altGear: () => app.sys?.altGearExtension(), masterAck: () => app.sys?.acknowledge(),
   idle: () => { if (app.fm) app.fm.ctl.throttle = 0; }, full: () => { if (app.fm) app.fm.ctl.throttle = 1; },
   help: () => { if (app.flying) { pause(true); show('help'); } },
   pause: () => { if (!app.flying) { if (app.screen && app.screen !== 'menu') show('back'); return; } if (app.crashed) return; pause(!app.paused); },
@@ -681,6 +698,7 @@ function tick() {
       if (lg !== undefined) fm.geoid += (lg - fm.geoid) * 0.05;
     }
     ap.update(dt);
+    app.sys?.update(dt);
     fm.step(dt, null);
     if (app.push && !app.push.update(dt, c.yaw + c.roll)) { app.push = null; toast('Pushback complete — parking brake set. Release (N) and taxi', 'good'); }
     for (const ev of fm.events.splice(0)) handleEvent(ev);
@@ -699,7 +717,8 @@ function tick() {
     const rumble = fm.onGround ? Math.min(1, fm.out.gs / 140) * 0.006 + (fm.onGround && fm.out.gs > 2 ? 0.0015 : 0) : 0;
     const turb = !fm.onGround ? Math.min(0.01, Math.hypot(...fm.gust) * 0.0018) : 0;
     sh.jolt = (sh.jolt || 0) * Math.exp(-dt * 5);
-    sh.shakeAmp = app.paused ? 0 : rumble + turb + sh.jolt;
+    const buffet = (fm.buffet || 0) * 0.005; // stall / Mach buffet
+    sh.shakeAmp = app.paused ? 0 : rumble + turb + buffet + sh.jolt;
   }
   world.updateAircraft(fm, app.paused ? 0 : dt, app.view !== 'cockpit');
   if (app.traffic) app.traffic.update(fm, dt);
@@ -726,6 +745,11 @@ function tick() {
   if (app.view !== 'cockpit') { try { const cc = window.Cesium.Cartographic.fromCartesian(world.viewer.camera.positionWC); camGeo = { lat: cc.latitude, lon: cc.longitude, h: cc.height }; } catch (e) { /* */ } }
   audio.update(fm, app.view, dt, camGeo);
   if (!app.paused) atc.update(dt);
+  if (app.sys) {
+    app.sysUI.update(); app.checklist.update();
+    // glass cockpit goes dark without AC power (GA panels run on the battery bus)
+    $('flightUI').classList.toggle('no-power', !(app.sys.elec.ac || (app.sys.kind === 'ga' && app.sys.elec.dc)));
+  }
   if (app.map && now - (app.lastMap || 0) > 250 && !$('minimap').classList.contains('hidden-map')) {
     app.lastMap = now;
     if (!app.routeCache || now - app.routeCache.t > 2000) {
@@ -861,7 +885,8 @@ function updateHud() {
     else if (nm < 12 && !fm.spoilersArmed && !fm.isGA) hint = 'Arm spoilers (Shift + /)';
     else if (nm < 16 && fm.flapIndex < Math.min(2, last) && o.ias < ap.spdAuto + 40) hint = 'Approach — extend flaps (F) as you slow down';
   }
-  if (fm.parkingBrake && fm.onGround && fm.ctl.throttle > 0.2) hint = 'Parking brake is set — press N';
+  if (app.sys && fm.onGround && !app.sys.allEnginesRunning) hint = app.sys.autostart ? 'Starting engines…' : 'Engines off — Ctrl+E auto-start, or O for the systems panel';
+  else if (fm.parkingBrake && fm.onGround && fm.ctl.throttle > 0.2) hint = 'Parking brake is set — press N';
   else if (o.stall) hint = 'STALL — lower the nose, add thrust';
   else if (fm.onGround && fm.out.gs < 1 && !fm.parkingBrake && fm.ctl.throttle < 0.05 && frame < 400) hint = 'Hold W to add thrust';
   if (!hint && navI && ap.engaged && ap.lat !== 'NAV' && ap.lat !== 'LOC' && !fm.onGround && o.alt > 1500) hint = 'Destination set — press LNAV and VNAV on the autopilot panel to fly there';

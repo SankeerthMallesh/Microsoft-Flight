@@ -41,7 +41,7 @@ const FAMILY = {
   717: { clmaxClean: 1.4, dclFlaps: 0.7, dclSlats: 0.4, ab: AB_BOEING },
   767: { clmaxClean: 1.42, dclFlaps: 0.62, dclSlats: 0.4, landFlap: 0, ab: AB_BOEING, spool: 7.5 },
   747: { clmaxClean: 1.42, dclFlaps: 0.55, dclSlats: 0.4, landFlap: 0, ab: AB_BOEING, spool: 8 },
-  777: { clmaxClean: 1.4, dclFlaps: 0.56, dclSlats: 0.4, landFlap: 0, law: 'boeing-fbw', ab: AB_BOEING, spool: 8, vrK: 1.08, v2K: 1.16, revK: 0.22, cd0: 0.0172, e: 0.9 },
+  777: { machLapse: 1.02, clmaxClean: 1.4, dclFlaps: 0.56, dclSlats: 0.4, landFlap: 0, law: 'boeing-fbw', ab: AB_BOEING, spool: 8, vrK: 1.08, v2K: 1.16, revK: 0.22, cd0: 0.0172, e: 0.9 },
   '777X': { clmaxClean: 1.42, dclFlaps: 0.56, dclSlats: 0.4, landFlap: 0, law: 'boeing-fbw', ab: AB_BOEING, spool: 8, vrK: 1.08, v2K: 1.16 },
   787: { clmaxClean: 1.42, dclFlaps: 0.56, dclSlats: 0.4, landFlap: 0, law: 'boeing-fbw', ab: AB_BOEING, spool: 7.5 },
   'MD-11': { clmaxClean: 1.4, dclFlaps: 0.6, dclSlats: 0.4, ab: AB_BOEING, spool: 7.5 },

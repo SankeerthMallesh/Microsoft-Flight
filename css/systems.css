@@ -1,0 +1,62 @@
+/* Aircraft systems UI: annunciators, systems / failures panel, electronic checklist. */
+#sysAnn { position: absolute; top: 56px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; align-items: flex-start; max-width: 340px; pointer-events: auto; z-index: 15; }
+#sysAnn.idle #mWarn, #sysAnn.idle #mCaut { opacity: 0.35; }
+#sysAnn button { font: 700 0.62rem/1.05 'Roboto Mono', monospace; letter-spacing: 0.04em; width: 74px; height: 34px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.18); background: #1b1f24; color: #6b6f74; cursor: pointer; }
+#sysAnn .mw.on { background: #d0141a; color: #fff; box-shadow: 0 0 14px rgba(255, 30, 30, 0.75); }
+#sysAnn .mc.on { background: #e3a100; color: #1a1200; box-shadow: 0 0 12px rgba(255, 180, 0, 0.6); }
+#sysAlerts { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+#sysAlerts .al { font: 700 0.72rem 'Roboto Mono', monospace; padding: 2px 8px; border-radius: 4px; background: rgba(0, 0, 0, 0.62); width: max-content; }
+#sysAlerts .warning { color: #ff4848; }
+#sysAlerts .caution { color: #ffb000; }
+
+#sysPanel, #checklist { position: absolute; z-index: 40; background: rgba(14, 19, 26, 0.94); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 12px; color: #e8edf3; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); pointer-events: auto; font-size: 0.8rem; }
+#sysPanel { top: 100px; right: 12px; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 200px); overflow: auto; }
+#sysPanel .tabs { display: flex; gap: 4px; padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); position: sticky; top: 0; background: rgba(14, 19, 26, 0.98); }
+#sysPanel .tabs button { background: transparent; color: #9aa6b2; border: 0; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+#sysPanel .tabs button.act { background: #1d6fd1; color: #fff; }
+#sysPanel .tabs .x, #checklist .ckhead [data-c="close"] { margin-left: auto; }
+#sysPanel .body { padding: 4px 12px 12px; }
+#sysPanel h5 { margin: 10px 0 6px; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: #9aa6b2; }
+#sysPanel .row { display: flex; flex-wrap: wrap; gap: 6px; }
+#sysPanel .stat { margin-top: 6px; font: 0.72rem 'Roboto Mono', monospace; color: #9aa6b2; }
+#sysPanel .g { color: #3cf26b; } #sysPanel .a { color: #ffb000; } #sysPanel .r { color: #ff4d4d; }
+#sysPanel .sw { min-width: 76px; padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.14); background: #1a2029; color: #cfd6de; font: 700 0.68rem 'Roboto Mono', monospace; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+#sysPanel .sw i { font-style: normal; font-weight: 500; font-size: 0.6rem; color: #6d7782; }
+#sysPanel .sw.on { border-color: #3cf26b; color: #fff; }
+#sysPanel .sw.on i { color: #3cf26b; }
+#sysPanel .sw.big { min-width: 140px; padding: 9px; }
+#sysPanel .gauge { position: relative; min-width: 100px; padding: 5px 8px; border-radius: 6px; background: #10151c; border: 1px solid rgba(255, 255, 255, 0.08); font: 0.66rem 'Roboto Mono', monospace; display: flex; flex-direction: column; overflow: hidden; }
+#sysPanel .gauge b { font-size: 0.78rem; }
+#sysPanel .gauge u { position: absolute; left: 0; bottom: 0; height: 2px; background: #3aa0ff; }
+#sysPanel table.eng { width: 100%; border-collapse: collapse; margin-top: 8px; font: 0.72rem 'Roboto Mono', monospace; }
+#sysPanel table.eng td, #sysPanel table.eng th { padding: 3px 4px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+#sysPanel table.eng td:first-child { text-align: left; color: #9aa6b2; }
+#sysPanel table.eng button { margin: 1px; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.15); background: #1a2029; color: #cfd6de; cursor: pointer; font: 700 0.62rem 'Roboto Mono', monospace; }
+#sysPanel table.eng button:disabled { opacity: 0.35; cursor: default; }
+#sysPanel .fireh { background: #3a1414 !important; color: #ffb3b3 !important; }
+#sysPanel .fireh.lit { background: #d0141a !important; color: #fff !important; }
+#sysPanel .fb { padding: 6px 9px; border-radius: 6px; border: 1px solid rgba(255, 90, 90, 0.35); background: #2a1518; color: #ffc9c9; cursor: pointer; font: 700 0.66rem 'Roboto Mono', monospace; }
+
+#checklist { bottom: 96px; left: 12px; width: min(380px, calc(100vw - 32px)); max-height: calc(100vh - 180px); overflow: auto; }
+#checklist .ckhead { display: flex; gap: 6px; align-items: center; padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+#checklist .ckhead button { background: #1a2029; color: #cfd6de; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 4px 9px; cursor: pointer; }
+#checklist .ckhead button:disabled { opacity: 0.35; }
+#checklist select { flex: 1; background: #10151c; color: #fff; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 5px; font-weight: 700; }
+#checklist ol { list-style: none; margin: 0; padding: 6px 10px; font: 0.76rem 'Roboto Mono', monospace; }
+#checklist li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 4px; border-bottom: 1px dotted rgba(255, 255, 255, 0.1); cursor: pointer; color: #e8edf3; }
+#checklist li b { font-weight: 700; text-align: right; color: #cfe3ff; }
+#checklist li.sensed, #checklist li.done { color: #3cf26b; }
+#checklist li.sensed b, #checklist li.done b { color: #3cf26b; }
+#checklist li.sensed span::before, #checklist li.done span::before { content: '✓ '; }
+#checklist .ckfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; font: 700 0.7rem 'Roboto Mono', monospace; color: #ffb000; }
+#checklist .ckfoot.ok { color: #3cf26b; }
+#checklist .ckfoot button { background: transparent; border: 1px solid rgba(255, 255, 255, 0.15); color: #9aa6b2; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+
+/* no electrical power: glass displays go dark */
+#flightUI.no-power #pfd, #flightUI.no-power #nd, #flightUI.no-power #eicas, #flightUI.no-power #pfdMini, #flightUI.no-power #ck3dScreens { visibility: hidden; }
+
+@media (max-width: 640px) {
+  #sysAnn { top: 52px; right: 8px; max-width: 60vw; }
+  #sysAnn button { width: 62px; height: 30px; font-size: 0.55rem; }
+  #sysPanel, #checklist { top: 96px; bottom: auto; left: 16px; right: 16px; width: auto; max-height: calc(100vh - 190px); overflow: auto; }
+}

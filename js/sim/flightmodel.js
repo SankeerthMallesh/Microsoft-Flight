@@ -201,7 +201,7 @@ export class FlightModel {
 
     // ----- moments
     const swept = !this.isGA && ac.engines.type === 'turbofan';
-    const stallRoll = stall * 0.02 * Math.sin(this.time * 1.7 + 1.3) + (this.law === 'direct' ? this.wingDrop * stall * (swept ? 0.035 : 0.025) : 0);
+    const stallRoll = stall * 0.02 * Math.sin(this.time * 1.7 + 1.3) + (this.law === 'direct' ? this.wingDrop * stall * (swept ? 0.07 : this.isGA ? 0.015 : 0.045) : 0);
     const Cl = d.Clb * beta + d.Clp * (1 - 0.6 * stall) * ph + d.Clr * rh + d.Clda * da * (1 - 0.5 * stall) + d.Cldr * dr + stallRoll - 0.02 * this.spoiler * 0;
     const CmGE = hge < this.b ? -0.035 * (1 - hge / this.b) : 0; // less tail downwash in ground effect -> nose-down
     const Cm = d.Cma * (alpha - d.a0) + d.Cmq * qh + d.Cmde * de + d.Cmflap * flap + d.Cmgear * this.gearPos - 0.25 * stall * Math.sign(alpha) + CmGE;
@@ -358,7 +358,8 @@ export class FlightModel {
       let T;
       if (e.type === 'turbofan') {
         // high-bypass lapse: ~0.8 of static at rotation, ~0.2 at FL350 / M0.78 (max cruise)
-        const lapse = Math.pow(atm.sigma, 0.85) * (1 - 0.9 * M + 0.52 * M * M);
+        const ml = this.tune.machLapse ?? 0.9; // very high bypass ratio (GE90 / GE9X): steeper Mach lapse
+        const lapse = Math.pow(atm.sigma, 0.85) * (1 - ml * M + (0.52 + (ml - 0.9) * 0.4) * M * M);
         T = e.maxThrust * lapse * (0.035 + 0.965 * f);
         // TSFC rises with Mach; cruise ~0.55 (LEAP/GEnx) .. 0.65 (CFM56) lb/lbf/h
         e.ff = (Math.abs(T) * 1.12e-5 * (1 + 0.62 * M) + 0.045 * Math.sqrt(e.maxThrust / 120000) * (atm.p / 101325)) * e.sfc;

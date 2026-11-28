@@ -571,6 +571,8 @@ export class World {
     this.lights = {
       navL: mk(Cesium.Color.RED, 5), navR: mk(Cesium.Color.LIME, 5), tail: mk(Cesium.Color.WHITE, 4),
       strobeL: mk(Cesium.Color.WHITE, 9), strobeR: mk(Cesium.Color.WHITE, 9), beaconT: mk(Cesium.Color.RED, 7), beaconB: mk(Cesium.Color.RED, 7),
+      // switchable lights driven by js/sim/systems.js (landing, taxi, logo)
+      landing: mk(Cesium.Color.fromCssColorString('#fffbe8'), 12), taxi: mk(Cesium.Color.fromCssColorString('#fff4d6'), 8), logo: mk(Cesium.Color.fromCssColorString('#f4f6ff').withAlpha(0.8), 7),
     };
     URL.revokeObjectURL(url);
     return model;
@@ -728,11 +730,18 @@ export class World {
     // lights
     const L = this.physics.lights, t = performance.now() / 1000;
     const set = (pt, p, on = true) => { pt.position = this.modelPoint(f, p); pt.show = on && visible !== 'nolights'; };
-    set(this.lights.navL, L.navLeft); set(this.lights.navR, L.navRight); set(this.lights.tail, L.tail);
+    const S = fm.systems, sw = (k) => !S || S.lightOn(k);
+    set(this.lights.navL, L.navLeft, sw('nav')); set(this.lights.navR, L.navRight, sw('nav')); set(this.lights.tail, L.tail, sw('nav'));
     const strobe = t % 1.2 < 0.07;
-    set(this.lights.strobeL, L.navLeft, strobe && !fm.onGround); set(this.lights.strobeR, L.navRight, strobe && !fm.onGround);
+    set(this.lights.strobeL, L.navLeft, strobe && (S ? sw('strobe') : !fm.onGround)); set(this.lights.strobeR, L.navRight, strobe && (S ? sw('strobe') : !fm.onGround));
     const beacon = t % 1.0 < 0.12;
-    set(this.lights.beaconT, L.beaconTop, beacon); set(this.lights.beaconB, L.beaconBot, beacon);
+    set(this.lights.beaconT, L.beaconTop, beacon && sw('beacon')); set(this.lights.beaconB, L.beaconBot, beacon && sw('beacon'));
+    if (this.lights.landing) {
+      const ng = this.physics.gear[0], vt = fm.ac.geo.vt || { h: 2 };
+      set(this.lights.landing, L.landing, !!S && sw('landing'));
+      set(this.lights.taxi, [ng.x + 0.3, 0, ng.z + 0.9], !!S && sw('taxi') && fm.gearPos > 0.9);
+      set(this.lights.logo, [L.tail[0] + fm.ac.length * 0.07, 0, L.tail[2] + vt.h * 0.45], !!S && sw('logo'));
+    }
   }
 
   // ------------------------------------------------------------------ runway lights / PAPI

@@ -77,7 +77,7 @@ function takeoff(id, ref, opts = {}) {
       if (!gearUp && o.vs > 300) { fm.gearDown = false; gearUp = true; }
     }
     const pe = pitchTgt - o.pitch;
-    fm.ctl.pitch = rotT != null ? clamp(0.25 * pe - 0.5 * fm.w[1] * R2D * 0.2, -1, 1) : 0;
+    fm.ctl.pitch = rotT != null ? clamp((fm.isGA ? 0.45 : 0.25) * pe - 0.5 * fm.w[1] * R2D * 0.2, -1, 1) : 0;
     // keep the centreline with rudder / roll on the wings level
     const xte = distance(LAT0, LON0, LAT0, fm.lon) * Math.sign(fm.lon - LON0);
     maxXte = Math.max(maxXte, Math.abs(xte));
@@ -231,14 +231,15 @@ function stall(id, ref) {
     const o = fm.out;
     if (fbw) { fm.assist = 'assisted'; fm.ctl.pitch = 1; }
     else if (tStall == null) fm.ctl.pitch = clamp(fm.ctl.pitch + DT * (-o.vs / 30000 - 0.6 * fm.w[1]), -1, 1);
-    else fm.ctl.pitch = time - tStall < 3 ? -0.6 : 0;
+    else if (time - tStall > 1.5) fm.ctl.pitch = clamp(0.04 * (-3 - o.pitch) - 0.3 * fm.w[1] * R2D * 0.1, -0.5, 0.3); // recover: nose to ~3 deg below the horizon
     fm.ctl.roll = 0;
     fm.step(DT); time += DT;
     minIas = Math.min(minIas, fm.out.ias); maxAlpha = Math.max(maxAlpha, fm.out.alpha);
     if (fm.out.stall && warnIas == null) warnIas = fm.out.ias;
     if (fm.stallFactor > 0.05 && stallIas == null) { stallIas = fm.out.ias; tStall = time; }
+    if (process.env.TRACE && tStall != null && Math.round(time * 60) % 15 === 0 && time - tStall < 4) console.log(`   ${(time - tStall).toFixed(2)} roll ${fm.out.roll.toFixed(1)} p ${(fm.w[0] * R2D).toFixed(1)} r ${(fm.w[2] * R2D).toFixed(1)} beta ${fm.out.beta.toFixed(1)} alpha ${fm.out.alpha.toFixed(1)} stall ${fm.stallFactor.toFixed(2)} drop ${fm.wingDrop} da ${fm.surf.da.toFixed(2)} dr ${fm.surf.dr.toFixed(2)} pitch ${fm.out.pitch.toFixed(1)}`);
     buffet = Math.max(buffet, fm.buffet || 0);
-    if (tStall != null && time - tStall < 6) maxRoll = Math.max(maxRoll, Math.abs(fm.out.roll));
+    if (tStall != null && time - tStall < 5) maxRoll = Math.max(maxRoll, Math.abs(fm.out.roll)); // wing drop before the recovery takes effect
     if (tStall != null && time - tStall > 6) break;
   }
   return { vs1: vs.vs1, warnIas, stallIas, minIas, maxRoll, buffet, maxAlpha, alphaStall: fm.alphaStall * R2D, fbw };
@@ -391,7 +392,7 @@ for (const id of TYPES.filter((x) => !onlyType || x === onlyType)) {
     check(row('Landing dist. from 50 ft', r.total, ref.ldgDist, 'm'));
     row('Peak decel', r.maxDecel, null, 'g', 2);
     if (!ac.engines.type.includes('piston')) {
-      for (const ab of ['LO', 'MED', 'MAX']) {
+      for (const ab of getAircraft(id) && make(id).fm.tune.ab ? ['LO', 'MED', 'MAX'] : []) {
         const a = landing(id, ref, { autobrake: ab });
         row(`Autobrake ${ab} ground roll`, a.roll, ref.ab?.[ab], 'm');
       }
