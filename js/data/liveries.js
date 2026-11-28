@@ -83,7 +83,7 @@ function finStripes(f, bands, a0 = 0, a1 = 1, wave = 0.05) {
 export const LIVERIES = [
   {
     // military types: the detailed models keep their own (FlightGear) paint; this drives the procedural fallback
-    id: 'military-grey', name: 'Air Superiority Grey', subtitle: 'Standard military paint', country: '—', fleet: ['f15c', 'f16c', 'fa18ef', 'f14d'],
+    id: 'military-grey', name: 'Air Superiority Grey', subtitle: 'Standard military paint', country: '—', fleet: ['f15c', 'f16c', 'fa18ef', 'f14d', 'f22a'],
     base: '#8a9199', engine: '#5d636a', finBase: '#8a9199', wing: '#848b93', wingUnder: '#9aa1a8', stab: '#848b93', belly: '#9aa1a8', reg: false, metallic: 0.05, roughness: 0.6,
   },
   {

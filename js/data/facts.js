@@ -1,5 +1,6 @@
 // "Did you know?" facts shown while scenery loads, keyed by aircraft id.
 export const FACTS = {
+  'f22a': 'The F-22 Raptor can \u201csupercruise\u201d: fly faster than sound without using its afterburners, saving fuel and staying stealthy.',
   'f15c': 'The F-15 Eagle has a combat record of more than 100 air-to-air victories and no losses in air combat.',
   'b737-700': 'Southwest Airlines has flown nothing but Boeing 737s since its first flight in 1971, making it the largest 737 operator in the world.',
   'b737-800': 'The 737 is the best-selling jetliner family in history. More than 11,000 have been delivered since the first one flew in 1967.',
