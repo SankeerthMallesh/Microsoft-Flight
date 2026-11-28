@@ -162,6 +162,8 @@ export function buildAircraft(ac) {
   const Ln = noseLenD * g.d;
   const Lt = (g.tailLen || (isProp ? 2.7 : 2.6)) * g.d;
   const tailStart = L - Lt;
+  // nose-mounted propeller: the published length runs to the spinner tip, so the cowl starts just behind it
+  const noseSpin = !ac.detailed && g.eng.some((e) => e.mount === 'nose') ? 0.32 * g.d * 0.55 + 0.07 : 0;
   const tipZ = (g.noseTip ?? -0.28) * H0; // nose-tip height (fraction of half-height)
   const crownK = g.noseCrown || 1.75; // larger = steeper rise of the crown behind the nose ("forehead")
   const pointy = { '787': 1.6, a350: 1.7, bizjet: 1.5, crj: 1.7, embraer: 1.8, q400: 1.7 }[g.nose] || 2;
@@ -187,7 +189,7 @@ export function buildAircraft(ac) {
     // returns {cz, ht, hw} at distance x from nose
     let top = H0, bot = -H0, hw = R;
     if (x < Ln) {
-      const t = clamp(x / Ln, 0, 1);
+      const t = clamp((x - noseSpin) / (Ln - noseSpin), 0, 1);
       const sB = Math.pow(1 - Math.pow(1 - t, pointy), 1 / pointy);
       const sT = Math.pow(1 - Math.pow(1 - t, crownK), 1 / crownK);
       top = tipZ + (H0 - tipZ) * sT;
@@ -729,7 +731,7 @@ export function buildAircraft(ac) {
         propEngine(xn0, side * y, zc, D, len, ei++);
       }
     } else if (e.mount === 'nose') {
-      propEngine(-0.05, 0, profile(0.3).cz, g.d * 0.55, 0.3, ei++, 'none');
+      propEngine(noseSpin ? noseSpin - 0.05 : -0.05, 0, profile(noseSpin + 0.3).cz, g.d * 0.55, 0.3, ei++, 'none');
     }
   }
 
