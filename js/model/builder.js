@@ -615,8 +615,8 @@ export function buildAircraft(ac) {
       revolve(body, [[last[0] * len - 0.03, last[1] * Dn * 0.985], [last[0] * len - 0.25 * Dn, last[1] * Dn * 0.97]], cx, y, zc, SW.exhaust);
       revolve(body, [[0.1 * len, N.outer[0][1] * Dn], [0, N.outer[0][1] * Dn]], cx, y, zc, SW.intake);
       // core cowl (light metal) then the exhaust plug
-      if (N.core) revolve(body, sc(N.core), cx, y, zc, (j) => (j === 0 ? SW.exhaust : SW.metal), { seg: chevrons ? 24 : 20, chevron: chevrons ? 0.025 * len : 0 });
-      revolve(body, sc(N.plug), cx, y, zc, (j) => (j === 0 ? SW.exhaust : SW.metal), { seg: 18 });
+      if (N.core) revolve(body, sc(N.core), cx, y, zc, SW.metal, { seg: chevrons ? 24 : 20, chevron: chevrons ? 0.025 * len : 0 });
+      revolve(body, sc(N.plug), cx, y, zc, SW.exhaust, { seg: 18 }); // one swatch per surface: mixing swatches across a ring streaks the atlas
     }
     // fan + spinner node (rotates)
     const fan = new NodeMesh('fan' + idx, [cx - 0.12 * len, y, zc]);
@@ -784,18 +784,29 @@ export function buildAircraft(ac) {
   function strut(node, x, y, z0, z1, r) {
     revolveZ(node, x, y, z0, z1, r);
   }
-  function rod(node, a, b2, r) {
+  function rod(node, a, b2, r, sw = SW.gear) {
     // cylinder between two points
-    const pc = node.piece(); const seg = 8; const [u, v] = swatchUV(SW.gear);
+    const pc = node.piece(); const seg = 8; const [u, v] = swatchUV(sw);
     const d = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]]; const l = Math.hypot(...d) || 1; d[0] /= l; d[1] /= l; d[2] /= l;
     let e1 = Math.abs(d[2]) < 0.9 ? [d[1], -d[0], 0] : [0, d[2], -d[1]]; const l1 = Math.hypot(...e1); e1 = e1.map((q) => q / l1);
     const e2 = [d[1] * e1[2] - d[2] * e1[1], d[2] * e1[0] - d[0] * e1[2], d[0] * e1[1] - d[1] * e1[0]];
     const rings = [a, b2].map((P) => { const ring = []; for (let k = 0; k <= seg; k++) { const t = (k / seg) * Math.PI * 2, c = Math.cos(t) * r, s2 = Math.sin(t) * r; ring.push([P[0] + e1[0] * c + e2[0] * s2, P[1] + e1[1] * c + e2[1] * s2, P[2] + e1[2] * c + e2[2] * s2, u, v]); } return ring; });
     pc.grid(rings, false); pc.grid(rings, true);
   }
-  function revolveZ(node, x, y, z0, z1, r) {
+  // oleo detail for airliner legs: thick cylinder, metal piston, torque link, axles
+  const gearDetail = !isGA && !g.fixedGear && !isProp && !ac.detailed;
+  function legDetail(node, x, y, axleZ, topZ, axles, halfW) {
+    const zMid = lerp(axleZ, topZ, 0.42), zLow = axleZ + wheelR * (axles.length > 1 ? 0.2 : 0.35);
+    revolveZ(node, x, y, zMid, topZ - 0.1, wheelR * 0.3);
+    revolveZ(node, x, y, zLow, zMid, wheelR * 0.19, SW.metal);
+    const r0 = wheelR * 0.3, knee = [x + r0 + wheelR * 0.38, y, lerp(zLow, zMid, 0.5)];
+    rod(node, [x + r0 * 0.8, y, zMid - 0.04], knee, wheelR * 0.05);
+    rod(node, knee, [x + r0 * 0.6, y, zLow + 0.04], wheelR * 0.05);
+    for (const dx of axles) rod(node, [x + dx, y + halfW, axleZ], [x + dx, y - halfW, axleZ], wheelR * 0.1, SW.metal);
+  }
+  function revolveZ(node, x, y, z0, z1, r, sw = SW.gear) {
     const pc = node.piece();
-    const seg = 10; const [u, v] = swatchUV(SW.gear);
+    const seg = 10; const [u, v] = swatchUV(sw);
     const rings = [];
     for (const zz of [z0, z1]) {
       const ring = [];
@@ -842,6 +853,10 @@ export function buildAircraft(ac) {
       rod(node, [mainX, y, zb], [mainX - 0.05 * wheelR, y - side * (topZ - zb) * 0.55, topZ - 0.05], Math.max(0.035, wheelR * 0.09));
     }
     const ww = wheelR * 0.75;
+    if (gearDetail) {
+      const rowsD = mw > 2 ? mw / 2 : 1;
+      legDetail(node, mainX, y, axleZ, topZ, [...Array(rowsD)].map((_, r) => (r - (rowsD - 1) / 2) * wheelR * 2.25), mw === 1 ? ww * 0.4 : ww * 0.75);
+    }
     if (mw === 1) wheel(node, mainX, y, axleZ, wheelR, ww);
     else if (mw === 2) { wheel(node, mainX, y + ww * 0.6, axleZ, wheelR, ww); wheel(node, mainX, y - ww * 0.6, axleZ, wheelR, ww); }
     else {
@@ -851,7 +866,8 @@ export function buildAircraft(ac) {
         wheel(node, mainX + dx, y + ww * 0.65, axleZ, wheelR, ww); wheel(node, mainX + dx, y - ww * 0.65, axleZ, wheelR, ww);
       }
       // bogie beam
-      revolveSq(node, [[-(rowsN - 1) * wheelR * 1.15, 0.01], [-(rowsN - 1) * wheelR * 1.1, wheelR * 0.16], [(rowsN - 1) * wheelR * 1.1, wheelR * 0.16], [(rowsN - 1) * wheelR * 1.15, 0.01]], mainX, y, axleZ, SW.gear);
+      const bb = gearDetail ? 0.22 : 0.16;
+      revolveSq(node, [[-(rowsN - 1) * wheelR * 1.15, 0.01], [-(rowsN - 1) * wheelR * 1.1, wheelR * bb], [(rowsN - 1) * wheelR * 1.1, wheelR * bb], [(rowsN - 1) * wheelR * 1.15, 0.01]], mainX, y, axleZ, SW.gear);
     }
   }
   if (g.bodyGear) {
@@ -862,6 +878,12 @@ export function buildAircraft(ac) {
       const node = legNode(side > 0 ? 'gearBL' : 'gearBR', [mainX - wheelR * 1.5, y, topZ], 'body');
       strut(node, mainX - wheelR * 1.5, y, axleZ, topZ, wheelR * 0.22);
       const rowsN = g.bodyGear / 2;
+      if (gearDetail) {
+        legDetail(node, mainX - wheelR * 1.5, y, axleZ, topZ, [...Array(rowsN)].map((_, r) => (r - (rowsN - 1) / 2) * wheelR * 2.25), wheelR * 0.8);
+        // body-gear bogie beam and bay door
+        revolveSq(node, [[-(rowsN - 1) * wheelR * 1.15, 0.01], [-(rowsN - 1) * wheelR * 1.1, wheelR * 0.22], [(rowsN - 1) * wheelR * 1.1, wheelR * 0.22], [(rowsN - 1) * wheelR * 1.15, 0.01]], mainX - wheelR * 1.5, y, axleZ, SW.gear);
+        doorPlate(node, mainX - wheelR * 1.5, y + side * wheelR * 0.4, axleZ + wheelR * 1.3, topZ - 0.15, wheelR * 1.8, side);
+      }
       for (let r = 0; r < rowsN; r++) {
         const dx = -wheelR * 1.5 + (r - (rowsN - 1) / 2) * wheelR * 2.25;
         wheel(node, mainX + dx, y + wheelR * 0.45, axleZ, wheelR, wheelR * 0.75); wheel(node, mainX + dx, y - wheelR * 0.45, axleZ, wheelR, wheelR * 0.75);
