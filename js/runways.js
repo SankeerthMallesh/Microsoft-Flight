@@ -18,6 +18,34 @@ function dist(la1, lo1, la2, lo2) {
   return 2 * RE * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
+
+// Real-world CC0 photo textures (ambientCG) tiled at true scale under the painted markings.
+// The markings canvas covers the whole runway (~1 px/m); the photo adds 2 cm-scale grain, cracks and patches.
+const TEX_BASE = new URL('../images/textures/', import.meta.url).href;
+export function surfaceMaterial(Cesium, baseImage, detail, repeat, opts = {}) {
+  return new Cesium.Material({
+    fabric: {
+      uniforms: {
+        image: baseImage, detail: TEX_BASE + detail, repeat, color: new Cesium.Color(1, 1, 1, 1),
+        strength: opts.strength ?? 1.0, mean: opts.mean ?? 0.47,
+      },
+      source: `czm_material czm_getMaterial(czm_materialInput materialInput) {
+        czm_material m = czm_getDefaultMaterial(materialInput);
+        vec4 b = texture(image, materialInput.st);
+        vec3 d = texture(detail, fract(repeat * materialInput.st)).rgb / mean;
+        // a second, rotated and larger tiling breaks up visible repetition
+        vec3 d2 = texture(detail, fract(repeat.yx * 0.173 * materialInput.st.yx + 0.37)).rgb / mean;
+        vec3 g = mix(vec3(1.0), d * mix(vec3(1.0), d2, 0.35), strength);
+        m.diffuse = clamp(b.rgb * g, 0.0, 1.0) * color.rgb;
+        m.alpha = b.a * color.a;
+        m.specular = 0.04; m.shininess = 12.0;
+        return m;
+      }`,
+    },
+    translucent: false,
+  });
+}
+
 const PAD = 45;       // paved overrun / blast pad beyond each end (m)
 const SHOULDER = 7.5; // paved shoulder each side (m)
 const CLIP_SIDE = 6;  // tiles are clipped this far outside the runway edge
@@ -179,7 +207,8 @@ export function buildAirportRunways(ap, geoid, sampleTile, plane = null) {
       indices: new Uint32Array(idx), primitiveType: Cesium.PrimitiveType.TRIANGLES,
       boundingSphere: Cesium.BoundingSphere.fromVertices(pos),
     });
-    const material = Cesium.Material.fromType('Image', { image: paintRunway(info) });
+    // markings canvas x real asphalt photo, one 25 m tile across / along
+    const material = surfaceMaterial(Cesium, paintRunway(info), 'asphalt.jpg', new Cesium.Cartesian2(across / 25, total / 25), { strength: 0.9, mean: 0.47 });
     mats.push(material);
     prims.push(new Cesium.Primitive({
       geometryInstances: new Cesium.GeometryInstance({ geometry }),

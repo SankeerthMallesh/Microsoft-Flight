@@ -1,6 +1,7 @@
 // 3D airport surroundings from OpenStreetMap: flat taxiways and aprons (replacing lumpy photogrammetry)
 // plus extruded terminals, hangars, the control tower and other buildings where Google's tiles are flat.
 import { buildAirportDetail } from './airportdetail.js';
+import { surfaceMaterial } from './runways.js';
 const C = () => window.Cesium;
 const RE = 6371008.8, FT = 0.3048, D2R = Math.PI / 180;
 const ENDPOINTS = [
@@ -200,7 +201,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       });
       prims.push(new Cesium.Primitive({
         geometryInstances: new Cesium.GeometryInstance({ geometry }),
-        appearance: new Cesium.MaterialAppearance({ material: (() => { const m = Cesium.Material.fromType('Image', { image: tex.apron, repeat: new Cesium.Cartesian2(Math.max(1, ext[0] / 30), Math.max(1, ext[1] / 30)) }); mats.push(m); return m; })(), faceForward: true }),
+        appearance: new Cesium.MaterialAppearance({ material: (() => { const m = surfaceMaterial(Cesium, tex.apron, 'concrete-slab.jpg', new Cesium.Cartesian2(Math.max(1, ext[0] / 30), Math.max(1, ext[1] / 30)), { strength: 0.9, mean: 0.3 }); mats.push(m); return m; })(), faceForward: true }),
         asynchronous: true, shadows: Cesium.ShadowMode.RECEIVE_ONLY,
       }));
       clips.push(new Cesium.ClippingPolygon({ positions: scaleRing(r, -2.5).map(([x, y]) => cart(x, y)) }));
@@ -248,7 +249,8 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
       },
       indices: new Uint32Array(TI), primitiveType: Cesium.PrimitiveType.TRIANGLES, boundingSphere: Cesium.BoundingSphere.fromVertices(TP),
     });
-    const m = Cesium.Material.fromType('Image', { image: tex.taxi }); mats.push(m);
+    // taxiway ribbon texture (st: 0..1 across ~23 m, 1 unit per 40 m along) x real asphalt photo
+    const m = surfaceMaterial(Cesium, tex.taxi, 'asphalt-worn.jpg', new Cesium.Cartesian2(1, 1.6), { strength: 0.85, mean: 0.2 }); mats.push(m);
     prims.push(new Cesium.Primitive({
       geometryInstances: new Cesium.GeometryInstance({ geometry }),
       appearance: new Cesium.MaterialAppearance({ material: m, faceForward: true }),
