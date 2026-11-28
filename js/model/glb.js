@@ -161,3 +161,25 @@ export function patchDetailedGLB(bytes, png, colors, extraNodes = []) {
   }
   return buildGLB(json, nb);
 }
+
+// Merge procedural aircraft nodes into one mesh for static / distant instances (parked aircraft, AI traffic):
+// ~25 draw calls per aircraft become 1 (+ the nodes matching `keep`, e.g. landing gear that must toggle).
+export function mergeNodes(nodes, keep = null) {
+  const kept = [], parts = [];
+  for (const n of nodes) { if (!n.indices.length) continue; (keep && keep.test(n.name) ? kept : parts).push(n); }
+  if (parts.length < 2) return nodes;
+  let nv = 0, ni = 0;
+  for (const n of parts) { nv += n.positions.length / 3; ni += n.indices.length; }
+  const positions = new Float32Array(nv * 3), normals = new Float32Array(nv * 3), uvs = new Float32Array(nv * 2), indices = new Uint32Array(ni);
+  let vo = 0, io = 0;
+  for (const n of parts) {
+    const t = n.translation || [0, 0, 0], cnt = n.positions.length / 3;
+    for (let i = 0; i < cnt; i++) {
+      positions[(vo + i) * 3] = n.positions[i * 3] + t[0]; positions[(vo + i) * 3 + 1] = n.positions[i * 3 + 1] + t[1]; positions[(vo + i) * 3 + 2] = n.positions[i * 3 + 2] + t[2];
+    }
+    normals.set(n.normals, vo * 3); uvs.set(n.uvs, vo * 2);
+    for (let i = 0; i < n.indices.length; i++) indices[io + i] = n.indices[i] + vo;
+    vo += cnt; io += n.indices.length;
+  }
+  return [{ name: 'body', positions, normals, uvs, indices }, ...kept];
+}

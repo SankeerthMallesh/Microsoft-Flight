@@ -9,7 +9,7 @@
 /* global Cesium */
 import { getGeometry } from './model/factory.js';
 import { paintLivery } from './model/painter.js';
-import { writeGLB } from './model/glb.js';
+import { writeGLB, mergeNodes } from './model/glb.js';
 import { getAircraft } from './data/aircraft.js';
 import { getLivery } from './data/liveries.js';
 import { airportsNear, runwayEnds } from './data/airports.js';
@@ -418,7 +418,8 @@ export class Traffic {
           const blob = small.convertToBlob ? await small.convertToBlob({ type: 'image/png' }) : await new Promise((r) => small.toBlob(r, 'image/png'));
           const png = new Uint8Array(await blob.arrayBuffer());
           const lv = getLivery(v.liveryId);
-          const glb = writeGLB(geo.nodes, png, { metallic: lv.metallic ?? 0.12, roughness: lv.roughness ?? 0.38 });
+          // one merged body + gear (toggles) + props (spin): ~25 draw calls per aircraft -> a handful
+          const glb = writeGLB(mergeNodes(geo.nodes, /^(gear|prop)/), png, { metallic: lv.metallic ?? 0.12, roughness: lv.roughness ?? 0.38 });
           v.url = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })); // kept alive: instances share the cached GPU resources
           v.physics = geo.physics;
         } catch (e) { console.warn('traffic model failed', v.key, e); v.failed = true; }

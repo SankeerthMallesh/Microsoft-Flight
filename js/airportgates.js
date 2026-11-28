@@ -2,7 +2,7 @@
 // models in plausible local liveries) at other stands, and provides a simple tug pushback.
 import { getGeometry } from './model/factory.js';
 import { paintLivery } from './model/painter.js';
-import { writeGLB } from './model/glb.js';
+import { writeGLB, mergeNodes } from './model/glb.js';
 import { getAircraft } from './data/aircraft.js';
 import { LIVERIES, getLivery } from './data/liveries.js';
 import { rng } from './airportdetail.js';
@@ -26,7 +26,8 @@ async function lowDetailGLB(acId, lvId) {
   if (!glbCache.has(key)) glbCache.set(key, (async () => {
     const geo = getGeometry(acId), lv = getLivery(lvId);
     const { bytes } = await paintLivery(geo.layout, lv);
-    const glb = writeGLB(geo.nodes, bytes, { metallic: lv.metallic ?? 0.12, roughness: lv.roughness ?? 0.38 });
+    // parked: one merged mesh, one draw call
+    const glb = writeGLB(mergeNodes(geo.nodes), bytes, { metallic: lv.metallic ?? 0.12, roughness: lv.roughness ?? 0.38 });
     return { url: URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' })), physics: geo.physics };
   })());
   return glbCache.get(key);

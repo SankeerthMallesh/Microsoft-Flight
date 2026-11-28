@@ -212,6 +212,7 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
   // ---- taxiways / taxilanes (ribbons)
   let k = 0;
   const taxis = [];
+  const TP = [], TN = [], TS = [], TI = [];
   for (const w of ways) {
     const a = w.tags?.aeroway; if (a !== 'taxiway' && a !== 'taxilane') continue;
     const pts = xyOf(w.geometry);
@@ -220,29 +221,17 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     taxis.push({ pts, hw, ref: (w.tags.ref || '').trim().slice(0, 4), kind: a });
     const { L, R } = ribbon(pts, hw + 1);
     const dh = -0.05 - (k++ % 8) * 0.004; // tiny per-way offsets avoid coplanar flicker where taxiways overlap
-    const pos = [], nrm = [], st = [], idx = [];
+    // all taxiways go into ONE merged mesh (one draw call, one texture) instead of a primitive each
+    const base = TP.length / 3;
     let dist = 0;
     for (let i = 0; i < pts.length; i++) {
       if (i > 0) dist += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
       for (const [p, s] of [[L[i], 0], [R[i], 1]]) {
-        const c = cart(p[0], p[1], dh); pos.push(c.x, c.y, c.z);
-        const n = up(c); nrm.push(n.x, n.y, n.z); st.push(s, dist / 40);
+        const c = cart(p[0], p[1], dh); TP.push(c.x, c.y, c.z);
+        const n = up(c); TN.push(n.x, n.y, n.z); TS.push(s, dist / 40);
       }
-      if (i > 0) { const b = (i - 1) * 2; idx.push(b, b + 1, b + 3, b, b + 3, b + 2); surfaces.segs.push([pts[i - 1], pts[i], hw + 2]); }
+      if (i > 0) { const b = base + (i - 1) * 2; TI.push(b, b + 1, b + 3, b, b + 3, b + 2); surfaces.segs.push([pts[i - 1], pts[i], hw + 2]); }
     }
-    const geometry = new Cesium.Geometry({
-      attributes: {
-        position: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.DOUBLE, componentsPerAttribute: 3, values: new Float64Array(pos) }),
-        normal: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.FLOAT, componentsPerAttribute: 3, values: new Float32Array(nrm) }),
-        st: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.FLOAT, componentsPerAttribute: 2, values: new Float32Array(st) }),
-      },
-      indices: new Uint32Array(idx), primitiveType: Cesium.PrimitiveType.TRIANGLES, boundingSphere: Cesium.BoundingSphere.fromVertices(pos),
-    });
-    prims.push(new Cesium.Primitive({
-      geometryInstances: new Cesium.GeometryInstance({ geometry }),
-      appearance: new Cesium.MaterialAppearance({ material: (() => { const m = Cesium.Material.fromType('Image', { image: tex.taxi }); mats.push(m); return m; })(), faceForward: true }),
-      asynchronous: false, shadows: Cesium.ShadowMode.RECEIVE_ONLY,
-    }));
     // clip slightly inside the drawn edge so no lumpy tile shows between
     const { L: cL, R: cR } = ribbon(pts, Math.max(2, hw - 2.5));
     clips.push(new Cesium.ClippingPolygon({ positions: [...cL, ...cR.slice().reverse()].map(([x, y]) => cart(x, y)) }));
@@ -250,6 +239,22 @@ export function buildAirport3D(ap, geoid, elements, opts = {}) {
     addUnder([...uL, ...uR.slice().reverse()], -0.6);
   }
 
+  if (TI.length) {
+    const geometry = new Cesium.Geometry({
+      attributes: {
+        position: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.DOUBLE, componentsPerAttribute: 3, values: new Float64Array(TP) }),
+        normal: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.FLOAT, componentsPerAttribute: 3, values: new Float32Array(TN) }),
+        st: new Cesium.GeometryAttribute({ componentDatatype: Cesium.ComponentDatatype.FLOAT, componentsPerAttribute: 2, values: new Float32Array(TS) }),
+      },
+      indices: new Uint32Array(TI), primitiveType: Cesium.PrimitiveType.TRIANGLES, boundingSphere: Cesium.BoundingSphere.fromVertices(TP),
+    });
+    const m = Cesium.Material.fromType('Image', { image: tex.taxi }); mats.push(m);
+    prims.push(new Cesium.Primitive({
+      geometryInstances: new Cesium.GeometryInstance({ geometry }),
+      appearance: new Cesium.MaterialAppearance({ material: m, faceForward: true }),
+      asynchronous: false, shadows: Cesium.ShadowMode.RECEIVE_ONLY,
+    }));
+  }
   if (under.length) {
     const um = Cesium.Material.fromType('Color', { color: Cesium.Color.fromCssColorString('#5f5a4f') });
     um._base = Cesium.Color.fromCssColorString('#5f5a4f'); mats.push(um);
