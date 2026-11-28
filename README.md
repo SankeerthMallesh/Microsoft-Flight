@@ -123,6 +123,7 @@ js/cockpit/instruments.js  PFD / ND / EICAS
 - The 3D Boeing 747 flight deck (747-8i, also used on the 747-8F and 747-400) comes from the [FlightGear](https://www.flightgear.org/) 747-8i (John Williams; original cockpit by Gijs de Rooy with Ivan Ngeow, Jentron, Syd Adams, Torsten Dreyer, Markus Bulik; Grupo FGBr), GPL v2.
 - The 3D CRJ700/CRJ900 flight deck comes from the [FlightGear](https://www.flightgear.org/) CRJ700 family (Ryan "Skyop" Miller, Henning S., D-JSB, Daniel M. and contributors), GPL v2.
 - The 3D ATR 72/42 flight deck comes from the [FlightGear](https://www.flightgear.org/) ATR 72-500 (Ryan Miller and contributors), GPL v2.
+- The F-15C Eagle (exterior and 3D cockpit) comes from the [FlightGear](https://www.flightgear.org/) F-15 (3D model by Enrique Laso; systems, cockpit and FDM by Richard Harrison and contributors), GPL v2.
 
 ### License
 

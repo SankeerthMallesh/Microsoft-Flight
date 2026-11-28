@@ -1,0 +1,10 @@
+{ "exterior": "Models/f15c.ac", "extNames": "^(Fuselage|Radome)", "xcg": 11.2,
+  "keep": "^Models/(Cockpit/|f15c\\.ac)",
+  "dropPaths": "(/f15d-canopy|/aim-|/mk-84|/rails|/tanks|/CFT|aircraft-ladder|HighSpeed|/convexhull|/Holes$|Lamp|Bulb|Nose wheel|FWD oleo|fwd retract|nosegear|Main (wheel|Upper|lower|retract)|Landing light|Taxi light|/Fan[LR]|Turbine|Afterburner|Nozzle|Intake\\.002|engine-and-inlet)",
+  "dropNames": "_on$|_lit$|[Ll]ight[Cc]one|halo|^HUDImage1$",
+  "dropAftOf": { "Cockpit/": -4.75 },
+  "decimateOver": 1500, "decimateMin": 0.12,
+  "glass": "/((Canopy|Windscreen)Glass|HUDImage2)$", "glassAlpha": 0.1,
+  "darkScreens": true,
+  "screens": { "pfd": ["MPCDImage"], "nd": ["VSDImage"], "isis": ["TEWSImage"], "hud": ["HUDImage2"] },
+  "eyeFG": [-5.0, 0, 1.40], "pitchDeg": -10 }
