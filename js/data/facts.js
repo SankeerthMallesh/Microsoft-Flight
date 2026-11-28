@@ -1,5 +1,6 @@
 // "Did you know?" facts shown while scenery loads, keyed by aircraft id.
 export const FACTS = {
+  'f14d': 'The F-14 Tomcat\u2019s wings sweep automatically in flight: spread wide for slow carrier landings, folded back to 68 degrees for Mach 2 dashes.',
   'f16c': 'The F-16 was the first fighter built around fly-by-wire controls, and its seat reclines 30 degrees to help the pilot withstand 9 g.',
   'f35a': 'The F-35\u2019s pilot helmet projects flight data and camera views onto the visor, letting the pilot \u201csee through\u201d the floor of the jet.',
   'f22a': 'The F-22 Raptor can \u201csupercruise\u201d: fly faster than sound without using its afterburners, saving fuel and staying stealthy.',
